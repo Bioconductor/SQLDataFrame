@@ -1,0 +1,20 @@
+## TODO: 
+- define `[,SQLDataFrame`, `[[,SQLDataFrame` to return `SQLDataFrame`
+  object.
+- add extra slots in `SQLDataFrame` to save the row/col indexes for
+  the `show` method only.
+- update `show,SQLDataFrame` to reflect the row/col indexes.
+- `rbind,SQLDataFrame`? Maybe not, now one `SQLDataFrame` only
+  corresponds to just one `tbl_dbi` object... Will there be any need
+  for rbinding data from different database table? 
+- realization methods: as.data.frame(), as(,"DataFrame")? 
+  
+## DONE
+- define a new class, SQLDataFrame, DO NOT extend `DataFrame`, save
+  `tbl_dbi` object as one separate slot.
+- define accessors and basic methods: dbname, dbtable, dbkey,
+  rownames, colnames, nrow, ncol, dim, length ...
+- define `show,SQLDataFrame` to work as `show,DataFrame`. Ignore the
+  existing internal functions from `DataFrame`, including
+  `extractROWS`, `as.list`, `lapply`...
+
