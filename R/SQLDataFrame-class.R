@@ -8,8 +8,8 @@ setOldClass("tbl_dbi")
         dbtable = "character",
         dbkey = "character",
         rownames = "character_OR_NULL",
-        colnames = "character", ## _OR_NULL",
-        nrows = "integer",
+        ## colnames = "character", ## _OR_NULL",
+        dbnrows = "integer",
         tblData = "tbl_dbi",
         indexes = "list"
         ## elementType = "character",
@@ -27,7 +27,7 @@ setOldClass("tbl_dbi")
 SQLDataFrame <- function(dbname = character(0),
                          dbtable = character(0),
                          dbkey = character(0),
-                         row.names = NULL,
+                         row.names = NULL, ## by default, read in all rows
                          col.names = NULL ## used to specify certain columns to read
                          ## check.names = TRUE
                          ){
@@ -41,7 +41,7 @@ SQLDataFrame <- function(dbname = character(0),
                                                  ## to avoid
                                                  ## inconvenience in
                                                  ## %>% language.
-    nrows <- tbl %>% summarize(n = n()) %>% pull(n)
+    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n)
     cns <- colnames(tbl)
     if (is.null(col.names)) {
         col.names <- cns
@@ -61,11 +61,11 @@ SQLDataFrame <- function(dbname = character(0),
         ## dbname = dbname,
         dbtable = dbtable,
         dbkey = dbkey,
-        nrows = nrows,
+        dbnrows = dbnrows,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
-        rownames = row.names,
-        colnames = col.names  ## reflects the "col.names" argument.
+        rownames = row.names ##,
+        ## colnames = col.names  ## reflects the "col.names" argument.
     )
 }
 
@@ -132,11 +132,37 @@ setGeneric("dbkey", signature = "x", function(x)
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
 #' @exportMethod dim nrow ncol length colnames
-setMethod("dim", "SQLDataFrame", function(x) c(x@nrows, length(a@tblData$ops$vars)) )
-setMethod("nrow", "SQLDataFrame", function(x) dim(x)[1L] )
-setMethod("ncol", "SQLDataFrame", function(x) dim(x)[2L] )
+setMethod("nrow", "SQLDataFrame", function(x)
+{
+    ridx <- x@indexes[[1]]
+    if (is.null(ridx)) {
+        nr <- x@dbnrows
+    } else {
+        nr <- length(ridx)
+    }
+    return(nr)
+})
+setMethod("ncol", "SQLDataFrame", function(x)
+{
+    cidx <- x@indexes[[2]]
+    if (is.null(cidx)) {
+        nc <- length(x@tblData$ops$vars)
+    } else {
+        nc <- length(cidx)
+    }
+    return(nc)
+})
+setMethod("dim", "SQLDataFrame", function(x) c(nrow(x), ncol(x)) )
 setMethod("length", "SQLDataFrame", function(x) ncol(x) )
-setMethod("colnames", "SQLDataFrame", function(x) colnames(x@tblData) )
+setMethod("colnames", "SQLDataFrame", function(x)
+{
+    cns <- colnames(x@tblData)
+    cidx <- x@indexes[[2]]
+    if(!is.null(cidx))
+        cns <- cns[cidx]
+    return(cns)
+})
+setMethod("rownames", "SQLDataFrame", function(x) x@rownames)
 
 ###--------------------
 ### "[,SQLDataFrame"
@@ -154,7 +180,11 @@ setMethod("colnames", "SQLDataFrame", function(x) colnames(x@tblData) )
         rownames <- make.unique(rownames)
     keys <- pull(x@tblData, grep(dbkey(x), colnames(x@tblData)))
     expr <- lazyeval::interp(quote(x %in% y), x = as.name(dbkey(x)), y = keys[i])
-    filter(x@tblData, expr)
+    out <- filter(x@tblData, expr)
+    cidx <- x@indexes[[2]]
+    if (!is.null(cidx))
+        out <- out %>% select(colnames(x))
+    return(out)
 }
 ## FIXME: now returns "tbl_dbi" object, should we return
 ## "SQLDataFrame" ? So that we need to save extra slots for column and
@@ -167,15 +197,20 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ...)
     
 })
 
-setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
+setMethod("[[", "SQLDataFrame", function(x, i, j, drop = TRUE, ..)
 {
+    ## browser()
     ## "dotArgs" etc... are copied from "[[,DataTable"
     dotArgs <- list(...)
     if (length(dotArgs) > 0L) 
         dotArgs <- dotArgs[names(dotArgs) != "exact"]
     if (!missing(j) || length(dotArgs) > 0L) 
         stop("incorrect number of subscripts")
-    x@tblData %>% select(colnames(x@tblData)[i])
+    ## x@tblData %>% select(colnames(x@tblData)[i])
+    BiocGenerics:::replaceSlots(x, indexes = list(x@indexes[[1]], i))
+    return(x)
+    if (length(i) == 1 && drop) 
+        return(x@tblData %>% pull(i))
     ## FIXME: need to return a `SQLDataFrame` object, instead of
     ## `tbl_dbi`. So need the "show,SQLDataFrame" to work first.
 })
@@ -186,7 +221,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 
 ## 1. only print "character" value of each column
 printROWS <- function(x, index){
-    out.db <- .extractROWS_SQLDataFrame(x, index)
+    out.db <- .extractROWS_SQLDataFrame(x, index)  ## will do the `select` of colnames(x)
     out.tbl <- out.db %>% collect()
     out <- as.matrix(format(as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
     ## could add unname(as.matrix()) to remove column names here. 
@@ -217,11 +252,13 @@ setMethod("show", "SQLDataFrame", function (object)
                          printROWS(object, tail(seq_len(nr), ntail)))
             rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
-        classinfo <- matrix(unlist(lapply(as.data.frame(head(object@tblData)), function(x)
-        { paste0("<", classNameForDisplay(x)[1], ">") }),
-        use.names = FALSE), nrow = 1,
-        dimnames = list("", colnames(object)))
-
+        ## rewrite, object@tblData using %>% select(cidx)
+        classinfo <- matrix(unlist(lapply(
+            as.data.frame(head(object@tblData %>% select(colnames(object)))),
+            function(x)
+            { paste0("<", classNameForDisplay(x)[1], ">") }),
+            use.names = FALSE), nrow = 1,
+            dimnames = list("", colnames(object)))
         out <- rbind(classinfo, out)
         print(out, quote = FALSE, right = TRUE)
     }

@@ -1,10 +1,8 @@
 ## TODO: 
-- nrows, ncols, rownames, colnames to reflect the @indexes slot. 
-- update `show,SQLDataFrame` to reflect the row/col indexes.
-- define `[,SQLDataFrame` to return `SQLDataFrame` object by adding
-  @indexes.
 - define `[[,SQLDataFrame` to return `SQLDataFrame` object. "[[,
   drop=TRUE". by adding @indexes[[2]].
+- define `[,SQLDataFrame` to return `SQLDataFrame` object by adding
+  @indexes.
 - `rbind,SQLDataFrame`? Maybe not, now one `SQLDataFrame` only
   corresponds to just one `tbl_dbi` object... Will there be any need
   for rbinding data from different database table? 
@@ -24,3 +22,9 @@
 - update `SQLDataFrame()` constructor for `@indexes` slot.
 - update `SQLDataFrame()` constructor with specified columns and error
   message for "col.names" argument.
+- update accessors of `nrow()`, `ncol()`, `dim()`, `length()`,
+  `colnames()` to reflect the `@indexes` slot.
+- ?? remove the `@colnames` slot? and keep `colnames()` accessor?
+  (consistent with `DataFrame`)
+- update `show,SQLDataFrame` to reflect the row/col indexes.
+  
