@@ -1,9 +1,10 @@
 ## TODO: 
-- define `[,SQLDataFrame`, `[[,SQLDataFrame` to return `SQLDataFrame`
-  object.
-- add extra slots in `SQLDataFrame` to save the row/col indexes for
-  the `show` method only.
+- nrows, ncols, rownames, colnames to reflect the @indexes slot. 
 - update `show,SQLDataFrame` to reflect the row/col indexes.
+- define `[,SQLDataFrame` to return `SQLDataFrame` object by adding
+  @indexes.
+- define `[[,SQLDataFrame` to return `SQLDataFrame` object. "[[,
+  drop=TRUE". by adding @indexes[[2]].
 - `rbind,SQLDataFrame`? Maybe not, now one `SQLDataFrame` only
   corresponds to just one `tbl_dbi` object... Will there be any need
   for rbinding data from different database table? 
@@ -18,3 +19,8 @@
   existing internal functions from `DataFrame`, including
   `extractROWS`, `as.list`, `lapply`...
 
+- add extra slots `@indexes` in `SQLDataFrame` to save the row/col indexes.
+- validity check for the length of `@indexes` slot. 
+- update `SQLDataFrame()` constructor for `@indexes` slot.
+- update `SQLDataFrame()` constructor with specified columns and error
+  message for "col.names" argument.

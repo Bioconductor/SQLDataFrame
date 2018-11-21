@@ -3,7 +3,7 @@ Title: representation of database tables in DataFrame metaphor
 Version: 0.1.0
 Authors@R: person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
-Depends: R (>= 3.5.1), dbplyr (>= 1.2.2)
+Depends: R (>= 3.5.1), dbplyr (>= 1.2.2), S4Vectors
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true

@@ -36,7 +36,7 @@ cold.db <- con %>% tbl("colData")
 ##
 a <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colData", dbkey = "sampleID")
 b <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colDatal", dbkey = "sampleID", row.names = letters)
-
+c <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colDatal", dbkey = "sampleID", col.names = c("Treatment", "ages", "random"))
 
 ## todo:
 ## rbind, as.data.frame(), as("DataFrame")...

@@ -8,9 +8,10 @@ setOldClass("tbl_dbi")
         dbtable = "character",
         dbkey = "character",
         rownames = "character_OR_NULL",
-        colnames = "character_OR_NULL",
+        colnames = "character", ## _OR_NULL",
         nrows = "integer",
-        tblData = "tbl_dbi" ##,
+        tblData = "tbl_dbi",
+        indexes = "list"
         ## elementType = "character",
         ## elementMetadata = "DataTable_OR_NULL",
         ## metadata = "list"
@@ -21,12 +22,13 @@ setOldClass("tbl_dbi")
 ### Constructor
 ###
 #' @importFrom tools file_path_as_absolute
+#' @import dbplyr
 #' 
 SQLDataFrame <- function(dbname = character(0),
                          dbtable = character(0),
                          dbkey = character(0),
                          row.names = NULL,
-                         col.names = NULL ##, 
+                         col.names = NULL ## used to specify certain columns to read
                          ## check.names = TRUE
                          ){
     ## browser()
@@ -43,14 +45,16 @@ SQLDataFrame <- function(dbname = character(0),
     cns <- colnames(tbl)
     if (is.null(col.names)) {
         col.names <- cns
+        cidx <- NULL
     } else {
         idx <- col.names %in% cns
         if (!all(idx)) {
-            warning("These ", sum(!idx), " columns (",
+            warning("The \"col.names\" for \"", 
                     paste(col.names[!idx], collapse = ", "),
-                    ") does not exist and would be removed!")
-            col.names <- col.names[idx]
+                    "\" does not exist and would be removed!")
         }
+        col.names <- col.names[idx]
+        cidx <- match(col.names, cns)
     }
     ## DBI::dbDisconnect(con)
     .SQLDataFrame(
@@ -59,8 +63,9 @@ SQLDataFrame <- function(dbname = character(0),
         dbkey = dbkey,
         nrows = nrows,
         tblData = tbl,
+        indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
         rownames = row.names,
-        colnames = col.names
+        colnames = col.names  ## reflects the "col.names" argument.
     )
 }
 
@@ -75,25 +80,19 @@ SQLDataFrame <- function(dbname = character(0),
 ## into the "listData()", so that "dim", "ncol" works, and
 ## "extractROWS()" works, so that "show" method works...
 
-
-
-### no need to define "show" method, as long as "[" works, show method works. 
-
-## setMethod("show", signature = "SQLDataFrame", function(object)
-## {
-##     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname(object))
-##     tbl <- con %>% tbl(dbtable(object))
-## })
-
-.validity_dbtable <- function(object)
+.validity_SQLDataFrame <- function(object)
 {
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname(object))
     tbls <- DBI::dbListTables(con)
     if (! dbtable(object) %in% tbls)
         stop('"dbtable" must be one of :', tbls)    
+    ## indexes
+    idx <- object@indexes
+    if (length(idx) != 2)
+        stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
 }
 
-setValidity("SQLDataFrame", .validity_dbtable)
+setValidity("SQLDataFrame", .validity_SQLDataFrame)
 
 ###-------------
 ## accessor
@@ -144,6 +143,7 @@ setMethod("colnames", "SQLDataFrame", function(x) colnames(x@tblData) )
 ###-------------------- 
 
 #' @importFrom lazyeval interp
+#' @import S4Vectors
 .extractROWS_SQLDataFrame <- function(x, i)
 {
     ## browser()
