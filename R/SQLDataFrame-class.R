@@ -162,6 +162,8 @@ setMethod("colnames", "SQLDataFrame", function(x)
         cns <- cns[cidx]
     return(cns)
 })
+setMethod("names", "SQLDataFrame", function(x) colnames(x))
+## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
 setMethod("rownames", "SQLDataFrame", function(x) x@rownames)
 
 ###--------------------
@@ -197,22 +199,30 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ...)
     
 })
 
-setMethod("[[", "SQLDataFrame", function(x, i, j, drop = TRUE, ..)
+## for "[[", do realization for singular column.
+setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 {
-    ## browser()
-    ## "dotArgs" etc... are copied from "[[,DataTable"
     dotArgs <- list(...)
     if (length(dotArgs) > 0L) 
         dotArgs <- dotArgs[names(dotArgs) != "exact"]
     if (!missing(j) || length(dotArgs) > 0L) 
         stop("incorrect number of subscripts")
-    ## x@tblData %>% select(colnames(x@tblData)[i])
-    BiocGenerics:::replaceSlots(x, indexes = list(x@indexes[[1]], i))
-    return(x)
-    if (length(i) == 1 && drop) 
-        return(x@tblData %>% pull(i))
-    ## FIXME: need to return a `SQLDataFrame` object, instead of
-    ## `tbl_dbi`. So need the "show,SQLDataFrame" to work first.
+    i2 <- normalizeDoubleBracketSubscript(
+        i, x,
+        exact = TRUE,  ## default
+        allow.NA = TRUE,
+        allow.nomatch = TRUE)
+    ## "allow.NA" and "allow.nomatch" is consistent with
+    ## selectMethod("getListElement", "list") <- "simpleList"
+    if (is.na(i2))
+        return(NULL)
+    cidx <- x@indexes[[2]]
+    if (is.null(cidx)) {
+        res <- x@tblData %>% pull(i2)
+    } else {
+        res <- x@tblData %>% select(cidx) %>% pull(i2)
+    }
+    return(res)
 })
 
 ###--------------

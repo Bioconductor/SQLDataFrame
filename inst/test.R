@@ -42,8 +42,19 @@ c <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colDatal",
                   dbkey = "sampleID",
                   col.names = c("Treatment", "ages", "random"))
 colnames(c)
+names(c)
 dim(c)
 length(c)
+c[[2]]
+c[[3]]  ## error: subscript is out of bounds
+c[["Treatment"]]
+c[["ages"]]
+c[[1:2]]  ## error: attempt to extract more than one element
+## normalizeDoubleBracketSubscript(i, x, allow.NA = TRUE) exact =
+## TRUE, allow.NA = TRUE, allow.nomatch = TRUE)
+c[[NA]]
+c[["random"]] 
+d <- DataFrame(a=letters, b=LETTERS, c=1:26)
 
 ## todo:
 ## rbind, as.data.frame(), as("DataFrame")...
