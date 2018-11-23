@@ -45,6 +45,9 @@ colnames(c)
 names(c)
 dim(c)
 length(c)
+##
+## "[["
+##
 c[[2]]
 c[[3]]  ## error: subscript is out of bounds
 c[["Treatment"]]
@@ -54,7 +57,28 @@ c[[1:2]]  ## error: attempt to extract more than one element
 ## TRUE, allow.NA = TRUE, allow.nomatch = TRUE)
 c[[NA]]
 c[["random"]] 
-d <- DataFrame(a=letters, b=LETTERS, c=1:26)
+
+##
+## "["
+##
+bs <- b[1:5, 1:3]  ## 
+bs
+bs1 <- b[1:15, 1:3]  ## >11 rows
+bs1
+
+## [[ does realization, with ridx.
+bs1[[1]]
+bs1[["ages"]]
+bs1[[2]]
+
+b[1:15, 1]  ## realization
+b[1:15, 1, drop = FALSE]
+b[1]  ## list_style_subsetting, returns SQLDataFrame object, ignores
+      ## "drop" argument.
+b[1:15, ]
+bs2 <- b[c(1:5, 20:26), c(1,3)]
+bs2
+bs2@indexes
 
 ## todo:
 ## rbind, as.data.frame(), as("DataFrame")...

@@ -7,7 +7,7 @@ setOldClass("tbl_dbi")
         ## dbname = "character",
         dbtable = "character",
         dbkey = "character",
-        rownames = "character_OR_NULL",
+        dbrownames = "character_OR_NULL",
         ## colnames = "character", ## _OR_NULL",
         dbnrows = "integer",
         tblData = "tbl_dbi",
@@ -64,7 +64,7 @@ SQLDataFrame <- function(dbname = character(0),
         dbnrows = dbnrows,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
-        rownames = row.names ##,
+        dbrownames = row.names ##,
         ## colnames = col.names  ## reflects the "col.names" argument.
     )
 }
@@ -164,7 +164,14 @@ setMethod("colnames", "SQLDataFrame", function(x)
 })
 setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
-setMethod("rownames", "SQLDataFrame", function(x) x@rownames)
+setMethod("rownames", "SQLDataFrame", function(x)
+{
+    rns <- x@dbrownames
+    ridx <- x@indexes[[1]]
+    if (!is.null(ridx))
+        rns <- rns[ridx]
+    return(rns)
+})
 
 ###--------------------
 ### "[,SQLDataFrame"
@@ -194,14 +201,58 @@ setMethod("rownames", "SQLDataFrame", function(x) x@rownames)
 
 setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
-setMethod("[", "SQLDataFrame", function(x, i, j, ...)
+setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
-    
+    ## browser()
+    if (!isTRUEorFALSE(drop)) 
+        stop("'drop' must be TRUE or FALSE")
+    if (length(list(...)) > 0L) 
+        warning("parameters in '...' not supported")
+    list_style_subsetting <- (nargs() - !missing(drop)) < 3L
+    if (list_style_subsetting || !missing(j)) {
+        if (list_style_subsetting) {
+            if (!missing(drop)) 
+                warning("'drop' argument ignored by list-style subsetting")
+            if (missing(i)) 
+                return(x)
+            j <- i
+        }
+        if (!is(j, "IntegerRanges")) {
+            xstub <- setNames(seq_along(x), names(x))
+            j <- normalizeSingleBracketSubscript(j, xstub)
+        }
+        cidx <- x@indexes[[2]]
+        if (is.null(cidx)) {
+            x@indexes[[2]] <- j
+        } else {
+            x@indexes[[2]] <- x@indexes[[2]][j]
+        }
+        if (list_style_subsetting) 
+            return(x)
+    }
+    if (!missing(i)) {
+        ridx <- x@indexes[[1]]
+        if (is.null(ridx)) {
+            x@indexes[[1]] <- i
+        } else {
+            x@indexes[[1]] <- x@indexes[[1]][i]
+        }
+    }
+    if (missing(drop)) 
+        drop <- ncol(x) == 1L
+    if (drop) {
+        if (ncol(x) == 1L) 
+            return(x[[1L]])
+        if (nrow(x) == 1L) 
+            return(as(x, "list"))
+    }
+    x  
 })
 
 ## for "[[", do realization for singular column.
 setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 {
+    ## browser()
     dotArgs <- list(...)
     if (length(dotArgs) > 0L) 
         dotArgs <- dotArgs[names(dotArgs) != "exact"]
@@ -216,11 +267,15 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     ## selectMethod("getListElement", "list") <- "simpleList"
     if (is.na(i2))
         return(NULL)
+    tblData <- x@tblData
+    ridx <- x@indexes[[1]]
+    if (!is.null(ridx))
+        tblData <- extractROWS(x, ridx)
     cidx <- x@indexes[[2]]
     if (is.null(cidx)) {
-        res <- x@tblData %>% pull(i2)
+        res <- tblData %>% pull(i2)
     } else {
-        res <- x@tblData %>% select(cidx) %>% pull(i2)
+        res <- tblData %>% select(cidx) %>% pull(i2)
     }
     return(res)
 })
@@ -262,7 +317,6 @@ setMethod("show", "SQLDataFrame", function (object)
                          printROWS(object, tail(seq_len(nr), ntail)))
             rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
-        ## rewrite, object@tblData using %>% select(cidx)
         classinfo <- matrix(unlist(lapply(
             as.data.frame(head(object@tblData %>% select(colnames(object)))),
             function(x)

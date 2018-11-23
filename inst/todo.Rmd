@@ -1,13 +1,11 @@
 ## TODO: 
-- define `[[,SQLDataFrame` to return `SQLDataFrame` object. "[[,
-  drop=TRUE". by adding @indexes[[2]].
-- define `[,SQLDataFrame` to return `SQLDataFrame` object by adding
-  @indexes.
 - `rbind,SQLDataFrame`? Maybe not, now one `SQLDataFrame` only
   corresponds to just one `tbl_dbi` object... Will there be any need
   for rbinding data from different database table? 
 - realization methods: as.data.frame(), as(,"DataFrame")? 
-  
+- think about the "dbkey" slot... needed for all database table? must
+  be unique identifier for all rows...
+
 ## DONE
 - define a new class, SQLDataFrame, DO NOT extend `DataFrame`, save
   `tbl_dbi` object as one separate slot.
@@ -17,14 +15,31 @@
   existing internal functions from `DataFrame`, including
   `extractROWS`, `as.list`, `lapply`...
 
-- add extra slots `@indexes` in `SQLDataFrame` to save the row/col indexes.
-- validity check for the length of `@indexes` slot. 
+**slots**
+- add extra slots `@indexes` in `SQLDataFrame` to save the row/col
+  indexes.
+- ?? remove the `@colnames` slot? and keep `colnames()` accessor?
+  (consistent with `DataFrame`)
+- renamed the `SQLDataFrame@rownames` slot into `dbrownames`.
+
+**validity check**
+- validity check for the length of `@indexes` slot.
+
+**constructor**
 - update `SQLDataFrame()` constructor for `@indexes` slot.
 - update `SQLDataFrame()` constructor with specified columns and error
   message for "col.names" argument.
+
+**accessors**
 - update accessors of `nrow()`, `ncol()`, `dim()`, `length()`,
   `colnames()` to reflect the `@indexes` slot.
-- ?? remove the `@colnames` slot? and keep `colnames()` accessor?
-  (consistent with `DataFrame`)
+
+**show**
 - update `show,SQLDataFrame` to reflect the row/col indexes.
-  
+
+**[, [[**
+- define `[[,SQLDataFrame` to return `SQLDataFrame` object. Only for
+  single column extraction and do realize automatically. (works like
+  "drop=TRUE")
+- define `[,SQLDataFrame` to return `SQLDataFrame` object by
+  adding/updating `@indexes` slot.
