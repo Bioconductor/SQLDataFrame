@@ -24,7 +24,10 @@ setOldClass("tbl_dbi")
 #' @import dbplyr
 #' 
 SQLDataFrame <- function(dbname = character(0),
-                         dbtable = character(0),
+                         dbtable = character(0), ## could be NULL if
+                                                 ## only 1 table
+                                                 ## inside the
+                                                 ## database.
                          dbkey = character(0),
                          row.names = NULL, ## by default, read in all
                                            ## rows
@@ -32,25 +35,54 @@ SQLDataFrame <- function(dbname = character(0),
                                           ## columns to read
                          ){
     ## browser()
-    ## checks
+    ## argument checks
     dbname <- tools::file_path_as_absolute(dbname)  ## error if file
                                                     ## does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+
+    if (missing(dbtable)) {
+        tbls <- DBI::dbListTables(con)
+        if (length(tbls) == 1) {
+            dbtable <- tbls
+        } else {
+            stop("Please specify the \"dbtable\" argument, ",
+                 "which must be one of: \"",
+                 paste(tbls, collapse = ", "), "\"")
+        }
+    }
     tbl <- con %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n)
+    ## col.names
     cns <- colnames(tbl)
     if (is.null(col.names)) {
         col.names <- cns
         cidx <- NULL
     } else {
         idx <- col.names %in% cns
-        if (!all(idx)) {
-            warning("The \"col.names\" for \"", 
-                    paste(col.names[!idx], collapse = ", "),
-                    "\" does not exist and would be removed!")
+        msg <- paste0("The \"col.names\" of \"",
+                       paste(col.names[!idx], collapse = ", "),
+                       "\" does not exist!")
+        if (!any(idx)) {
+            warning(msg,
+                    " Will use \"col.names = colnames(dbtable)\"",
+                    " as default.")
+            col.names <- cns
+            cidx <- NULL
+        } else {
+            warning(msg, " Only \"",
+                    paste(col.names[idx], collapse = ", "),
+                    "\" will be used.")
+            col.names <- col.names[idx]
+            cidx <- match(col.names, cns)
         }
-        col.names <- col.names[idx]
-        cidx <- match(col.names, cns)
+    }
+    ## row.names
+    if (!is.null(row.names)) {
+        if (length(row.names) != dbnrows)
+            warning("the length of \"row.names\" is not consistent",
+                    " with the dimensions of the database table. \n",
+                    "  Will use \"NULL\" as default.")
+        row.names <- NULL
     }
     ## DBI::dbDisconnect(con)
     .SQLDataFrame(
@@ -59,7 +91,7 @@ SQLDataFrame <- function(dbname = character(0),
         dbnrows = dbnrows,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
-        dbrownames = row.names,
+        dbrownames = row.names
     )
 }
 
@@ -162,6 +194,10 @@ setMethod("rownames", "SQLDataFrame", function(x)
     if (!is.null(ridx))
         rns <- rns[ridx]
     return(rns)
+})
+setMethod("dimnames", "SQLDataFrame", function(x)
+{
+    list(rownames(x), colnames(x))
 })
 
 ###--------------------
