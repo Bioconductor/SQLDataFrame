@@ -1,4 +1,7 @@
 ## TODO: 
+- ?? validity check: dbtable check not needed? Already checked in
+  constructor:```con <- DBI::dbConnect(RSQLite::SQLite(), dbname =
+  dbname); tbl <- con %>% tbl(dbtable)```
 - `rbind,SQLDataFrame`? Maybe not, now one `SQLDataFrame` only
   corresponds to just one `tbl_dbi` object... Will there be any need
   for rbinding data from different database table? 

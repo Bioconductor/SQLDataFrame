@@ -4,7 +4,6 @@ setOldClass("tbl_dbi")
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
     slots = c(
-        ## dbname = "character",
         dbtable = "character",
         dbkey = "character",
         dbrownames = "character_OR_NULL",
@@ -27,9 +26,10 @@ setOldClass("tbl_dbi")
 SQLDataFrame <- function(dbname = character(0),
                          dbtable = character(0),
                          dbkey = character(0),
-                         row.names = NULL, ## by default, read in all rows
-                         col.names = NULL ## used to specify certain columns to read
-                         ## check.names = TRUE
+                         row.names = NULL, ## by default, read in all
+                                           ## rows
+                         col.names = NULL ## used to specify certain
+                                          ## columns to read
                          ){
     ## browser()
     ## checks
@@ -37,10 +37,6 @@ SQLDataFrame <- function(dbname = character(0),
                                                     ## does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
     tbl <- con %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
-    ## keys <- pull(tbl, grep(key, colnames(tbl))) ## save key values,
-                                                 ## to avoid
-                                                 ## inconvenience in
-                                                 ## %>% language.
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n)
     cns <- colnames(tbl)
     if (is.null(col.names)) {
@@ -58,14 +54,12 @@ SQLDataFrame <- function(dbname = character(0),
     }
     ## DBI::dbDisconnect(con)
     .SQLDataFrame(
-        ## dbname = dbname,
         dbtable = dbtable,
         dbkey = dbkey,
         dbnrows = dbnrows,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
-        dbrownames = row.names ##,
-        ## colnames = col.names  ## reflects the "col.names" argument.
+        dbrownames = row.names,
     )
 }
 
@@ -76,12 +70,9 @@ SQLDataFrame <- function(dbname = character(0),
 ## to save listData? save the whole tbl.db? or in columns?
 ## "show,DataFrame" calls `lapply()`.
 
-## ?? easiest way to do is to save individual columns from the tbl_dbi
-## into the "listData()", so that "dim", "ncol" works, and
-## "extractROWS()" works, so that "show" method works...
-
 .validity_SQLDataFrame <- function(object)
 {
+    ## dbtable match ?? 
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname(object))
     tbls <- DBI::dbListTables(con)
     if (! dbtable(object) %in% tbls)
@@ -176,31 +167,6 @@ setMethod("rownames", "SQLDataFrame", function(x)
 ###--------------------
 ### "[,SQLDataFrame"
 ###-------------------- 
-
-#' @importFrom lazyeval interp
-#' @import S4Vectors
-.extractROWS_SQLDataFrame <- function(x, i)
-{
-    ## browser()
-    i <- normalizeSingleBracketSubscript(
-        i, x, exact = FALSE, allow.NAs = TRUE, as.NSBS = FALSE)
-    rownames <- rownames(x)[i]
-    if (!is.null(rownames))
-        rownames <- make.unique(rownames)
-    keys <- pull(x@tblData, grep(dbkey(x), colnames(x@tblData)))
-    expr <- lazyeval::interp(quote(x %in% y), x = as.name(dbkey(x)), y = keys[i])
-    out <- filter(x@tblData, expr)
-    cidx <- x@indexes[[2]]
-    if (!is.null(cidx))
-        out <- out %>% select(colnames(x))
-    return(out)
-}
-## FIXME: now returns "tbl_dbi" object, should we return
-## "SQLDataFrame" ? So that we need to save extra slots for column and
-## row indexes as lazy index for subsetting. 
-
-setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
-
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
     ## browser()
@@ -249,7 +215,9 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
     x  
 })
 
-## for "[[", do realization for singular column.
+###--------------------
+### "[[,SQLDataFrame" (do realization for single column only)
+###--------------------
 setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 {
     ## browser()
@@ -284,11 +252,36 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 ### show method
 ###--------------
 
+#' @importFrom lazyeval interp
+#' @import S4Vectors
+.extractROWS_SQLDataFrame <- function(x, i) 
+{
+    ## browser()
+    i <- normalizeSingleBracketSubscript(
+        i, x, exact = FALSE, allow.NAs = TRUE, as.NSBS = FALSE)
+    rownames <- rownames(x)[i]
+    if (!is.null(rownames))
+        rownames <- make.unique(rownames)
+    keys <- pull(x@tblData, grep(dbkey(x), colnames(x@tblData)))
+    expr <- lazyeval::interp(quote(x %in% y), x = as.name(dbkey(x)),
+                             y = keys[i])
+    out <- filter(x@tblData, expr)
+    cidx <- x@indexes[[2]]
+    if (!is.null(cidx))
+        out <- out %>% select(colnames(x))
+    return(out)
+}
+## FIXME: now returns "tbl_dbi" object, should we return
+## "SQLDataFrame" ? So that we need to save extra slots for column and
+## row indexes as lazy index for subsetting. 
+setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
+
 ## 1. only print "character" value of each column
 printROWS <- function(x, index){
-    out.db <- .extractROWS_SQLDataFrame(x, index)  ## will do the `select` of colnames(x)
+    out.db <- .extractROWS_SQLDataFrame(x, index)
     out.tbl <- out.db %>% collect()
-    out <- as.matrix(format(as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
+    out <- as.matrix(format(
+        as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
     ## could add unname(as.matrix()) to remove column names here. 
     return(out)
 }
