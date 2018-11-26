@@ -59,17 +59,18 @@ SQLDataFrame <- function(dbname = character(0),
         cidx <- NULL
     } else {
         idx <- col.names %in% cns
-        msg <- paste0("The \"col.names\" of \"",
-                       paste(col.names[!idx], collapse = ", "),
-                       "\" does not exist!")
+        wmsg <- paste0(
+            "The \"col.names\" of \"",
+            paste(col.names[!idx], collapse = ", "),
+            "\" does not exist!")
         if (!any(idx)) {
-            warning(msg,
-                    " Will use \"col.names = colnames(dbtable)\"",
-                    " as default.")
+            warning(
+                wmsg, " Will use \"col.names = colnames(dbtable)\"",
+                " as default.")
             col.names <- cns
             cidx <- NULL
         } else {
-            warning(msg, " Only \"",
+            warning(wmsg, " Only \"",
                     paste(col.names[idx], collapse = ", "),
                     "\" will be used.")
             col.names <- col.names[idx]
@@ -102,14 +103,20 @@ SQLDataFrame <- function(dbname = character(0),
 ## to save listData? save the whole tbl.db? or in columns?
 ## "show,DataFrame" calls `lapply()`.
 
+.available_tbls <- function(x)
+{
+    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = x)
+    tbls <- DBI::dbListTables(con)
+    return(tbls)
+}
+
 .validity_SQLDataFrame <- function(object)
 {
-    ## dbtable match ?? 
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname(object))
-    tbls <- DBI::dbListTables(con)
+    ## dbtable match
+    tbls <- .available_tbls(dbname(object))
     if (! dbtable(object) %in% tbls)
         stop('"dbtable" must be one of :', tbls)    
-    ## indexes
+    ## @indexes length
     idx <- object@indexes
     if (length(idx) != 2)
         stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
@@ -233,6 +240,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
             return(x)
     }
     if (!missing(i)) {
+        i <- normalizeSingleBracketSubscript(i, x)
         ridx <- x@indexes[[1]]
         if (is.null(ridx)) {
             x@indexes[[1]] <- i
@@ -290,32 +298,33 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 
 #' @importFrom lazyeval interp
 #' @import S4Vectors
-.extractROWS_SQLDataFrame <- function(x, i) 
+
+.extract_tbl_rows_by_key <- function(x, key, i)
 {
-    ## browser()
-    i <- normalizeSingleBracketSubscript(
-        i, x, exact = FALSE, allow.NAs = TRUE, as.NSBS = FALSE)
-    rownames <- rownames(x)[i]
-    if (!is.null(rownames))
-        rownames <- make.unique(rownames)
-    keys <- pull(x@tblData, grep(dbkey(x), colnames(x@tblData)))
-    expr <- lazyeval::interp(quote(x %in% y), x = as.name(dbkey(x)),
+    keys <- pull(x, grep(key, colnames(x)))
+    expr <- lazyeval::interp(quote(x %in% y), x = as.name(key),
                              y = keys[i])
-    out <- filter(x@tblData, expr)
-    cidx <- x@indexes[[2]]
-    if (!is.null(cidx))
-        out <- out %>% select(colnames(x))
+    out <- x %>% filter(expr)
     return(out)
 }
-## FIXME: now returns "tbl_dbi" object, should we return
-## "SQLDataFrame" ? So that we need to save extra slots for column and
-## row indexes as lazy index for subsetting. 
-setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
-## 1. only print "character" value of each column
-printROWS <- function(x, index){
-    out.db <- .extractROWS_SQLDataFrame(x, index)
-    out.tbl <- out.db %>% collect()
+.extract_tbl_from_SQLDataFrame <- function(x)
+{
+    ridx <- x@indexes[[1]]
+    cidx <- x@indexes[[2]]
+    tbl <- x@tblData
+    if (!is.null(ridx))
+        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
+    if (!is.null(cidx))
+        tbl <- tbl %>% select(colnames(x))
+    return(tbl)
+}
+
+.printROWS <- function(x, index){
+    tbl <- .extract_tbl_from_SQLDataFrame(x)
+    i <- normalizeSingleBracketSubscript(index, x)
+    tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
+    out.tbl <- tbl %>% collect()
     out <- as.matrix(format(
         as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
     ## could add unname(as.matrix()) to remove column names here. 
@@ -336,14 +345,14 @@ setMethod("show", "SQLDataFrame", function (object)
     if (nr > 0 && nc > 0) {
         nms <- rownames(object)
         if (nr <= (nhead + ntail + 1L)) {
-            out <- printROWS(object, seq_len(nr))
+            out <- .printROWS(object, seq_len(nr))
             if (!is.null(nms)) 
                 rownames(out) <- nms
         }
         else {
-            out <- rbind(printROWS(object, seq_len(nhead)),
+            out <- rbind(.printROWS(object, seq_len(nhead)),
                          rep.int("...", nc),
-                         printROWS(object, tail(seq_len(nr), ntail)))
+                         .printROWS(object, tail(seq_len(nr), ntail)))
             rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
         classinfo <- matrix(unlist(lapply(
