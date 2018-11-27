@@ -23,7 +23,7 @@ setOldClass("tbl_dbi")
 #' @importFrom tools file_path_as_absolute
 #' @import dbplyr
 #' 
-SQLDataFrame <- function(dbname = character(0),
+SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table
                                                  ## inside the
@@ -35,9 +35,8 @@ SQLDataFrame <- function(dbname = character(0),
                                           ## columns to read
                          ){
     ## browser()
-    ## argument checks
-    dbname <- tools::file_path_as_absolute(dbname)  ## error if file
-                                                    ## does not exist!
+    dbname <- tools::file_path_as_absolute(dbname)
+    ## error if file does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
 
     if (missing(dbtable)) {
@@ -79,11 +78,12 @@ SQLDataFrame <- function(dbname = character(0),
     }
     ## row.names
     if (!is.null(row.names)) {
-        if (length(row.names) != dbnrows)
+        if (length(row.names) != dbnrows) {
             warning("the length of \"row.names\" is not consistent",
                     " with the dimensions of the database table. \n",
                     "  Will use \"NULL\" as default.")
-        row.names <- NULL
+            row.names <- NULL
+        }
     }
     ## DBI::dbDisconnect(con)
     .SQLDataFrame(
@@ -210,6 +210,21 @@ setMethod("dimnames", "SQLDataFrame", function(x)
 ###--------------------
 ### "[,SQLDataFrame"
 ###-------------------- 
+## both input & output are SQLDataFrame, by adding ridx into @indexes[[1]]
+.extractROWS_SQLDataFrame <- function(x, i)
+{
+    i <- normalizeSingleBracketSubscript(i, x)
+    ridx <- x@indexes[[1]]
+    if (is.null(ridx)) {
+        if (! identical(i, seq_len(x@dbnrows)))
+            x@indexes[[1]] <- i
+    } else {
+        x@indexes[[1]] <- x@indexes[[1]][i]
+    }
+    return(x)
+}
+setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
+
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
     ## browser()
@@ -232,22 +247,16 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
         }
         cidx <- x@indexes[[2]]
         if (is.null(cidx)) {
-            x@indexes[[2]] <- j
+            if (!identical(j, seq_along(colnames(x@tblData))))
+                x@indexes[[2]] <- j
         } else {
             x@indexes[[2]] <- x@indexes[[2]][j]
         }
         if (list_style_subsetting) 
             return(x)
     }
-    if (!missing(i)) {
-        i <- normalizeSingleBracketSubscript(i, x)
-        ridx <- x@indexes[[1]]
-        if (is.null(ridx)) {
-            x@indexes[[1]] <- i
-        } else {
-            x@indexes[[1]] <- x@indexes[[1]][i]
-        }
-    }
+    if (!missing(i))
+        x <- extractROWS(x, i)
     if (missing(drop)) 
         drop <- ncol(x) == 1L
     if (drop) {
@@ -279,16 +288,8 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     ## selectMethod("getListElement", "list") <- "simpleList"
     if (is.na(i2))
         return(NULL)
-    tblData <- x@tblData
-    ridx <- x@indexes[[1]]
-    if (!is.null(ridx))
-        tblData <- extractROWS(x, ridx)
-    cidx <- x@indexes[[2]]
-    if (is.null(cidx)) {
-        res <- tblData %>% pull(i2)
-    } else {
-        res <- tblData %>% select(cidx) %>% pull(i2)
-    }
+    tblData <- .extract_tbl_from_SQLDataFrame(x)
+    res <- tblData %>% pull(i2)
     return(res)
 })
 
