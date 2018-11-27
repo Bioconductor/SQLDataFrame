@@ -1,13 +1,14 @@
 ## TODO: 
-- ?? validity check: dbtable check not needed? Already checked in
-  constructor:```con <- DBI::dbConnect(RSQLite::SQLite(), dbname =
-  dbname); tbl <- con %>% tbl(dbtable)```
+- `extractCOLS,SQLDataFrame`? 
+- think about the "dbkey" slot... needed for all database table? must
+  be unique identifier for all rows...
 - `rbind,SQLDataFrame`? Maybe not, now one `SQLDataFrame` only
   corresponds to just one `tbl_dbi` object... Will there be any need
   for rbinding data from different database table? 
 - realization methods: as.data.frame(), as(,"DataFrame")? 
-- think about the "dbkey" slot... needed for all database table? must
-  be unique identifier for all rows...
+- inst/test.db? only keep "colDatal" and rename as "colData"?? update
+  testthat, examples...
+
 
 ## DONE
 - define a new class, SQLDataFrame, DO NOT extend `DataFrame`, save
@@ -26,6 +27,7 @@
 - renamed the `SQLDataFrame@rownames` slot into `dbrownames`.
 
 **validity check**
+- validity check for `dbtable()` name. 
 - validity check for the length of `@indexes` slot.
 
 **constructor**
@@ -38,9 +40,17 @@
   `colnames()` to reflect the `@indexes` slot.
 
 **show**
+- add utility function `.extract_tbl_from_SQLDataFrame()` to return
+  `tbl_dbi` object with row/col filter/selection from `@indexes`.
+- **???** add utility function `.extract_tbl_rows_by_key()` to extract
+  certain rows by key. Need to rewrite, by removing the call of
+  `dbkey(x)`.
 - update `show,SQLDataFrame` to reflect the row/col indexes.
 
+
 **[, [[**
+- add `extractROWS,SQLDataFrame`, with both input and output to be
+  `SQLDataFrame` object.
 - define `[[,SQLDataFrame` to return `SQLDataFrame` object. Only for
   single column extraction and do realize automatically. (works like
   "drop=TRUE")
