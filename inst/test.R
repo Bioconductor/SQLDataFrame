@@ -25,6 +25,7 @@ colDatal <- data.frame(sampleID = letters,
                       Treatment=rep(c("ChIP", "Input"), 13),
                       ages = sample(20:40, 26, replace=T))
 
+library(DBI)
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
 DBI::dbListTables(con)
 dbWriteTable(con, "colData", colData)
@@ -64,3 +65,17 @@ cold.db %>% mutate(rowID = row_number())
 ## Error: Window function `row_number()` is not supported by this database
 
 
+## now have b,
+
+b[1:2]
+b[2:3]
+b[c(1,3)]
+b[1]  ## works
+b[2]
+b[3]
+b[,2]
+b[,2, drop=FALSE]
+b[1:5, ]
+b[1:5, 2:3]
+b[1:100, ]  ## expect_error(, "subscript contains out-of-bounds indices")
+b[, 4]  ## expect_error(, "subscript contains out-of-bounds indices")

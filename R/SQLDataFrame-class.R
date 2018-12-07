@@ -6,11 +6,11 @@ setOldClass("tbl_dbi")
     slots = c(
         dbtable = "character",
         dbkey = "character",
-        dbrownames = "character_OR_NULL",
-        ## colnames = "character", ## _OR_NULL",
         dbnrows = "integer",
+        dbrownames = "character_OR_NULL",
         tblData = "tbl_dbi",
-        indexes = "list"
+        indexes = "list",
+        includeKey = "logical"
         ## elementType = "character",
         ## elementMetadata = "DataTable_OR_NULL",
         ## metadata = "list"
@@ -90,9 +90,10 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         dbtable = dbtable,
         dbkey = dbkey,
         dbnrows = dbnrows,
+        dbrownames = row.names,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
-        dbrownames = row.names
+        includeKey = TRUE
     )
 }
 
@@ -128,6 +129,58 @@ setValidity("SQLDataFrame", .validity_SQLDataFrame)
 ## accessor
 ###-------------
 
+#' @exportMethod dim nrow ncol length colnames
+setMethod("nrow", "SQLDataFrame", function(x)
+{
+    ridx <- x@indexes[[1]]
+    if (is.null(ridx)) {
+        nr <- x@dbnrows
+    } else {
+        nr <- length(ridx)
+    }
+    return(nr)
+})
+setMethod("ncol", "SQLDataFrame", function(x)
+{
+    cidx <- x@indexes[[2]]
+    if (is.null(cidx)) {
+        nc <- length(x@tblData$ops$vars)
+    } else {
+        nc <- length(cidx)
+    }
+    nc <- nc - !x@includeKey
+    return(nc)
+})
+setMethod("dim", "SQLDataFrame", function(x) c(nrow(x), ncol(x)) )
+setMethod("length", "SQLDataFrame", function(x) ncol(x) )
+setMethod("colnames", "SQLDataFrame", function(x)
+{
+    cns <- colnames(x@tblData)
+    cidx <- x@indexes[[2]]
+    if (!x@includeKey) {
+        if (is.null(cidx))
+            cidx <- seq_len(ncol(x@tblData))
+        cidx <- cidx[cidx != wheredbkey(x)]
+    }
+    if (!is.null(cidx))
+        cns <- cns[cidx]
+    return(cns)
+})
+setMethod("names", "SQLDataFrame", function(x) colnames(x))
+## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
+setMethod("rownames", "SQLDataFrame", function(x)
+{
+    rns <- x@dbrownames
+    ridx <- x@indexes[[1]]
+    if (!is.null(ridx))
+        rns <- rns[ridx]
+    return(rns)
+})
+setMethod("dimnames", "SQLDataFrame", function(x)
+{
+    list(rownames(x), colnames(x))
+})
+
 setGeneric("dbname", signature = "x", function(x)
     standardGeneric("dbname"))
 
@@ -161,52 +214,6 @@ setGeneric("dbkey", signature = "x", function(x)
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
-#' @exportMethod dim nrow ncol length colnames
-setMethod("nrow", "SQLDataFrame", function(x)
-{
-    ridx <- x@indexes[[1]]
-    if (is.null(ridx)) {
-        nr <- x@dbnrows
-    } else {
-        nr <- length(ridx)
-    }
-    return(nr)
-})
-setMethod("ncol", "SQLDataFrame", function(x)
-{
-    cidx <- x@indexes[[2]]
-    if (is.null(cidx)) {
-        nc <- length(x@tblData$ops$vars)
-    } else {
-        nc <- length(cidx)
-    }
-    return(nc)
-})
-setMethod("dim", "SQLDataFrame", function(x) c(nrow(x), ncol(x)) )
-setMethod("length", "SQLDataFrame", function(x) ncol(x) )
-setMethod("colnames", "SQLDataFrame", function(x)
-{
-    cns <- colnames(x@tblData)
-    cidx <- x@indexes[[2]]
-    if(!is.null(cidx))
-        cns <- cns[cidx]
-    return(cns)
-})
-setMethod("names", "SQLDataFrame", function(x) colnames(x))
-## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
-setMethod("rownames", "SQLDataFrame", function(x)
-{
-    rns <- x@dbrownames
-    ridx <- x@indexes[[1]]
-    if (!is.null(ridx))
-        rns <- rns[ridx]
-    return(rns)
-})
-setMethod("dimnames", "SQLDataFrame", function(x)
-{
-    list(rownames(x), colnames(x))
-})
-
 ###--------------------
 ### "[,SQLDataFrame"
 ###-------------------- 
@@ -225,6 +232,24 @@ setMethod("dimnames", "SQLDataFrame", function(x)
 }
 setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
+.extractCOLS_SQLDataFrame <- function(x, j)
+{
+    xstub <- setNames(seq_along(x), names(x))
+    j <- normalizeSingleBracketSubscript(j, xstub)
+    if (!wheredbkey(x) %in% j) {
+        j <- sort(c(j, wheredbkey(x)))
+        x@includeKey <- FALSE
+    }
+    cidx <- x@indexes[[2]]
+    if (is.null(cidx)) {
+        if (!identical(j, seq_along(colnames(x@tblData))))
+            x@indexes[[2]] <- j
+    } else {
+            x@indexes[[2]] <- x@indexes[[2]][j]
+    }
+    return(x)
+}
+
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
     ## browser()
@@ -241,17 +266,8 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                 return(x)
             j <- i
         }
-        if (!is(j, "IntegerRanges")) {
-            xstub <- setNames(seq_along(x), names(x))
-            j <- normalizeSingleBracketSubscript(j, xstub)
-        }
-        cidx <- x@indexes[[2]]
-        if (is.null(cidx)) {
-            if (!identical(j, seq_along(colnames(x@tblData))))
-                x@indexes[[2]] <- j
-        } else {
-            x@indexes[[2]] <- x@indexes[[2]][j]
-        }
+        if (!is(j, "IntegerRanges"))
+            x <- .extractCOLS_SQLDataFrame(x, j)
         if (list_style_subsetting) 
             return(x)
     }
@@ -302,8 +318,8 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #' @import S4Vectors
 
 .extract_tbl_rows_by_key <- function(x, key, i)
-    ## FIXME: requires a dbkey() for now. Need a work-around. 
 {
+    ## always require a dbkey()
     keys <- pull(x, grep(key, colnames(x)))
     expr <- lazyeval::interp(quote(x %in% y), x = as.name(key),
                              y = keys[i])
@@ -312,7 +328,6 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 }
 
 .extract_tbl_from_SQLDataFrame <- function(x)
-    ## always keep the dbkey() column? add a tag? 
 {
     ridx <- x@indexes[[1]]
     cidx <- x@indexes[[2]]
@@ -320,18 +335,21 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
     if (!is.null(cidx))
-        tbl <- tbl %>% select(colnames(x))
+        tbl <- tbl %>% select(cidx)
     return(tbl)
 }
 
 .printROWS <- function(x, index){
     tbl <- .extract_tbl_from_SQLDataFrame(x)
     i <- normalizeSingleBracketSubscript(index, x)
-    tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)  ## requires a key col here...
+    tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
-    out <- as.matrix(format(
+    if (!x@includeKey)
+        out.tbl <- out.tbl %>% select(-wheredbkey(x))
+    out.key <- tbl %>% pull(wheredbkey(x))
+    out.other <- as.matrix(format(
         as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
-    ## could add unname(as.matrix()) to remove column names here. 
+    out <- unname(cbind(out.key, rep("|", length(i)), out.other))
     return(out)
 }
 
@@ -346,7 +364,7 @@ setMethod("show", "SQLDataFrame", function (object)
     cat(class(object), " with ", nr, ifelse(nr == 1, " row and ", 
         " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
         sep = "")
-    if (nr > 0 && nc > 0) {
+    if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column. 
         nms <- rownames(object)
         if (nr <= (nhead + ntail + 1L)) {
             out <- .printROWS(object, seq_len(nr))
@@ -355,7 +373,7 @@ setMethod("show", "SQLDataFrame", function (object)
         }
         else {
             out <- rbind(.printROWS(object, seq_len(nhead)),
-                         rep.int("...", nc),
+                         rep.int("...", nc+2),
                          .printROWS(object, tail(seq_len(nr), ntail)))
             rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
@@ -365,7 +383,9 @@ setMethod("show", "SQLDataFrame", function (object)
             { paste0("<", classNameForDisplay(x)[1], ">") }),
             use.names = FALSE), nrow = 1,
             dimnames = list("", colnames(object)))
-        out <- rbind(classinfo, out)
+        keyclass <- paste0("<", classNameForDisplay(b@tblData %>% pull(wheredbkey(b))), ">")
+        classinfo_key <- matrix(c(keyclass, "|"), nrow = 1, dimnames = list("", c("dbkey", "")))
+        out <- rbind(cbind(classinfo_key, classinfo), out)
         print(out, quote = FALSE, right = TRUE)
     }
 })

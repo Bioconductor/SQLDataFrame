@@ -1,28 +1,7 @@
 ## TODO: 
 
-- add additional slot `@includeKey = TRUE` by default. 
-- `dbkey()` returns key column name. `wheredbkey()` returns the
-  positions of key column e.g., `match(dbkey(),
-  colnames(SQLDataFrame))`.
-- "[,SQLDataFrame" always keep key column in @indexes[[2]]. 
-  - save match(dbkey, colnames(object))
-  - `colnames(SQLDataFrame)` still shows original colnames. 
-  - `[i,j]`, "j" should correspond to the original col orders. 
-  - update `@includeKey` if `j` doesn't include `which(key)`.
-- "show, SQLDataFrame" Always show key column as first column. e.g.,
-  "key | original columns...". **key column save once, show twice!**
-  - `show`(don't show) key column after `|` if `@includeKey` is
-    TRUE(FALSE).
-  - `.extract_tbl_from_SQLDataFrame` will always have key col in
-  returned tbl. (no work needed)
-  - `.extract_tbl_rows_by_key`, (no work)
-  - `.printROWS`, print "key | otherCol1, otherCol2, ..."
-
 - remove "rownames", from constructor/accessor/...
-
-- to always have key() column available, could be used for selecting
-  rows, but works like an attribute, not an explicit column, do not
-  show. See `rowRanges` class.    
+-  show. See `rowRanges` class.
   thoughts: use "key" column as the major column, all others as meta
   columns? or vice versa. How to do this under `tbl_dbi`? 
 - realization methods: as.data.frame(), as(,"DataFrame")? 
@@ -44,6 +23,36 @@
 
 
 ## DONE
+
+### always keep key() column, show as first column. 
+- add additional slot `@includeKey = TRUE` by default.
+- `dbkey()` returns key column name. `wheredbkey()` returns the
+  positions of key column e.g., `match(dbkey(),
+  colnames(SQLDataFrame))`. 
+- update `colnames(SQLDataFrame)`, check if `@includeKey`.
+- update `ncol(x)`, if `!x@includeKey`, return `nc-1`. 
+
+- "[,SQLDataFrame" always keep key column in @indexes[[2]]. 
+  - if `! wheredbkey(x) %in% j`: 
+	- update `@indexes[[2]]` by adding `wheredbkey(x)`.
+	- update `@includeKey` as FALSE. 
+  - `[i,j]`, "j" should correspond to the original col orders. 
+
+- "show, SQLDataFrame" Always show key column as first column. e.g.,
+  "key | original columns...". **key column save once, show twice!**
+  - `show`(don't show) key column after `|` if `@includeKey` is
+    TRUE(FALSE). 
+  - `.extract_tbl_from_SQLDataFrame` will always have key col in
+  returned tbl. (no work needed)
+  - `.extract_tbl_rows_by_key`, (no work)
+  - `.printROWS`, print "key | original columns... ". check
+    `@includeKey(x)` to see if print the key column after `|`.
+  - `[j] list_style_subsetting` returns `SQLDataFrame`. show doesn't
+    need change.
+  - `[, j] single column` returns realized by default
+    `drop=TRUE`. (no change need)
+
+### Initial 
 - define a new class, SQLDataFrame, DO NOT extend `DataFrame`, save
   `tbl_dbi` object as one separate slot.
 - define accessors and basic methods: dbname, dbtable, dbkey,
