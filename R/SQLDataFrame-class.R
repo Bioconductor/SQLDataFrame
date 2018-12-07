@@ -293,6 +293,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     return(res)
 })
 
+setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ###--------------
 ### show method
 ###--------------
@@ -301,6 +302,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 #' @import S4Vectors
 
 .extract_tbl_rows_by_key <- function(x, key, i)
+    ## FIXME: requires a dbkey() for now. Need a work-around. 
 {
     keys <- pull(x, grep(key, colnames(x)))
     expr <- lazyeval::interp(quote(x %in% y), x = as.name(key),
@@ -310,6 +312,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 }
 
 .extract_tbl_from_SQLDataFrame <- function(x)
+    ## always keep the dbkey() column? add a tag? 
 {
     ridx <- x@indexes[[1]]
     cidx <- x@indexes[[2]]
@@ -324,7 +327,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 .printROWS <- function(x, index){
     tbl <- .extract_tbl_from_SQLDataFrame(x)
     i <- normalizeSingleBracketSubscript(index, x)
-    tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
+    tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)  ## requires a key col here...
     out.tbl <- tbl %>% collect()
     out <- as.matrix(format(
         as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
