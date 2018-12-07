@@ -1,0 +1,191 @@
+---
+title: "SQLDataFrame: Representation of database table in DataFrame metaphor"
+author:
+- name: Qian Liu
+  affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
+- name: Martin Morgan
+  affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
+date: "last compiled: `r Sys.Date()`"
+output:
+    BiocStyle::html_document:
+        toc: true
+        toc_float: true
+package: SQLDataFrame
+vignette: >
+  %\VignetteIndexEntry{SQLDataFrame: Representation of database table in DataFrame metaphor}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+date: "last edit: 11/30/2018"
+
+# Introduction
+
+
+Theoretically, users could choose to use different database backend
+when doing the `SQLDataFrame` constructor. Five commonly used
+backends are:
+
+- _RMySQL_: connects to MySQL and MariaDB
+- _RPostgreSQL_: connects to Postgres and Redshift.
+- **RSQLite**: embeds a SQLite database. (now used as default)
+- _odbc_ connects to many commercial databases via the open database
+  connectivity protocol.
+- _bigrquery_ connects to Google’s BigQuery.
+
+[dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
+
+# Installation
+
+1. Download the package. 
+
+```{r getPackage, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("SQLDataFrame")
+```
+The development version is also available to download from Github. 
+```{r getDevel, eval=FALSE}
+BiocManager::install("Liubuntu/SQLDataFrame")
+```
+
+2. Load the package into R session.
+```{r Load, message=FALSE}
+library(SQLDataFrame)
+```
+
+# SQLDataFrame
+## SQLDataFrame constructor
+To construct a `SQLDataFrame` object, 3 arguments are needed:
+`dbname`, `dbtable` and `dbkey`. The `dbname` is the file path to the
+database that is saved on-disk. `dbtable` argument specifies the
+database table name that is going to be represented in `SQLDataFrame`
+object. If only one table is available in the specified database name,
+this argument could be left blank. The `dbkey` argument is used to
+specify the column name in the table which could uniquely identify all
+the data observations (rows).  
+The `show` method for `SQLDataFrame` has consistent format with the 
+`DataFrame` object.
+
+
+```{r constructor}
+test.db <- system.file("inst/extdata/test.db", package = "SQLDataFrame")
+obj <- SQLDataFrame(
+    dbname = test.db, dbtable = "colDatal", dbkey = "sampleID")
+obj
+```
+
+## SQLDataFrame methods
+### Slot accessors
+
+To make the `SQLDataFrame` object as light and compact as possible,
+there are only 6 slots contained in the object. We can obtain specific
+slot with the corresponding slot accessor functions.
+```{r}
+slotNames(obj)
+dbtable(obj)
+dbkey(obj)
+colnames(obj)
+nrow(obj)
+```
+The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
+table, which is a light-weight representation of the database table in
+_R_. The `dbrownames` and `dbnrow` slot saves the row information for
+the original database table. When subsetting `SQLDataFrame` objects
+using `[`, these 3 slots remains unchanged, but the `nrow()`,
+`rownames()` and `show()` method will reflect the data subsetting.
+
+```{r}
+obj@tblData
+obj@dbrownames
+obj@dbnrows
+```
+
+The `dbname()` method returns the absolute path for the database. It
+was extracted from the `obj@tblData` instead of being a stand-alone
+slot.
+
+```{r}
+dbname(obj)
+```
+Besides, many more useful methods are defined to get general
+information from `SQLDataFrame` object. e.g., we can use `dimnames()`
+to return the row/colnames of the data. It returns an unnamed list,
+with the first element being rownames (could also use `rownames()`
+method), and 2nd element being colnames (could also use `colnames()`
+method). Could also use `rownames()/colnames()` to extract the
+specific dimension names. `dim()` returns the dimension of the
+database table. Could also use `nrow()/ncol()` to extract a specific
+dimension. `length()` method is also defined which works same as
+`ncol()`.   
+By default, the `rownames(SQLDataFrame)` would be `NULL` as row names
+are normally undesirable when data is large. But people could add it
+using the constructor`SQLDataFrame(row.names=)`. 
+
+```{r methods}
+dim(obj)
+identical(dim(obj), c(nrow(obj), ncol(obj)))
+dimnames(obj)
+length(obj)
+```
+
+### `[[` subsetting
+Behaves similarly to `[[,DataFrame` and returns a realized vector of
+values from a single column. `$,SQLDataFrame` is also defined to
+conveniently extract column values. 
+
+```{r}
+obj[[1]]
+obj[["ages"]]
+identical(obj[[3]], obj[["ages"]])
+obj$ages
+```
+
+### `[` subsetting
+`SQLDataFrame` instances can be subsetted in a similar way of
+`DataFrame` following the usual _R_ conventions, with numeric,
+character or logical vectors; logical vectors are recycled to the
+appropriate length.
+
+```{r, subsetting}
+obj[1:3, 1:3]
+obj[c(TRUE, FALSE), c(TRUE, FALSE)]
+obj[1:3, c("sampleID", "ages")]
+
+obj1 <- obj[1:3, 1:3]
+```
+
+List style subsetting is also allowed to extract certain columns from
+the `SQLDataFrame` object which returns `SQLDataFrame` by default.  
+```{r}
+obj[1]
+obj[c("sampleID", "ages")]
+```
+When subsetting using `[` for a single column, the default is to
+return the realized value, unless user specify `drop=FALSE` explicitly. 
+```{r}
+obj[, 1]
+obj[, 1, drop=FALSE]
+```
+
+### Numeric calculation / Data manipulation (todo)
+
+Numeric calculations could be evaluated on `SQLDataFrame` objects.
+
+```{r, numeric, eval=FALSE}
+sum(obj@ages)
+```
+
+# SessionInfo()
+
+```{r}
+sessionInfo()
+```
+
+

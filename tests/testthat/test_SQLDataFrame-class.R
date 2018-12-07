@@ -1,6 +1,6 @@
 context("SQLDataFrame-class")
 
-test.db <- system.file("inst/test.db", package = "SQLDataFrame")
+test.db <- system.file("inst/extdata/test.db", package = "SQLDataFrame")
 
 test_that("SQLDataFrame constructor works",
 {
