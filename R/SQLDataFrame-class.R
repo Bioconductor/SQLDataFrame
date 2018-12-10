@@ -79,21 +79,11 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
             cidx <- match(col.names, cns)
         }
     }
-    ## row.names
-    ## if (!is.null(row.names)) {
-    ##     if (length(row.names) != dbnrows) {
-    ##         warning("the length of \"row.names\" is not consistent",
-    ##                 " with the dimensions of the database table. \n",
-    ##                 "  Will use \"NULL\" as default.")
-    ##         row.names <- NULL
-    ##     }
-    ## }
     ## DBI::dbDisconnect(con)
     .SQLDataFrame(
         dbtable = dbtable,
         dbkey = dbkey,
         dbnrows = dbnrows,
-        ## dbrownames = row.names,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
         includeKey = TRUE
