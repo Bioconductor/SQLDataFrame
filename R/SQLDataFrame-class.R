@@ -1,5 +1,9 @@
+#' SQLDataFrame class
+#' @name SQLDataFrame
+#' @exportClass SQLDataFrame
 #' @importFrom methods setOldClass
-#' 
+#' @aliases SQLDataFrame-class
+#' @description NULL
 setOldClass("tbl_dbi")
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
@@ -121,7 +125,7 @@ setValidity("SQLDataFrame", .validity_SQLDataFrame)
 ## accessor
 ###-------------
 
-#' @exportMethod dim nrow ncol length colnames
+#' @exportMethod dim nrow ncol length colnames names dimnames
 setMethod("nrow", "SQLDataFrame", function(x)
 {
     ridx <- x@indexes[[1]]
@@ -161,18 +165,8 @@ setMethod("colnames", "SQLDataFrame", function(x)
 setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
 
-## setMethod("rownames", "SQLDataFrame", function(x)
-## {
-##     rns <- x@dbrownames
-##     ridx <- x@indexes[[1]]
-##     if (!is.null(ridx))
-##         rns <- rns[ridx]
-##     return(rns)
-## })
-
 setMethod("dimnames", "SQLDataFrame", function(x)
 {
-    ## list(rownames(x), colnames(x))
     list(NULL, colnames(x))
 })
 
@@ -194,8 +188,6 @@ setGeneric("dbtable", signature = "x", function(x)
 
 #' @rdname SQLDataFrame-class
 #' @aliases dbtable dbtable,SQLDataFrame
-#' @description the \code{dbtable} slot getter and setter for
-#'     \code{SQLDataFrame} object.
 #' @export
 setMethod("dbtable", "SQLDataFrame", function(x) x@dbtable)
 
@@ -204,8 +196,6 @@ setGeneric("dbkey", signature = "x", function(x)
 
 #' @rdname SQLDataFrame-class
 #' @aliases key key,SQLDataFrame
-#' @description the \code{key} slot getter and setter for
-#'     \code{SQLDataFrame} object.
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
@@ -252,6 +242,8 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     return(out)
 }
 
+#' @rdname SQLDataFrame-class
+#' @aliases show show,SQLDataFrame-methods
 #' @export
 setMethod("show", "SQLDataFrame", function (object) 
 {
@@ -282,8 +274,10 @@ setMethod("show", "SQLDataFrame", function (object)
             { paste0("<", classNameForDisplay(x)[1], ">") }),
             use.names = FALSE), nrow = 1,
             dimnames = list("", colnames(object)))
-        keyclass <- paste0("<", classNameForDisplay(b@tblData %>% pull(.wheredbkey(b))), ">")
-        classinfo_key <- matrix(c(keyclass, "|"), nrow = 1, dimnames = list("", c("dbkey", "")))
+        keyclass <- paste0(
+            "<", classNameForDisplay(b@tblData %>% pull(.wheredbkey(b))), ">")
+        classinfo_key <- matrix(
+            c(keyclass, "|"), nrow = 1, dimnames = list("", c("dbkey", "")))
         out <- rbind(cbind(classinfo_key, classinfo), out)
         print(out, quote = FALSE, right = TRUE)
     }
@@ -293,6 +287,8 @@ setMethod("show", "SQLDataFrame", function (object)
 ### coercion
 ###--------------
 
+#' @rdname SQLDataFrame-class
+#' @aliases coerce,SQLDataFrame,data.frame-method
 #' @export
 setMethod("as.data.frame", "SQLDataFrame",
           function(x, row.names = NULL, optional = FALSE, ...)
@@ -304,13 +300,18 @@ setMethod("as.data.frame", "SQLDataFrame",
     as.data.frame(out.tbl)
 })
 
-## #' @rdname SQLDataFrame-class
-## #' @aliases coerce,SQLDataFrame,DataFrame-method
-## #' @param to the class of object to be returned by coercion.
-## #' @param strict Logical. Whether to force return a \code{DataFrame}. 
-## #' @export
-## setMethod("coerce", c("SQLDataFrame", "DataFrame"),
-##           function(from, to="DataFrame", strict = TRUE))
+#' @name coerce
+#' @rdname SQLDataFrame-class
+#' @aliases coerce,SQLDataFrame,DataFrame-method
+#' @description the coercion method between \code{SQLDataFrame} and
+#'     \code{DataFrame} objects.
+#' @param from the \code{SQLDataFrame} object to be coerced.
+#' @export
+#' 
+setAs("SQLDataFrame", "DataFrame", function(from)
+{
+    as(as.data.frame(from), "DataFrame")
+})
 
 ## #' @name coerce
 ## #' @rdname SQLDataFrame-class

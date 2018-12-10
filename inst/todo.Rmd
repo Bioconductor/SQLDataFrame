@@ -1,14 +1,15 @@
 ## TODO: 
 
+- coercion of `DataFrame/data.frame/ANY` into `SQLDataFrame`. 
+- write out subsetted SQL table? 
+
 -  show. See `rowRanges` class.
   thoughts: use "key" column as the major column, all others as meta
   columns? or vice versa. How to do this under `tbl_dbi`? 
-- realization methods: as.data.frame(), as(,"DataFrame")? 
 
 - numeric calculations, e.g., sum(), max(), min, row/colSums,
   row/colMeans, row/colMin, row/colMaxs, apply, ... need to define.
 
-- `extractCOLS,SQLDataFrame`? 
 - think about the "dbkey" slot... needed for all database table? must
   be unique identifier for all rows...
 - left_join, reordering... `rbind,SQLDataFrame`? Maybe not, now one
@@ -17,14 +18,17 @@
 - inst/test.db? only keep "colDatal" and rename as "colData"?? update
   testthat, examples...
 
-- write out subsetted SQL table? 
 
+
+## DOING
+- `extractCOLS,SQLDataFrame`, add generic in `S4Vectors`, update
+  `DelayedDataFrame` and `SQLDataFrame`...
 
 ## DONE
 
 - remove "rownames", from slots/constructor/accessor/, test functions..
 - add head(), tail() methods
-- 
+- realization methods: as.data.frame(), as(,"DataFrame")
 
 ### always keep key() column, show as first column. 
 - add additional slot `@includeKey = TRUE` by default.
@@ -101,3 +105,5 @@
 - define `$,SQLDataFrame` method, which calls `[[,SQLDataFrame`. 
 - define `[,SQLDataFrame` to return `SQLDataFrame` object by
   adding/updating `@indexes` slot.
+
+
