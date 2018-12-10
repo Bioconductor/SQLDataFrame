@@ -159,3 +159,12 @@ test_that("'.extract_tbl_rows_by_key' works",
     expect_identical(nrow, 5L)
     expect_identical(colnames(res), colnames(obj))
 })
+
+test_that("'as.data.frame' works",
+{
+    obj1 <- obj[, 2:3]
+    exp <- data.frame(
+        Treatment = obj1$Treatment, ages = obj1$ages,
+        stringsAsFactors = FALSE)
+    expect_identical(exp, as.data.frame(obj1))
+})

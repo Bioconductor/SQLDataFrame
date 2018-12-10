@@ -103,13 +103,6 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
 ## to save listData? save the whole tbl.db? or in columns?
 ## "show,DataFrame" calls `lapply()`.
 
-.available_tbls <- function(x)
-{
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = x)
-    tbls <- DBI::dbListTables(con)
-    return(tbls)
-}
-
 .validity_SQLDataFrame <- function(object)
 {
     ## dbtable match
@@ -159,7 +152,7 @@ setMethod("colnames", "SQLDataFrame", function(x)
     if (!x@includeKey) {
         if (is.null(cidx))
             cidx <- seq_len(ncol(x@tblData))
-        cidx <- cidx[cidx != wheredbkey(x)]
+        cidx <- cidx[cidx != .wheredbkey(x)]
     }
     if (!is.null(cidx))
         cns <- cns[cidx]
@@ -216,126 +209,6 @@ setGeneric("dbkey", signature = "x", function(x)
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
-## mostly copied from "head,DataTable"
-#' @export
-setMethod("head", "SQLDataFrame", function(x, n=6L)
-{
-    stopifnot(length(n) == 1L)
-    n <- if (n < 0L) 
-             max(nrow(x) + n, 0L)
-         else min(n, nrow(x))
-    x[seq_len(n), , drop = FALSE]
-})
-
-## mostly copied from "tail,DataTable"
-#' @export
-setMethod("tail", "SQLDataFrame", function(x, n=6L)
-{
-    stopifnot(length(n) == 1L)
-    nrx <- nrow(x)
-    n <- if (n < 0L) 
-             max(nrx + n, 0L)
-         else min(n, nrx)
-    sel <- as.integer(seq.int(to = nrx, length.out = n))
-    ans <- x[sel, , drop = FALSE]
-    ans    
-})
-
-###--------------------
-### "[,SQLDataFrame"
-###-------------------- 
-.extractROWS_SQLDataFrame <- function(x, i)
-{
-    i <- normalizeSingleBracketSubscript(i, x)
-    ridx <- x@indexes[[1]]
-    if (is.null(ridx)) {
-        if (! identical(i, seq_len(x@dbnrows)))
-            x@indexes[[1]] <- i
-    } else {
-        x@indexes[[1]] <- x@indexes[[1]][i]
-    }
-    return(x)
-}
-setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
-
-.extractCOLS_SQLDataFrame <- function(x, j)
-{
-    xstub <- setNames(seq_along(x), names(x))
-    j <- normalizeSingleBracketSubscript(j, xstub)
-    if (!wheredbkey(x) %in% j) {
-        j <- sort(c(j, wheredbkey(x)))
-        x@includeKey <- FALSE
-    }
-    cidx <- x@indexes[[2]]
-    if (is.null(cidx)) {
-        if (!identical(j, seq_along(colnames(x@tblData))))
-            x@indexes[[2]] <- j
-    } else {
-            x@indexes[[2]] <- x@indexes[[2]][j]
-    }
-    return(x)
-}
-
-setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
-{
-    ## browser()
-    if (!isTRUEorFALSE(drop)) 
-        stop("'drop' must be TRUE or FALSE")
-    if (length(list(...)) > 0L) 
-        warning("parameters in '...' not supported")
-    list_style_subsetting <- (nargs() - !missing(drop)) < 3L
-    if (list_style_subsetting || !missing(j)) {
-        if (list_style_subsetting) {
-            if (!missing(drop)) 
-                warning("'drop' argument ignored by list-style subsetting")
-            if (missing(i)) 
-                return(x)
-            j <- i
-        }
-        if (!is(j, "IntegerRanges"))
-            x <- .extractCOLS_SQLDataFrame(x, j)
-        if (list_style_subsetting) 
-            return(x)
-    }
-    if (!missing(i))
-        x <- extractROWS(x, i)
-    if (missing(drop)) 
-        drop <- ncol(x) == 1L
-    if (drop) {
-        if (ncol(x) == 1L) 
-            return(x[[1L]])
-        if (nrow(x) == 1L) 
-            return(as(x, "list"))
-    }
-    x  
-})
-
-###--------------------
-### "[[,SQLDataFrame" (do realization for single column only)
-###--------------------
-setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
-{
-    ## browser()
-    dotArgs <- list(...)
-    if (length(dotArgs) > 0L) 
-        dotArgs <- dotArgs[names(dotArgs) != "exact"]
-    if (!missing(j) || length(dotArgs) > 0L) 
-        stop("incorrect number of subscripts")
-    i2 <- normalizeDoubleBracketSubscript(
-        i, x,
-        exact = TRUE,  ## default
-        allow.NA = TRUE,
-        allow.nomatch = TRUE)
-    ## "allow.NA" and "allow.nomatch" is consistent with
-    ## selectMethod("getListElement", "list") <- "simpleList"
-    if (is.na(i2))
-        return(NULL)
-    tblData <- .extract_tbl_from_SQLDataFrame(x)
-    res <- tblData %>% pull(i2)
-    return(res)
-})
-
-setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ###--------------
 ### show method
 ###--------------
@@ -371,8 +244,8 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
     tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
     if (!x@includeKey)
-        out.tbl <- out.tbl %>% select(-wheredbkey(x))
-    out.key <- tbl %>% pull(wheredbkey(x))
+        out.tbl <- out.tbl %>% select(-.wheredbkey(x))
+    out.key <- tbl %>% pull(.wheredbkey(x))
     out.other <- as.matrix(format(
         as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
     out <- unname(cbind(out.key, rep("|", length(i)), out.other))
@@ -409,14 +282,41 @@ setMethod("show", "SQLDataFrame", function (object)
             { paste0("<", classNameForDisplay(x)[1], ">") }),
             use.names = FALSE), nrow = 1,
             dimnames = list("", colnames(object)))
-        keyclass <- paste0("<", classNameForDisplay(b@tblData %>% pull(wheredbkey(b))), ">")
+        keyclass <- paste0("<", classNameForDisplay(b@tblData %>% pull(.wheredbkey(b))), ">")
         classinfo_key <- matrix(c(keyclass, "|"), nrow = 1, dimnames = list("", c("dbkey", "")))
         out <- rbind(cbind(classinfo_key, classinfo), out)
         print(out, quote = FALSE, right = TRUE)
     }
 })
 
+###--------------
+### coercion
+###--------------
 
-###--------------
-### realization? (as.data.frame(x), as(x, "DataFrame"): use %>% collect() )
-###--------------
+#' @export
+setMethod("as.data.frame", "SQLDataFrame",
+          function(x, row.names = NULL, optional = FALSE, ...)
+{
+    tbl <- .extract_tbl_from_SQLDataFrame(x)
+    out.tbl <- tbl %>% collect()
+    if (! x@includeKey)
+        out.tbl <- out.tbl %>% select(-.wheredbkey(x))
+    as.data.frame(out.tbl)
+})
+
+## #' @rdname SQLDataFrame-class
+## #' @aliases coerce,SQLDataFrame,DataFrame-method
+## #' @param to the class of object to be returned by coercion.
+## #' @param strict Logical. Whether to force return a \code{DataFrame}. 
+## #' @export
+## setMethod("coerce", c("SQLDataFrame", "DataFrame"),
+##           function(from, to="DataFrame", strict = TRUE))
+
+## #' @name coerce
+## #' @rdname SQLDataFrame-class
+## #' @aliases coerce,ANY,SQLDataFrame-method
+## #' @export
+## setAs("ANY", "SQLDataFrame", function(from){
+##     df <- as(from, "DataFrame")
+##     as(df, "SQLDataFrame")
+## })
