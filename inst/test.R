@@ -37,7 +37,7 @@ coldl.db <- con %>% tbl("colDatal")
 
 ##
 a <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colData", dbkey = "sampleID")
-b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colDatal", dbkey = "sampleID", row.names = letters)
+b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colDatal", dbkey = "sampleID")
 
 colData %>% as.tibble() %>% dplyr::slice(1L)
 ## # A tibble: 1 x 3

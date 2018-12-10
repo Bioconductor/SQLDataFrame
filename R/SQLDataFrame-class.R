@@ -7,7 +7,7 @@ setOldClass("tbl_dbi")
         dbtable = "character",
         dbkey = "character",
         dbnrows = "integer",
-        dbrownames = "character_OR_NULL",
+        ## dbrownames = "character_OR_NULL",
         tblData = "tbl_dbi",
         indexes = "list",
         includeKey = "logical"
@@ -29,8 +29,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                                                  ## inside the
                                                  ## database.
                          dbkey = character(0),
-                         row.names = NULL, ## by default, read in all
-                                           ## rows
+                         ## row.names = NULL, ## by default, read in all rows
                          col.names = NULL ## used to specify certain
                                           ## columns to read
                          ){
@@ -77,20 +76,20 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         }
     }
     ## row.names
-    if (!is.null(row.names)) {
-        if (length(row.names) != dbnrows) {
-            warning("the length of \"row.names\" is not consistent",
-                    " with the dimensions of the database table. \n",
-                    "  Will use \"NULL\" as default.")
-            row.names <- NULL
-        }
-    }
+    ## if (!is.null(row.names)) {
+    ##     if (length(row.names) != dbnrows) {
+    ##         warning("the length of \"row.names\" is not consistent",
+    ##                 " with the dimensions of the database table. \n",
+    ##                 "  Will use \"NULL\" as default.")
+    ##         row.names <- NULL
+    ##     }
+    ## }
     ## DBI::dbDisconnect(con)
     .SQLDataFrame(
         dbtable = dbtable,
         dbkey = dbkey,
         dbnrows = dbnrows,
-        dbrownames = row.names,
+        ## dbrownames = row.names,
         tblData = tbl,
         indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
         includeKey = TRUE
@@ -168,17 +167,20 @@ setMethod("colnames", "SQLDataFrame", function(x)
 })
 setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
-setMethod("rownames", "SQLDataFrame", function(x)
-{
-    rns <- x@dbrownames
-    ridx <- x@indexes[[1]]
-    if (!is.null(ridx))
-        rns <- rns[ridx]
-    return(rns)
-})
+
+## setMethod("rownames", "SQLDataFrame", function(x)
+## {
+##     rns <- x@dbrownames
+##     ridx <- x@indexes[[1]]
+##     if (!is.null(ridx))
+##         rns <- rns[ridx]
+##     return(rns)
+## })
+
 setMethod("dimnames", "SQLDataFrame", function(x)
 {
-    list(rownames(x), colnames(x))
+    ## list(rownames(x), colnames(x))
+    list(NULL, colnames(x))
 })
 
 setGeneric("dbname", signature = "x", function(x)
@@ -365,17 +367,17 @@ setMethod("show", "SQLDataFrame", function (object)
         " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
         sep = "")
     if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column. 
-        nms <- rownames(object)
+        ## nms <- rownames(object)
         if (nr <= (nhead + ntail + 1L)) {
             out <- .printROWS(object, seq_len(nr))
-            if (!is.null(nms)) 
-                rownames(out) <- nms
+            ## if (!is.null(nms)) 
+            ##     rownames(out) <- nms
         }
         else {
             out <- rbind(.printROWS(object, seq_len(nhead)),
                          rep.int("...", nc+2),
                          .printROWS(object, tail(seq_len(nr), ntail)))
-            rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
+            ## rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
         classinfo <- matrix(unlist(lapply(
             as.data.frame(head(object@tblData %>% select(colnames(object)))),
