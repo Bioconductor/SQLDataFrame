@@ -1,12 +1,10 @@
 ## TODO: 
 
-- remove "rownames", from constructor/accessor/...
 -  show. See `rowRanges` class.
   thoughts: use "key" column as the major column, all others as meta
   columns? or vice versa. How to do this under `tbl_dbi`? 
 - realization methods: as.data.frame(), as(,"DataFrame")? 
 
-- head(), tail()... ??
 - numeric calculations, e.g., sum(), max(), min, row/colSums,
   row/colMeans, row/colMin, row/colMaxs, apply, ... need to define.
 
@@ -23,6 +21,10 @@
 
 
 ## DONE
+
+- remove "rownames", from slots/constructor/accessor/, test functions..
+- add head(), tail() methods
+- 
 
 ### always keep key() column, show as first column. 
 - add additional slot `@includeKey = TRUE` by default.

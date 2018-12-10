@@ -216,10 +216,34 @@ setGeneric("dbkey", signature = "x", function(x)
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
+## mostly copied from "head,DataTable"
+#' @export
+setMethod("head", "SQLDataFrame", function(x, n=6L)
+{
+    stopifnot(length(n) == 1L)
+    n <- if (n < 0L) 
+             max(nrow(x) + n, 0L)
+         else min(n, nrow(x))
+    x[seq_len(n), , drop = FALSE]
+})
+
+## mostly copied from "tail,DataTable"
+#' @export
+setMethod("tail", "SQLDataFrame", function(x, n=6L)
+{
+    stopifnot(length(n) == 1L)
+    nrx <- nrow(x)
+    n <- if (n < 0L) 
+             max(nrx + n, 0L)
+         else min(n, nrx)
+    sel <- as.integer(seq.int(to = nrx, length.out = n))
+    ans <- x[sel, , drop = FALSE]
+    ans    
+})
+
 ###--------------------
 ### "[,SQLDataFrame"
 ###-------------------- 
-## both input & output are SQLDataFrame, by adding ridx into @indexes[[1]]
 .extractROWS_SQLDataFrame <- function(x, i)
 {
     i <- normalizeSingleBracketSubscript(i, x)
