@@ -105,6 +105,11 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
         dotArgs <- dotArgs[names(dotArgs) != "exact"]
     if (!missing(j) || length(dotArgs) > 0L) 
         stop("incorrect number of subscripts")
+    ## extracting key col value 
+    if (is.character(i) && length(i) == 1 && i %in% dbkey(x)) {
+        res <- .extract_tbl_from_SQLDataFrame(x) %>% select(i) %>% pull()
+        return(res)
+    }
     i2 <- normalizeDoubleBracketSubscript(
         i, x,
         exact = TRUE,  ## default

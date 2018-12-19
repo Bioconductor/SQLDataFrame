@@ -8,9 +8,9 @@ obj <- SQLDataFrame(
 test_that("[[,SQLDataFrame works",
 {
     ## key values
-    ## exp <- letters
-    ## expect_identical(exp, obj[["sampleID"]])
-    ## expect_identical(exp, obj$sampleID)
+    exp <- letters
+    expect_identical(exp, obj[["sampleID"]])
+    expect_identical(exp, obj$sampleID)
 
     exp <- rep(c("ChIP", "Input"), 13)
     expect_identical(exp, obj[[1]])
