@@ -27,7 +27,7 @@ test_that("SQLDataFrame constructor argument checking",
 
 
 obj <- SQLDataFrame(
-    dbname = test.db, dbtable = "colDatal", dbkey = "sampleID")
+    dbname = test.db, dbtable = "colData", dbkey = "sampleID")
 
 test_that("SQLDataFrame constructor works",
 {
@@ -36,10 +36,10 @@ test_that("SQLDataFrame constructor works",
     exp <- c("dbtable", "dbkey", "dbnrows", "tblData", "indexes")
     expect_identical(exp, slotNames(obj))
     expect_identical(test.db, dbname(obj))
-    expect_identical("colDatal", dbtable(obj))
+    expect_identical("colData", dbtable(obj))
     expect_identical("sampleID", dbkey(obj))
     expect_identical(c(26L, 2L), dim(obj))
-    expect_identical(list(NULL, c("Treatment", "ages")),
+    expect_identical(list(NULL, c("Treatment", "Ages")),
                      dimnames(obj))
     expect_identical(2L, length(obj))
 })
@@ -58,7 +58,7 @@ test_that("'.extract_tbl_from_SQLDataFrame' works",
     expect_true(is(res, "tbl_dbi")) 
     expect_true(is.na(nrow(res)))
     expect_identical(ncol(res), 2L)
-    expect_identical(colnames(res), c("sampleID", "ages"))
+    expect_identical(colnames(res), c("sampleID", "Ages"))
 
     ## always keep key column in tblData
     obj2 <- obj[, 1, drop=FALSE]
@@ -81,7 +81,7 @@ test_that("'.extract_tbl_rows_by_key' works",
 test_that("'as.data.frame' works",
 {
     obj1 <- obj[, 2, drop=FALSE]
-    exp <- data.frame(sampleID = letters, ages = obj1$ages,
+    exp <- data.frame(sampleID = letters, Ages = obj1$Ages,
                       stringsAsFactors = FALSE)
     expect_identical(exp, as.data.frame(obj1))
 })

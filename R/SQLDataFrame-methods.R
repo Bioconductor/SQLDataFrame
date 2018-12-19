@@ -135,7 +135,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ## "normalizeSingleBracketSubscript"
 #' @export
 ## #' @examples
-## #' b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colDatal", dbkey = "sampleID") 
+## #' b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID") 
 ## #' ROWNAMES(b)
 ## #' ROWNAMES(b[c(TRUE, FALSE), ])
 #' b[letters[10:15], ]

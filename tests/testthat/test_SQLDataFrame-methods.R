@@ -2,7 +2,7 @@ context("SQLDataFrame-methods")
 
 test.db <- system.file("inst/extdata/test.db", package = "SQLDataFrame")
 obj <- SQLDataFrame(
-    dbname = test.db, dbtable = "colDatal", dbkey = "sampleID")
+    dbname = test.db, dbtable = "colData", dbkey = "sampleID")
 
 ## methods
 test_that("[[,SQLDataFrame works",
@@ -15,9 +15,9 @@ test_that("[[,SQLDataFrame works",
     exp <- rep(c("ChIP", "Input"), 13)
     expect_identical(exp, obj[[1]])
 
-    exp <- obj@tblData %>% pull(ages)
+    exp <- obj@tblData %>% pull(Ages)
     expect_identical(exp, obj[[2]])
-    expect_identical(obj[[2]], obj[["ages"]])
+    expect_identical(obj[[2]], obj[["Ages"]])
 
     expect_error(obj[[2:3]], "attempt to extract more than one element")
 })

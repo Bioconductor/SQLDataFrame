@@ -18,26 +18,25 @@ dbtable(a)
 key(a)
 
 ## example database tables
-colData <- data.frame(sampleID = letters[1:6],
-                      Treatment=rep(c("ChIP", "Input"), 3),
-                      ages = sample(25:35, 6))
-colDatal <- data.frame(sampleID = letters,
+colData <- data.frame(sampleID = letters,
                       Treatment=rep(c("ChIP", "Input"), 13),
-                      ages = sample(20:40, 26, replace=T))
+                      Ages = sample(20:40, 26, replace=T))
 
 library(DBI)
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
 DBI::dbListTables(con)
+## dbRemoveTable(con, "colDatal")
 dbWriteTable(con, "colData", colData)
-dbWriteTable(con, "colDatal", colDatal)
+
+
+
+
 ## dbDisconnect(con)
 library(dplyr)
 cold.db <- con %>% tbl("colData")
-coldl.db <- con %>% tbl("colDatal")
 
 ##
-a <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colData", dbkey = "sampleID")
-b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colDatal", dbkey = "sampleID")
+b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID")
 
 ## row subsetting with character vector (add to test_method.R)
 b[letters[10:15], ]
