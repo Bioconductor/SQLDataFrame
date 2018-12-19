@@ -13,8 +13,10 @@
   - `extractROWS`, `.extractCOLS_SQLDataFrame`.   -- done!
   - `[` subsetting, add to @indexes. only refer to the non-key columns. -- done!
   - `show` method refer to `rowRanges(airway)` for formatting.  -- done!
+
+	- use key values for row subsetting.   -- done!
   - row subsetting with numeric indexes, must realize the key column? 
-  - new example, with primary key in middle columns. 
+  - new example, with primary key in middle columns, test. 
   - new example, with 2 key columns. 
   
  

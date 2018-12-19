@@ -32,6 +32,7 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 ###-------------------- 
 .extractROWS_SQLDataFrame <- function(x, i)
 {
+    ## browser()
     i <- normalizeSingleBracketSubscript(i, x)
     ridx <- x@indexes[[1]]
     if (is.null(ridx)) {
@@ -119,3 +120,27 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 })
 
 setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
+
+
+###--------------------
+### "ROWNAMES,SQLDataFrame" 
+###--------------------
+## for primary key, so that row subsetting with character vector could
+## work. Pass to "NSBS,character", then
+## "normalizeSingleBracketSubscript"
+#' @export
+## #' @examples
+## #' b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colDatal", dbkey = "sampleID") 
+## #' ROWNAMES(b)
+## #' ROWNAMES(b[c(TRUE, FALSE), ])
+#' b[letters[10:15], ]
+setMethod("ROWNAMES", "SQLDataFrame", function(x)
+{
+    ## browser()
+    stopifnot(length(dbkey(x)) == 1L)
+    keys <- x@tblData %>% select(dbkey(x)) %>% pull()
+    ridx <- x@indexes[[1]]
+    if (!is.null(ridx))
+        keys <- keys[ridx]
+    return(keys)
+})
