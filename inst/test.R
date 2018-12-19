@@ -39,6 +39,12 @@ coldl.db <- con %>% tbl("colDatal")
 a <- SQLDataFrame(dbname = "inst/test.db", dbtable = "colData", dbkey = "sampleID")
 b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colDatal", dbkey = "sampleID")
 
+## row subsetting with character vector (add to test_method.R)
+b[letters[10:15], ]
+## col indexes corresponds to non-key-columns only. (add to test_method.R)
+b[,2]  ## return age value.
+b[,1] ## return "Treatment" value.
+
 colData %>% as.tibble() %>% dplyr::slice(1L)
 ## # A tibble: 1 x 3
 ##   sampleID Treatment  ages
