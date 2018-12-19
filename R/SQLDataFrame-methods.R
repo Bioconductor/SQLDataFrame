@@ -46,15 +46,12 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
 .extractCOLS_SQLDataFrame <- function(x, j)
 {
+    ## browser()
     xstub <- setNames(seq_along(x), names(x))
     j <- normalizeSingleBracketSubscript(j, xstub)
-    if (!.wheredbkey(x) %in% j) {
-        j <- sort(c(j, .wheredbkey(x)))
-        x@includeKey <- FALSE
-    }
     cidx <- x@indexes[[2]]
     if (is.null(cidx)) {
-        if (!identical(j, seq_along(colnames(x@tblData))))
+        if (!identical(j, seq_along(colnames(x))))
             x@indexes[[2]] <- j
     } else {
             x@indexes[[2]] <- x@indexes[[2]][j]
@@ -116,9 +113,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     ## selectMethod("getListElement", "list") <- "simpleList"
     if (is.na(i2))
         return(NULL)
-    tblData <- .extract_tbl_from_SQLDataFrame(x)
-    if (! x@includeKey)
-        tblData <- tblData %>% select(-.wheredbkey(x))
+    tblData <- .extract_tbl_from_SQLDataFrame(x) %>% select(- !!dbkey(x))
     res <- tblData %>% pull(i2)
     return(res)
 })

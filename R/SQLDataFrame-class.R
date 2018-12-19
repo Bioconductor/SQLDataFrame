@@ -13,8 +13,8 @@ setOldClass("tbl_dbi")
         dbnrows = "integer",
         ## dbrownames = "character_OR_NULL",
         tblData = "tbl_dbi",
-        indexes = "list",
-        includeKey = "logical"
+        indexes = "list"
+        ## includeKey = "logical"
         ## elementType = "character",
         ## elementMetadata = "DataTable_OR_NULL",
         ## metadata = "list"
@@ -85,8 +85,8 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         dbkey = dbkey,
         dbnrows = dbnrows,
         tblData = tbl,
-        indexes = list(NULL, cidx),  ## unnamed, for row & col indexes. 
-        includeKey = TRUE
+        indexes = list(NULL, cidx)  ## unnamed, for row & col indexes. 
+        ## includeKey = TRUE
     )
 }
 
@@ -115,49 +115,33 @@ setValidity("SQLDataFrame", .validity_SQLDataFrame)
 ## accessor
 ###-------------
 
-#' @exportMethod dim nrow ncol length colnames names dimnames
-setMethod("nrow", "SQLDataFrame", function(x)
+#' @exportMethod dim length names dimnames
+setMethod("dim", "SQLDataFrame", function(x)
 {
+    ## nrow
     ridx <- x@indexes[[1]]
     if (is.null(ridx)) {
         nr <- x@dbnrows
     } else {
         nr <- length(ridx)
     }
-    return(nr)
+    ## ncol
+    nc <- length(colnames(x))
+    return(c(nr, nc))
 })
-setMethod("ncol", "SQLDataFrame", function(x)
-{
-    cidx <- x@indexes[[2]]
-    if (is.null(cidx)) {
-        nc <- length(x@tblData$ops$vars)
-    } else {
-        nc <- length(cidx)
-    }
-    nc <- nc - !x@includeKey
-    return(nc)
-})
-setMethod("dim", "SQLDataFrame", function(x) c(nrow(x), ncol(x)) )
+
 setMethod("length", "SQLDataFrame", function(x) ncol(x) )
-setMethod("colnames", "SQLDataFrame", function(x)
-{
-    cns <- colnames(x@tblData)
-    cidx <- x@indexes[[2]]
-    if (!x@includeKey) {
-        if (is.null(cidx))
-            cidx <- seq_len(ncol(x@tblData))
-        cidx <- cidx[cidx != .wheredbkey(x)]
-    }
-    if (!is.null(cidx))
-        cns <- cns[cidx]
-    return(cns)
-})
 setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
 
 setMethod("dimnames", "SQLDataFrame", function(x)
 {
-    list(NULL, colnames(x))
+    ## colnames
+    cns <- colnames(x@tblData)[-.wheredbkey(x)]
+    cidx <- x@indexes[[2]]
+    if (!is.null(cidx))
+        cns <- cns[cidx]
+    return(list(NULL, cns))
 })
 
 setGeneric("dbname", signature = "x", function(x)
@@ -185,7 +169,7 @@ setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases key key,SQLDataFrame
+#' @aliases dbkey dbkey,SQLDataFrame
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
@@ -198,10 +182,26 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
 .extract_tbl_rows_by_key <- function(x, key, i)
 {
-    ## always require a dbkey()
-    keys <- pull(x, grep(key, colnames(x)))
-    expr <- lazyeval::interp(quote(x %in% y), x = as.name(key),
-                             y = keys[i])
+    ## browser()
+    ## always require a dbkey(), and accommodate with multiple key columns. 
+    ## keys <- x %>% select(key) %>% as.data.frame()
+    keys <- as.data.frame(select(x, key))
+    ## keys_uniq <- apply(keys, 1, function(x) paste(x, collapse="_"))
+
+    ## TODO: extract other info from "DBI::dbConnect" connection object, the
+    ## "sqlite_stat1", "sqlite_stat2" for the weighted order of
+    ## columns...
+    ## keys <- pull(x, grep(key, colnames(x)))
+
+    ## todo: save as a list, and use lazyeval::interp to paste expressions together with "&"
+    ## exprs <- list()
+    ## for (k in seq_along(key)) {
+    ##     expr[[k]] <- lazyeval::interp(quote(x %in% y), x = as.name(key[k]),
+    ##                                   y = keys[i, k])
+    ## }
+    ## if (length(key) > 1)
+    ##     expr <- lazyeval::interp(quote(x & y), x = expr1, y = expr2)
+    expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i, 1])
     out <- x %>% filter(expr)
     return(out)
 }
@@ -213,22 +213,22 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     tbl <- x@tblData
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
-    if (!is.null(cidx))
-        tbl <- tbl %>% select(cidx)
+    ## if (!is.null(cidx))
+    tbl <- tbl %>% select(dbkey(x), colnames(x))  ## order by "key + otherCols"
     return(tbl)
 }
 
 .printROWS <- function(x, index){
-    tbl <- .extract_tbl_from_SQLDataFrame(x)
+    ## browser()
+    tbl <- .extract_tbl_from_SQLDataFrame(x)  ## already ordered by
+                                              ## "key + otherCols".
     i <- normalizeSingleBracketSubscript(index, x)
     tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
-    if (!x@includeKey)
-        out.tbl <- out.tbl %>% select(-.wheredbkey(x))
-    out.key <- tbl %>% pull(.wheredbkey(x))
-    out.other <- as.matrix(format(
-        as.data.frame(lapply(out.tbl, showAsCell), optional = TRUE)))
-    out <- unname(cbind(out.key, rep("|", length(i)), out.other))
+    out <- as.matrix(unname(cbind(
+        out.tbl[, seq_along(dbkey(x))],
+        rep("|", length(i)),
+        out.tbl[, -seq_along(dbkey(x))])))
     return(out)
 }
 
@@ -254,21 +254,24 @@ setMethod("show", "SQLDataFrame", function (object)
         }
         else {
             out <- rbind(.printROWS(object, seq_len(nhead)),
-                         rep.int("...", nc+2),
+                        c(rep.int("...", length(dbkey(object))),
+                         ".", rep.int("...", nc)),
                          .printROWS(object, tail(seq_len(nr), ntail)))
             ## rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
-        classinfo <- matrix(unlist(lapply(
-            as.data.frame(head(object@tblData %>% select(colnames(object)))),
+        classinfoFun <- function(tbl, colnames) {
+            matrix(unlist(lapply(
+            as.data.frame(head(tbl %>% select(colnames))),
             function(x)
             { paste0("<", classNameForDisplay(x)[1], ">") }),
             use.names = FALSE), nrow = 1,
-            dimnames = list("", colnames(object)))
-        keyclass <- paste0(
-            "<", classNameForDisplay(b@tblData %>% pull(.wheredbkey(b))), ">")
+            dimnames = list("", colnames))}
+        classinfo_key <- classinfoFun(object@tblData, dbkey(object))
         classinfo_key <- matrix(
-            c(keyclass, "|"), nrow = 1, dimnames = list("", c("dbkey", "")))
-        out <- rbind(cbind(classinfo_key, classinfo), out)
+            c(classinfo_key, "|"), nrow = 1,
+            dimnames = list("", c(dbkey(object), "|")))
+        classinfo_other <- classinfoFun(object@tblData, colnames(object))
+        out <- rbind(cbind(classinfo_key, classinfo_other), out)
         print(out, quote = FALSE, right = TRUE)
     }
 })

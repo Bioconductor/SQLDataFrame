@@ -5,5 +5,5 @@
 \alias{SQLDataFrame-class}
 \title{SQLDataFrame class}
 \description{
-abcd
+SQLDataFrame class
 }
