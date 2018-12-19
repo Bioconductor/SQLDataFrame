@@ -288,8 +288,6 @@ setMethod("as.data.frame", "SQLDataFrame",
 {
     tbl <- .extract_tbl_from_SQLDataFrame(x)
     out.tbl <- tbl %>% collect()
-    if (! x@includeKey)
-        out.tbl <- out.tbl %>% select(-.wheredbkey(x))
     as.data.frame(out.tbl)
 })
 
