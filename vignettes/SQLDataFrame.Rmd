@@ -70,108 +70,123 @@ object. If only one table is available in the specified database name,
 this argument could be left blank. The `dbkey` argument is used to
 specify the column name in the table which could uniquely identify all
 the data observations (rows).  
-The `show` method for `SQLDataFrame` has consistent format with the 
-`DataFrame` object.
+
+Note that after reading the database table into `SQLDataFrame`, the
+key columns will be kept as fixed columns showing on the left hand
+side, with `|` separating key column(s) with the other columns. The
+`ncol`, `colnames`, and corresponding column subsetting will only
+corresponds to the non-key-columns.
 
 
 ```{r constructor}
 test.db <- system.file("inst/extdata/test.db", package = "SQLDataFrame")
 obj <- SQLDataFrame(
-    dbname = test.db, dbtable = "colDatal", dbkey = "sampleID")
+    dbname = test.db, dbtable = "colData", dbkey = "sampleID")
 obj
+dim(obj)
+colnames(obj)
 ```
 
 ## SQLDataFrame methods
 ### Slot accessors
 
 To make the `SQLDataFrame` object as light and compact as possible,
-there are only 6 slots contained in the object. We can obtain specific
-slot with the corresponding slot accessor functions.
+there are only 5 slots contained in the object. Metadata information
+could be returned through these 5 slots using slot accessors or other
+utility functions.
+
 ```{r}
 slotNames(obj)
+dbname(obj)
 dbtable(obj)
 dbkey(obj)
 colnames(obj)
-nrow(obj)
 ```
+
 The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
 table, which is a light-weight representation of the database table in
-_R_. The `dbrownames` and `dbnrow` slot saves the row information for
-the original database table. When subsetting `SQLDataFrame` objects
-using `[`, these 3 slots remains unchanged, but the `nrow()`,
-`rownames()` and `show()` method will reflect the data subsetting.
+_R_. The `dbnrow` slot saves the row information for the original
+database table. 
+
+When subsetting `SQLDataFrame` objects using `[`,
+these 2 slots remains unchanged, but the `nrow()`, `ncol()`,
+`colnames()` and `show()` method will reflect the data subsetting.
 
 ```{r}
 obj@tblData
-obj@dbrownames
 obj@dbnrows
 ```
 
-The `dbname()` method returns the absolute path for the database. It
-was extracted from the `obj@tblData` instead of being a stand-alone
-slot.
-
-```{r}
-dbname(obj)
-```
-Besides, many more useful methods are defined to get general
-information from `SQLDataFrame` object. e.g., we can use `dimnames()`
-to return the row/colnames of the data. It returns an unnamed list,
-with the first element being rownames (could also use `rownames()`
-method), and 2nd element being colnames (could also use `colnames()`
-method). Could also use `rownames()/colnames()` to extract the
-specific dimension names. `dim()` returns the dimension of the
-database table. Could also use `nrow()/ncol()` to extract a specific
-dimension. `length()` method is also defined which works same as
-`ncol()`.   
-By default, the `rownames(SQLDataFrame)` would be `NULL` as row names
-are normally undesirable when data is large. But people could add it
-using the constructor`SQLDataFrame(row.names=)`. 
+Besides, many useful common methods are defined on `SQLDataFrame`
+object to make it a more DataFrame-like data structure. e.g., we can
+use `dimnames()` to return the row/colnames of the data. It returns an
+unnamed list, with the first element being rownames which is always
+`NULL`, and 2nd element being colnames (could also use `colnames()`
+method). `dim()` method is defined to return the dimension of the
+database table, which enables the `nrow()/ncol()` to extract a
+specific dimension. `length()` method is also defined which works same
+as `ncol()`.   
+Note that the `rownames(SQLDataFrame)` would always be `NULL` as
+rownames are not supported in `SQLDataFrame`.
 
 ```{r methods}
 dim(obj)
-identical(dim(obj), c(nrow(obj), ncol(obj)))
 dimnames(obj)
 length(obj)
 ```
 
 ### `[[` subsetting
-Behaves similarly to `[[,DataFrame` and returns a realized vector of
-values from a single column. `$,SQLDataFrame` is also defined to
-conveniently extract column values. 
+`[[,SQLDataFrame` Behaves similarly to `[[,DataFrame` and returns a
+realized vector of values from a single column. `$,SQLDataFrame` is
+also defined to conveniently extract column values.
 
 ```{r}
 obj[[1]]
-obj[["ages"]]
-identical(obj[[3]], obj[["ages"]])
-obj$ages
+obj[[2]]
+obj[["Ages"]]
+obj$Ages
+```
+
+We can also get the key column values using character extraction. 
+```{r}
+obj[["sampleID"]]
 ```
 
 ### `[` subsetting
+
 `SQLDataFrame` instances can be subsetted in a similar way of
 `DataFrame` following the usual _R_ conventions, with numeric,
 character or logical vectors; logical vectors are recycled to the
-appropriate length.
+appropriate length. 
+
+**NOTE**, use `drop=FALSE` explicitly for single
+column subsetting if you want a `SQLDataFrame` object, otherwise, the
+default `drop=TRUE` would always return a realized value for that
+column.
 
 ```{r, subsetting}
-obj[1:3, 1:3]
-obj[c(TRUE, FALSE), c(TRUE, FALSE)]
-obj[1:3, c("sampleID", "ages")]
+obj[1:3, 1:2]
+obj[c(TRUE, FALSE), c(TRUE, FALSE), drop=FALSE]
+obj[1:3, "Ages", drop=FALSE]
+obj[, "Ages"]  ## realized column value
+```
 
-obj1 <- obj[1:3, 1:3]
+The `ROWNAMES,SQLDataFrame` method is defined to return the key column
+name (only works for `SQLDataFrame` object with a single key column),
+so that the row subsetting with character vector works for the
+**single-key-SQLDataFrame** objects.
+
+```{r}
+ROWNAMES(obj)
+obj[c("a", "c", "d", "e"), ]
 ```
 
 List style subsetting is also allowed to extract certain columns from
 the `SQLDataFrame` object which returns `SQLDataFrame` by default.  
+
 ```{r}
 obj[1]
-obj[c("sampleID", "ages")]
-```
-When subsetting using `[` for a single column, the default is to
-return the realized value, unless user specify `drop=FALSE` explicitly. 
-```{r}
-obj[, 1]
-obj[, 1, drop=FALSE]
+obj["Ages"]
 ```
 
 ### Numeric calculation / Data manipulation (todo)
@@ -179,7 +194,8 @@ obj[, 1, drop=FALSE]
 Numeric calculations could be evaluated on `SQLDataFrame` objects.
 
 ```{r, numeric, eval=FALSE}
-sum(obj@ages)
+sum(obj$Ages)
+max(obj$Ages)
 ```
 
 # SessionInfo()
