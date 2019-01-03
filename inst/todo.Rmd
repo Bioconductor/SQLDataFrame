@@ -1,59 +1,51 @@
 ## TODO: 
 
-- show method, show the dbkey columns | other columns. Col subsetting
-  encourage to use column names instead of numeric indexes. 
-  - colnames() update to return colnames(tbl)[-dbkey(x)]  -- done!
-  - ncol()? ncol(tbl) - length(dbkey(x)) ??   -- done!
-  - remove `@includeKey` slot.   -- done!
-  - remove `.wheredbkey()`?   -- keep for now. 
-  - define `dimnames`, then `colnames()` would automatically work.   -- done!
-  - define `dim`, then `nrow/ncol()` would automatically work.   -- done!
-  - `extract_tbl_from_SQLDataFrame`, `.printROWS`.  -- done!
-  - `[[` extract and realize from the non-key-columns. -- done!
-  - `extractROWS`, `.extractCOLS_SQLDataFrame`.   -- done!
-  - `[` subsetting, add to @indexes. only refer to the non-key columns. -- done!
-  - `show` method refer to `rowRanges(airway)` for formatting.  -- done!
-
-	- use key values for row subsetting.   -- done!
-  - row subsetting with numeric indexes, must realize the key column? 
-  - new example, with primary key in middle columns, test. 
-  - new example, with 2 key columns. 
-  
+- row subsetting with numeric indexes, must realize the key column? -- done! 
+- row subsetting encourage to use column names instead of numeric indexes. 
+- new example, with 2 key columns. 
  
- 
-- dbkey subsetting as rownames.
 - [, subsetting using filter(c1 = , c2 %in%, c3 > ...) or using "&"
 - SQL raw filters translation. 
 - message for [numeric, ], to suggest language filtering. 
 - coercion of `DataFrame/data.frame/ANY` into `SQLDataFrame`. 
 - write out subsetted SQL table? 
 
--  show. See `rowRanges` class.
-  thoughts: use "key" column as the major column, all others as meta
-  columns? or vice versa. How to do this under `tbl_dbi`? 
-
 - numeric calculations, e.g., sum(), max(), min, row/colSums,
   row/colMeans, row/colMin, row/colMaxs, apply, ... need to define.
 
-- think about the "dbkey" slot... needed for all database table? must
-  be unique identifier for all rows...
 - left_join, reordering... `rbind,SQLDataFrame`? Maybe not, now one
   `SQLDataFrame` only corresponds to just one `tbl_dbi` object... Will
   there be any need for rbinding data from different database table?
 - inst/test.db? only keep "colDatal" and rename as "colData"?? update
   testthat, examples...
 
-
-
 ## DOING
 - `extractCOLS,SQLDataFrame`, add generic in `S4Vectors`, update
   `DelayedDataFrame` and `SQLDataFrame`...
 
 ## DONE
-
+- remove `includeKey` slot. 
 - remove "rownames", from slots/constructor/accessor/, test functions..
 - add head(), tail() methods
 - realization methods: as.data.frame(), as(,"DataFrame")
+
+### reimplementation of `SQLDataFrame` to keep key columns as fixed and show on the left-hand-side, with `|` in between to separate key columns with other columns. `ncol`, and `colnames` would only correspond to the `non-key-columns`.
+
+- colnames() update to return colnames(tbl)[-dbkey(x)]
+- ncol()? ncol(tbl) - length(dbkey(x)) ??
+- remove `@includeKey` slot. 
+- remove `.wheredbkey()`?   -- **keep for now** 
+- define `dimnames`, then `colnames()` would automatically work.
+- define `dim`, then `nrow/ncol()` would automatically work. 
+- `extract_tbl_from_SQLDataFrame`, `.printROWS`. 
+- `[[` extract and realize from the non-key-columns.
+- `extractROWS`, `.extractCOLS_SQLDataFrame`. 
+- `[` subsetting, add to @indexes. only refer to the non-key columns.
+- `show` method refer to `rowRanges(airway)` for formatting. 
+- use key values for row subsetting. 
+- `[["key"`, or `["key", ` to return realized key value? 
+- dbkey subsetting as rownames for `single-key-SQLDataFrame` only.
+- new example, with primary key in middle columns, test. 
 
 ### always keep key() column, show as first column. 
 - add additional slot `@includeKey = TRUE` by default.
