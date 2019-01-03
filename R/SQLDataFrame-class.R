@@ -41,7 +41,9 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
     dbname <- tools::file_path_as_absolute(dbname)
     ## error if file does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-
+    ## src <- src_dbi(con, auto_disconnect = TRUE)
+    ## on.exit(DBI::dbDisconnect(con))
+    
     if (missing(dbtable)) {
         tbls <- DBI::dbListTables(con)
         if (length(tbls) == 1) {
@@ -79,7 +81,6 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
             cidx <- match(col.names, cns)
         }
     }
-    ## DBI::dbDisconnect(con)
     .SQLDataFrame(
         dbtable = dbtable,
         dbkey = dbkey,
@@ -184,25 +185,31 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 {
     ## browser()
     ## always require a dbkey(), and accommodate with multiple key columns. 
-    ## keys <- x %>% select(key) %>% as.data.frame()
-    keys <- as.data.frame(select(x, key))
-    ## keys_uniq <- apply(keys, 1, function(x) paste(x, collapse="_"))
+    if (length(key) == 1) {
+        keys <- pull(x, grep(key, colnames(x)))
+        ## expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i])
+        out <- x %>% filter(!!as.name(key) %in% keys[i])
+        ## out <- x %>% filter_(paste(key, "%in%", "c(", paste(shQuote(keys[i]), collapse=","), ")"))  ## work, keep for now. 
+    } else {
+        x <- x %>% mutate(concatKey = paste(!!!syms(key), sep="\b"))
+        keys <- x %>% pull(concatKey)
+        out <- x %>% filter(concatKey %in% keys[i]) %>% select(-concatKey)
+        ## out <- x %>% filter(paste(!!!syms(key), sep="\b") %in% keys[i])
 
+        ## con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+        ## check "DBI::dbConnect" and "DBI::dbDisconnect", when will
+        ## need to close the connection? possible to open a new
+        ## connection later on?
+    ##     con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+    ##     out <- DBI::dbGetQuery(
+    ##         con1,
+    ##         "SELECT * FROM dbtable WHERE (cyl || '\b' || gear IN ($1))",
+    ##         param = list(keys[i])
+    ##     )
+    }
     ## TODO: extract other info from "DBI::dbConnect" connection object, the
     ## "sqlite_stat1", "sqlite_stat2" for the weighted order of
     ## columns...
-    ## keys <- pull(x, grep(key, colnames(x)))
-
-    ## todo: save as a list, and use lazyeval::interp to paste expressions together with "&"
-    ## exprs <- list()
-    ## for (k in seq_along(key)) {
-    ##     expr[[k]] <- lazyeval::interp(quote(x %in% y), x = as.name(key[k]),
-    ##                                   y = keys[i, k])
-    ## }
-    ## if (length(key) > 1)
-    ##     expr <- lazyeval::interp(quote(x & y), x = expr1, y = expr2)
-    expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i, 1])
-    out <- x %>% filter(expr)
     return(out)
 }
 

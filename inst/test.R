@@ -1,21 +1,10 @@
 ## class
-a <- .SQLDataFrame()
+a <- .SQLDataFrame()  ## expected error!
 ## SQLDataFrame with 0 rows and 0 columns
 str(a)
-## Formal class 'SQLDataFrame' [package "SQLDataFrame"] with 9 slots
-##   ..@ dbpath         : chr(0) 
-##   ..@ dbtable        : chr(0) 
-##   ..@ key            : chr(0) 
-##   ..@ rownames       : NULL
-##   ..@ nrows          : int 0
-##   ..@ listData       : Named list()
-##   ..@ elementType    : chr "ANY"
-##   ..@ elementMetadata: NULL
-##   ..@ metadata       : list()
-
-dbpath(a)
+dbname(a)
 dbtable(a)
-key(a)
+dbkey(a)
 
 ## example database tables
 colData <- data.frame(sampleID = letters,
@@ -28,14 +17,76 @@ DBI::dbListTables(con)
 ## dbRemoveTable(con, "colDatal")
 dbWriteTable(con, "colData", colData)
 
+state <- data.frame(division = as.character(state.division),
+                    region = as.character(state.region),
+                    state = state.name,
+                    population = state.x77[,"Population"],
+                    row.names = NULL,
+                    stringsAsFactors = FALSE)
+## change $population column a little bit so not unique
+state$population[state$state == "Arizona"] <- state$population[state$state == "Kansas"]
+state$population[state$state == "Kentucky"] <- state$population[state$state == "Louisiana"]
+state$population[state$state == "New Mexico"] <- state$population[state$state == "West Virginia"]
+state$population[state$state == "South Dakota"] <- state$population[state$state == "North Dakota"]
+state$size <- cut(state$population, breaks = c(0, 1000, 5000, 30000), labels = c("small", "medium", "large"))
+
+DBI::dbWriteTable(con, "state", state)
+DBI::dbListTables(con)
+
+###
+## primary key
+###
+ss <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "state", dbkey = "state")
+
+rownames(ss)
+colnames(ss)
+ss[1:5, ]
+## row subsetting by primary key. 
+ss[c("Alabama", "Alaska"),]
+ROWNAMES(ss)
+ss[, 1:2]
+ss[, 2:3]
+ss[, 2, drop=FALSE]
+ss[["state"]]
+## list-style-subsetting
+ss[c("region", "population")]
+ss["region"]
+sum(ss$population)
+
+## write out the SQLDataFrame as a database table, save by default to
+## the input dbname(), use argument "name.." to save the table
+## name. (arg: database name, table name, database connection type,
+## ...)
 
 
 
-## dbDisconnect(con)
+###
+## composite key
+###
+ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+## region & population could uniquely identify each record.
+rownames(ss1)
+colnames(ss1)
+ss1[1:5, ]
+ROWNAMES(ss1)  ## only works for primary key. 
+ss1[c("Alabama", "Alaska"),]  ## expected ERROR because ROWNAMES(ss1) does not work. 
+ss1[, 1:2]
+ss1[, 2:3]
+ss1[, 2, drop=FALSE]
+ss1[["state"]]
+## list-style-subsetting
+ss1["state"]
+ss1[c("division", "size")]
+sum(ss1$population)
+
+###
+## sql manipulations for rows
+### 
+
 library(dplyr)
 cold.db <- con %>% tbl("colData")
-
-##
 b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID")
 
 ## row subsetting with character vector (add to test_method.R)
@@ -84,3 +135,51 @@ b[1:5, ]
 b[1:5, 2:3]
 b[1:100, ]  ## expect_error(, "subscript contains out-of-bounds indices")
 b[, 4]  ## expect_error(, "subscript contains out-of-bounds indices")
+
+###
+## SQL examples
+###
+con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
+dbWriteTable(con1, "mtcars", mtcars)
+DBI::dbListTables(con1)
+dbGetQuery(con, 'SELECT * FROM mtcars LIMIT 2')
+dbGetQuery(
+    con,
+        "SELECT * FROM mtcars WHERE (
+       SELECT cyl || '\b' || gear IN ('6.0\b4.0', '6.0\b3.0')
+     )
+     LIMIT 2;"
+    )
+filt <- mtcars[mtcars$carb == 4, c("cyl", "gear")]
+filtp <- paste(paste0(filt[,1], ".0"), paste0(filt[,2], ".0"), sep="\b")
+dbGetQuery(
+    con,
+    "SELECT * FROM mtcars WHERE (cyl || '\b' || gear IN ($1))",
+    param = list(filtp)
+    )
+
+## All data manipulation on SQL tbls are lazy: they will not actually
+## run the query or retrieve the data unless you ask for it: they all
+## return a new tbl_dbi object. Use compute() to run the query and
+## save the results in a temporary in the database, or use collect()
+## to retrieve the results to R. You can see the query with
+## show_query().  For best performance, the database should have an
+## index on the variables that you are grouping by.  Use explain() to
+## check that the database is using the indexes that you expect.
+## There is one excpetion: do() is not lazy since it must pull the
+## data into R.
+
+## ? src_sql to work directly on tbl_dbi object? 
+dbGetQuery(con, "SELECT * FROM state WHERE state = 'Alabama'")
+dbGetQuery(con, "SELECT * FROM state WHERE state IN ('Alabama', 'Alaska')")
+dbGetQuery(con, "SELECT * FROM state WHERE state IN ($1)", param = list(c("Alaska", "Alabama")))
+dbGetQuery(con, "SELECT * FROM state WHERE (division || '\b' || region IN ('Pacific\bWest') )")
+
+## concatenation of multiple columns when matching  *** (using || as infix operator)
+DBI::dbGetQuery(con,
+           "SELECT * FROM state WHERE (division || '\b' || region IN ($1) )",
+           param = list(paste0(c("Mountain", "Pacific"), "\b", "West")))
+
+dbGetQuery(con, "SELECT region || '_' || region || '_' || state as FullName FROM state")
+dbGetQuery(con, "SELECT * FROM state WHERE state || '\b' || region LIKE '%a\bS%'")
+
