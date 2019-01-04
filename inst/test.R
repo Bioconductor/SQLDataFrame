@@ -12,10 +12,10 @@ colData <- data.frame(sampleID = letters,
                       Ages = sample(20:40, 26, replace=T))
 
 library(DBI)
-con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
-DBI::dbListTables(con)
-## dbRemoveTable(con, "colDatal")
-dbWriteTable(con, "colData", colData)
+conn <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+DBI::dbListTables(conn)
+## dbRemoveTable(conn, "colDatal")
+dbWriteTable(conn, "colData", colData)
 
 state <- data.frame(division = as.character(state.division),
                     region = as.character(state.region),
@@ -30,8 +30,8 @@ state$population[state$state == "New Mexico"] <- state$population[state$state ==
 state$population[state$state == "South Dakota"] <- state$population[state$state == "North Dakota"]
 state$size <- cut(state$population, breaks = c(0, 1000, 5000, 30000), labels = c("small", "medium", "large"))
 
-DBI::dbWriteTable(con, "state", state)
-DBI::dbListTables(con)
+DBI::dbWriteTable(conn, "state", state)
+DBI::dbListTables(conn)
 
 ###
 ## primary key
@@ -57,8 +57,31 @@ sum(ss$population)
 ## the input dbname(), use argument "name.." to save the table
 ## name. (arg: database name, table name, database connection type,
 ## ...)
+tt <- ss[10:25, 3:4]
+str(tt)
+tbl <- .extract_tbl_from_SQLDataFrame(tt)
+compute(tbl)
+saveSQLDataFrame(tt, dbtable = "tt")
 
+tt@tblData$src$con
+dbListTables(tt@tblData$src$con)
+dbDisconnect(conn)
+conn <- dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+dbListTables(conn)
 
+identical(conn, tt@tblData$src$con)  ## FALSE
+str(conn)
+str(tt@tblData$src$con)
+conn@ref
+## <environment: 0x55ac04c69698>
+tt@tblData$src$con@ref
+## <environment: 0x55ac03d894d8>
+### Summary: when constructing "SQLDataFrame" opened an connection,
+### and it was save as a temporary table (only visible) to the current
+### connection: "sqldf@tblData$src$con" and will be automatically
+### deleted when the connection expires, so it was not physically
+### written into the dabase.
+ttnew <- SQLDataFrame("inst/extdata/test.db", "tt")
 
 ###
 ## composite key
@@ -86,7 +109,7 @@ sum(ss1$population)
 ### 
 
 library(dplyr)
-cold.db <- con %>% tbl("colData")
+cold.db <- conn %>% tbl("colData")
 b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID")
 
 ## row subsetting with character vector (add to test_method.R)
@@ -137,14 +160,56 @@ b[1:100, ]  ## expect_error(, "subscript contains out-of-bounds indices")
 b[, 4]  ## expect_error(, "subscript contains out-of-bounds indices")
 
 ###
-## SQL examples
+## SQL examples: compute
+###
+con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")  ## works
+con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "/home/qian/Documents/Research/rsqlite/test.db") ## works
+## summary: "compute" works for "SQLiteConnection" object with both in memory or on-disk database. 
+dbWriteTable(con1, "mtcars", mtcars, overwrite = T)
+DBI::dbListTables(con1)
+mtcars.db <- tbl(con1, "mtcars")
+mt <- mtcars.db %>% select(mpg:hp)
+mt %>% show_query()
+compute(mt, name = "mt")
+DBI::dbListTables(con1)
+tbl(con1, "mt")
+DBI::dbReadTable(con1, "mt")
+
+mt1 <- mt %>% filter(mpg > 21)
+compute(mt1)
+DBI::dbListTables(con1)
+compute(mt1, name = "mt1")
+DBI::dbListTables(con1)
+
+## try the existing database
+### works in writing to the current connection, but when opening a new
+### R session, the table will be lost. So the "compute()" only saves a
+### temporary table.
+conn <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+DBI::dbListTables(conn)
+state.db <- tbl(conn, "state")
+st <- state.db %>% select(region:size) %>% filter(region == "West")
+st %>% show_query()
+compute(st, name = "st")
+DBI::dbListTables(conn)
+compute(st)
+DBI::dbListTables(conn)
+DBI::dbRemoveTable(conn, "st")
+## DBI::dbRemoveTable(conn, "lnyqcyiovw")
+
+conn1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+dbListTables(conn1)  ## does not include the previous saved tables. so
+                     ## the table is not written into the database!
+
+###
+## SQL examples: concatenation
 ###
 con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
 dbWriteTable(con1, "mtcars", mtcars)
 DBI::dbListTables(con1)
-dbGetQuery(con, 'SELECT * FROM mtcars LIMIT 2')
+dbGetQuery(con1, 'SELECT * FROM mtcars LIMIT 2')
 dbGetQuery(
-    con,
+    con1,
         "SELECT * FROM mtcars WHERE (
        SELECT cyl || '\b' || gear IN ('6.0\b4.0', '6.0\b3.0')
      )
@@ -153,7 +218,7 @@ dbGetQuery(
 filt <- mtcars[mtcars$carb == 4, c("cyl", "gear")]
 filtp <- paste(paste0(filt[,1], ".0"), paste0(filt[,2], ".0"), sep="\b")
 dbGetQuery(
-    con,
+    con1,
     "SELECT * FROM mtcars WHERE (cyl || '\b' || gear IN ($1))",
     param = list(filtp)
     )
@@ -170,16 +235,16 @@ dbGetQuery(
 ## data into R.
 
 ## ? src_sql to work directly on tbl_dbi object? 
-dbGetQuery(con, "SELECT * FROM state WHERE state = 'Alabama'")
-dbGetQuery(con, "SELECT * FROM state WHERE state IN ('Alabama', 'Alaska')")
-dbGetQuery(con, "SELECT * FROM state WHERE state IN ($1)", param = list(c("Alaska", "Alabama")))
-dbGetQuery(con, "SELECT * FROM state WHERE (division || '\b' || region IN ('Pacific\bWest') )")
+dbGetQuery(conn, "SELECT * FROM state WHERE state = 'Alabama'")
+dbGetQuery(conn, "SELECT * FROM state WHERE state IN ('Alabama', 'Alaska')")
+dbGetQuery(conn, "SELECT * FROM state WHERE state IN ($1)", param = list(c("Alaska", "Alabama")))
+dbGetQuery(conn, "SELECT * FROM state WHERE (division || '\b' || region IN ('Pacific\bWest') )")
 
 ## concatenation of multiple columns when matching  *** (using || as infix operator)
-DBI::dbGetQuery(con,
+DBI::dbGetQuery(conn,
            "SELECT * FROM state WHERE (division || '\b' || region IN ($1) )",
            param = list(paste0(c("Mountain", "Pacific"), "\b", "West")))
 
-dbGetQuery(con, "SELECT region || '_' || region || '_' || state as FullName FROM state")
-dbGetQuery(con, "SELECT * FROM state WHERE state || '\b' || region LIKE '%a\bS%'")
+dbGetQuery(conn, "SELECT region || '_' || region || '_' || state as FullName FROM state")
+dbGetQuery(conn, "SELECT * FROM state WHERE state || '\b' || region LIKE '%a\bS%'")
 

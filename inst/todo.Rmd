@@ -13,7 +13,8 @@
 - numeric calculations, e.g., sum(), max(), min, row/colSums,
   row/colMeans, row/colMin, row/colMaxs, apply, ... need to define.
 
-- left_join, reordering... `rbind,SQLDataFrame`? Maybe not, now one
+- `dbplyr::join.tbl_sql`, left_join,
+  reordering... `rbind,SQLDataFrame`? Maybe not, now one
   `SQLDataFrame` only corresponds to just one `tbl_dbi` object... Will
   there be any need for rbinding data from different database table?
 - inst/test.db? only keep "colDatal" and rename as "colData"?? update
