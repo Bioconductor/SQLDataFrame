@@ -62,7 +62,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
-    browser()
+    ## browser()
     if (!isTRUEorFALSE(drop)) 
         stop("'drop' must be TRUE or FALSE")
     if (length(list(...)) > 0L) 
@@ -76,13 +76,20 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                 return(x)
             j <- i
         }
-        if (!is(j, "IntegerRanges"))
+        if (!is(j, "IntegerRanges"))  ## FEATURE: keyword "filter(col1, col2, ...)"
             x <- .extractCOLS_SQLDataFrame(x, j)
         if (list_style_subsetting) 
             return(x)
     }
-    if (!missing(i))
+    if (!missing(i)) {  ## FEATURE: list(key1 = .., key2 = .., ...)
+        if (is.list(i)) {
+            if (!identical(dbkey(x), union(dbkey(x), names(i))))
+                stop("Please use: \"", paste(dbkey(x), collapse=", "),
+                     "\" as the query list name(s).")
+            i <- do.call(paste, c(i[dbkey(x)], sep="\b"))
+        }
         x <- extractROWS(x, i)
+    }
     if (missing(drop)) 
         drop <- ncol(x) == 1L
     if (drop) {
@@ -145,6 +152,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     ## keys <- x@tblData %>%
     ##     transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
     ##     pull(concat)
+    ## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
     keys <- x@tblData %>% select(dbkey(x)) %>% collect() %>%
         transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
         pull(concat)
@@ -161,7 +169,13 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ## ROWNAMES(ss2)
 ## ss2[c("South\b3615.0", "West\b365.0"), ]  ## transmute(paste) %>% pull()
 ## ss2[c("South\b3615", "West\b365"), ]   ## collect(dbkey(x)) %>% transmute(paste) %>% pull()
-## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
+### row subsetting with list object works, checks dbkey(), but doesn't matter with ordering. 
+## ss1[list(population = c("3615", "365", "4981"), region = c("South", "West", "South")), ]
+## ss2[list(region = c("South", "West", "West"), population = c("3615", "365", "2280")), ]
+## ss1[list(region="South", population = "3615", other = "random"), ]
+## Error in ss1[list(region = "South", population = "3615", other = "random"),  : 
+##   Please use: "region, population" as the query list name(s).
+
 ###
 ## column data type for tibble & data.frame
 ###
@@ -174,5 +188,6 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ## tbl(con1, "mtcars") %>% transmute(new = paste(mpg, cyl, sep="_"))  ## "tbl_dbi", added ".0" for "dbl"
 ## mtcars %>% transmute(new = paste(mpg, cyl, sep = "_"))  ## "tbl_df", "tbl", "data.frame"... no adding of ".0" for "dbl" columns...
 
-
-
+## dbkey <- c("mpg", "cyl")
+## tbl(con1, "mtcars") %>% transmute(new = paste(!!!syms(dbkey), sep="_")) ## efficient, but hard to cast specific column into integer. 
+## tbl(con1, "mtcars") %>% select(dbkey) %>% collect() %>% transmute(new = paste(!!!syms(dbkey), sep="_")) ## less efficient, but works. 
