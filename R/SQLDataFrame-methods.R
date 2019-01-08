@@ -142,10 +142,12 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 setMethod("ROWNAMES", "SQLDataFrame", function(x)
 {
     ## browser()
-    stopifnot(length(dbkey(x)) == 1L)
-    keys <- x@tblData %>% select(dbkey(x)) %>% pull()
+    keys <- x@tblData %>%
+        transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
+        pull(concat)
     ridx <- x@indexes[[1]]
     if (!is.null(ridx))
         keys <- keys[ridx]
     return(keys)
 })
+
