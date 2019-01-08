@@ -62,7 +62,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
-    ## browser()
+    browser()
     if (!isTRUEorFALSE(drop)) 
         stop("'drop' must be TRUE or FALSE")
     if (length(list(...)) > 0L) 
@@ -142,7 +142,10 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 setMethod("ROWNAMES", "SQLDataFrame", function(x)
 {
     ## browser()
-    keys <- x@tblData %>%
+    ## keys <- x@tblData %>%
+    ##     transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
+    ##     pull(concat)
+    keys <- x@tblData %>% select(dbkey(x)) %>% collect() %>%
         transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
         pull(concat)
     ridx <- x@indexes[[1]]
@@ -150,4 +153,26 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
         keys <- keys[ridx]
     return(keys)
 })
+
+## ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
+##                     dbtable = "state",
+##                     dbkey = c("region", "population"))
+## ss2 <- ss1[1:9, ]
+## ROWNAMES(ss2)
+## ss2[c("South\b3615.0", "West\b365.0"), ]  ## transmute(paste) %>% pull()
+## ss2[c("South\b3615", "West\b365"), ]   ## collect(dbkey(x)) %>% transmute(paste) %>% pull()
+## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
+###
+## column data type for tibble & data.frame
+###
+## Q: when to add ".0" when concatenation. 
+## ss1@tblData %>% transmute(new = paste(region, population, sep = "_"))  ## chr, dbl => chr, adding ".0"
+## ss1@tblData %>% collect() %>% transmute(new = paste(region, population, sep = "_"))  ## chr, dbl => chr,no adding of ".0" after realization!!!
+
+## con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
+## dbWriteTable(con1, "mtcars", mtcars)
+## tbl(con1, "mtcars") %>% transmute(new = paste(mpg, cyl, sep="_"))  ## "tbl_dbi", added ".0" for "dbl"
+## mtcars %>% transmute(new = paste(mpg, cyl, sep = "_"))  ## "tbl_df", "tbl", "data.frame"... no adding of ".0" for "dbl" columns...
+
+
 
