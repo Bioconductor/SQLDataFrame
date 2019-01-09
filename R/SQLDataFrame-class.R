@@ -178,6 +178,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 ### show method
 ###--------------
 
+## input "tbl_dbi" and output "tbl_dbi". 
 #' @importFrom lazyeval interp
 #' @import S4Vectors
 
@@ -189,27 +190,21 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
         keys <- pull(x, grep(key, colnames(x)))
         ## expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i])
         out <- x %>% filter(!!as.name(key) %in% keys[i])
-        ## out <- x %>% filter_(paste(key, "%in%", "c(", paste(shQuote(keys[i]), collapse=","), ")"))  ## work, keep for now. 
+        ## out <- x %>% filter_(paste(key, "%in%", "c(", paste(shQuote(keys[i]), collapse=","), ")"))
+        ## works, keep for now. 
     } else {
         x <- x %>% mutate(concatKey = paste(!!!syms(key), sep="\b"))
         keys <- x %>% pull(concatKey)
         out <- x %>% filter(concatKey %in% keys[i]) %>% select(-concatKey)
-        ## out <- x %>% filter(paste(!!!syms(key), sep="\b") %in% keys[i])
+        ## returns "tbl_dbi" object, no realization. 
 
-        ## con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        ## check "DBI::dbConnect" and "DBI::dbDisconnect", when will
-        ## need to close the connection? possible to open a new
-        ## connection later on?
-    ##     con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-    ##     out <- DBI::dbGetQuery(
-    ##         con1,
-    ##         "SELECT * FROM dbtable WHERE (cyl || '\b' || gear IN ($1))",
-    ##         param = list(keys[i])
-    ##     )
+        ## keys <- x %>% transmute(concatKey = paste(!!!syms(key), sep="\b")) %>% pull(concatKey)
+        ## qry <- paste("SELECT * FROM ", x$ops$x,
+        ##              " WHERE (", paste(key, collapse = " || '\b' || ") ,
+        ##              ") IN ($1)")
+        ## out <- DBI::dbGetQuery(x$src$con, qry, param = list(keys[i]))
+        ## works, but "dbGetQuery" returns the result of a query as a data frame.
     }
-    ## TODO: extract other info from "DBI::dbConnect" connection object, the
-    ## "sqlite_stat1", "sqlite_stat2" for the weighted order of
-    ## columns...
     return(out)
 }
 
@@ -229,7 +224,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     ## browser()
     tbl <- .extract_tbl_from_SQLDataFrame(x)  ## already ordered by
                                               ## "key + otherCols".
-    i <- normalizeSingleBracketSubscript(index, x)
+    i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bounds subscripts.
     tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
     out <- as.matrix(unname(cbind(
