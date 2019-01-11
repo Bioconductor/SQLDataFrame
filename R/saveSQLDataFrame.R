@@ -1,20 +1,17 @@
-## the newly saved SQLDataFrame must have a key column.
-## output message:
-## Source: table<> [?? X ncol]
-## Database: sqlite 3.22.0 [/home/qian/...]
-## Key(s): dbkey(x)
-## Use the following code to read into R as SQLDataFrame object:
-## dat <- SQLDataFrame(dbname, dbtable, dbkey)
 #' @param ... other parameters passed to methods.
 
-saveSQLDataFrame <- function(x, dbtable = dplyr:::random_table_name(),
-                             overwrite = FALSE, types = NULL, ...)
+saveSQLDataFrame <- function(x, dbname, 
+                             dbtable = dplyr:::random_table_name(),
+                             overwrite = FALSE,
+                             types = NULL, ...)
 {
-    browser()
+    ## browser()
+    dbname <- file_path_as_absolute(dbname)
     tbl <- .extract_tbl_from_SQLDataFrame(x)
-    ## invisible(compute(tbl, name = dbtable))
-    ## compute(tbl, name = dbtable)
-    copy_to(tbl$src$con, tbl, name = dbtable, temporary = FALSE, overwrite = overwrite,
+
+    ## open a new connection, or "src_dbi", and write database table.
+    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+    copy_to(con, tbl, name = dbtable, temporary = FALSE, overwrite = overwrite,
             types = types, unique_indexes = NULL, indexes = list(dbkey(x)),
             analyze = TRUE, ...)
     ## by default "temporary = FALSE", to physically write the table,
@@ -28,25 +25,27 @@ saveSQLDataFrame <- function(x, dbtable = dplyr:::random_table_name(),
     msg <- paste0("## A new database table is saved! \n",
                   "## Source: table<", dbtable, "> [", paste(dim(x),
                   collapse = " X "), "] \n",
-                  "## Database: sqlite 3.22.0 \n", ## FIXME: where to
-                  extract "sqlite 3.22.0"?  "## [", dbname(x), "] \n",
-                  "## Use the following command to read it into R: \n",
-                  "## dat <- SQLDataFrame(\n", "## dbname = \"",
-                  dbname(x), "\",\n", "## dbtable = \"", dbtable,
-                  "\",\n", "## dbkey = \"", dbkey(x), "\")", "\n",
-                  "\n",
-
-                  "## A new database table is saved. \n",
-                  "## Database: \n",
-                  "##   dbname: ", dbname(x), "\n",
-                  "##   dbtable: ", dbtable, " [", paste(dim(x), collapse = " X "), "] \n",
-                  "##   dbkey: ", paste(dbkey(x), collapse = " ,"), "\n", 
-                  "## Use the following command to read into R: \n",
-                  "##   dat <- SQLDataFrame(dbname, dbtable, dbkey)"
-                  )
+                  "## Database: ", db_desc(con), "\n",
+                  "## Use the following command to reload into R: \n",
+                  "## dat <- SQLDataFrame(\n",
+                  "##   dbname = \"", dbname, "\",\n",
+                  "##   dbtable = \"", dbtable, "\",\n",
+                  "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
+                  paste(paste0("'", dbkey(x), "'"), collapse=", "),
+                  ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
     message(msg)
 }
 
 ## random_table_name <- function(n = 10) {
 ##     paste0(sample(letters, n, replace = TRUE), collapse = "")
+
+## ss@tblData$src
+###
+## Q1: how to get the print function for "src_dbi", "src_sql", "src"?
+###
+## want to capture:
+## src:  sqlite 3.22.0 [/home/qian/Documents/Research/rsqlite/SQLDataFrame/inst/extdata/test.db]
+###
+## Q2: add argument for path to a newly generated database. by default use current path?? 
+###
 
