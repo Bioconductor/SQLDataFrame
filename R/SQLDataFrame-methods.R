@@ -76,7 +76,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                 return(x)
             j <- i
         }
-        if (!is(j, "IntegerRanges"))  ## FEATURE: keyword "filter(col1, col2, ...)"
+        if (!is(j, "IntegerRanges"))  ## FEATURE: keyword "select(col1, col2, ...)"
             x <- .extractCOLS_SQLDataFrame(x, j)
         if (list_style_subsetting) 
             return(x)
@@ -162,32 +162,3 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     return(keys)
 })
 
-## ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
-##                     dbtable = "state",
-##                     dbkey = c("region", "population"))
-## ss2 <- ss1[1:9, ]
-## ROWNAMES(ss2)
-## ss2[c("South\b3615.0", "West\b365.0"), ]  ## transmute(paste) %>% pull()
-## ss2[c("South\b3615", "West\b365"), ]   ## collect(dbkey(x)) %>% transmute(paste) %>% pull()
-### row subsetting with list object works, checks dbkey(), but doesn't matter with ordering. 
-## ss1[list(population = c("3615", "365", "4981"), region = c("South", "West", "South")), ]
-## ss2[list(region = c("South", "West", "West"), population = c("3615", "365", "2280")), ]
-## ss1[list(region="South", population = "3615", other = "random"), ]
-## Error in ss1[list(region = "South", population = "3615", other = "random"),  : 
-##   Please use: "region, population" as the query list name(s).
-
-###
-## column data type for tibble & data.frame
-###
-## Q: when to add ".0" when concatenation. 
-## ss1@tblData %>% transmute(new = paste(region, population, sep = "_"))  ## chr, dbl => chr, adding ".0"
-## ss1@tblData %>% collect() %>% transmute(new = paste(region, population, sep = "_"))  ## chr, dbl => chr,no adding of ".0" after realization!!!
-
-## con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
-## dbWriteTable(con1, "mtcars", mtcars)
-## tbl(con1, "mtcars") %>% transmute(new = paste(mpg, cyl, sep="_"))  ## "tbl_dbi", added ".0" for "dbl"
-## mtcars %>% transmute(new = paste(mpg, cyl, sep = "_"))  ## "tbl_df", "tbl", "data.frame"... no adding of ".0" for "dbl" columns...
-
-## dbkey <- c("mpg", "cyl")
-## tbl(con1, "mtcars") %>% transmute(new = paste(!!!syms(dbkey), sep="_")) ## efficient, but hard to cast specific column into integer. 
-## tbl(con1, "mtcars") %>% select(dbkey) %>% collect() %>% transmute(new = paste(!!!syms(dbkey), sep="_")) ## less efficient, but works. 
