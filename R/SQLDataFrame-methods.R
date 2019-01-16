@@ -162,3 +162,12 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     return(keys)
 })
 
+setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
+          function(x, i, j, ..., drop = TRUE)
+{
+    if (!identical(dbkey(x), dbkey(i)))
+        stop("The dbkey() must be same between \"", deparse(substitute(x)),
+             "\" and \"", deparse(substitute(i)), "\".", "\n")
+    i <- ROWNAMES(i)
+    callNextMethod()
+})
