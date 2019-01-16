@@ -39,13 +39,3 @@ saveSQLDataFrame <- function(x, dbname,
 ## random_table_name <- function(n = 10) {
 ##     paste0(sample(letters, n, replace = TRUE), collapse = "")
 
-## ss@tblData$src
-###
-## Q1: how to get the print function for "src_dbi", "src_sql", "src"?
-###
-## want to capture:
-## src:  sqlite 3.22.0 [/home/qian/Documents/Research/rsqlite/SQLDataFrame/inst/extdata/test.db]
-###
-## Q2: add argument for path to a newly generated database. by default use current path?? 
-###
-
