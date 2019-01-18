@@ -1,7 +1,7 @@
 #' @param ... other parameters passed to methods.
 
 saveSQLDataFrame <- function(x, dbname, 
-                             dbtable = dplyr:::random_table_name(),
+                             dbtable = deparse(substitute(x)),
                              overwrite = FALSE,
                              types = NULL, ...)
 {
