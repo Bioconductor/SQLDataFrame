@@ -81,13 +81,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
         if (list_style_subsetting) 
             return(x)
     }
-    if (!missing(i)) {  ## FEATURE: list(key1 = .., key2 = .., ...)
-        if (is.list(i)) {
-            if (!identical(dbkey(x), union(dbkey(x), names(i))))
-                stop("Please use: \"", paste(dbkey(x), collapse=", "),
-                     "\" as the query list name(s).")
-            i <- do.call(paste, c(i[dbkey(x)], sep="\b"))
-        }
+    if (!missing(i)) { 
         x <- extractROWS(x, i)
     }
     if (missing(drop)) 
@@ -99,6 +93,38 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
             return(as(x, "list"))
     }
     x  
+})
+
+setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
+          function(x, i, j, ..., drop = TRUE)
+{
+    if (!identical(dbkey(x), dbkey(i)))
+        stop("The dbkey() must be same between \"", deparse(substitute(x)),
+             "\" and \"", deparse(substitute(i)), "\".", "\n")
+    i <- ROWNAMES(i)
+    callNextMethod()
+})
+
+## setMethod("[", signature = c("SQLDataFrame", "sql", "ANY"),
+##           function(x, i, j, ..., drop = TRUE)
+## {
+##     browser()
+##     tbl <- .extract_tbl_from_SQLDataFrame(x)
+##     tbl %>% sql(i)
+##     ## You can also use pass raw SQL if you want a more sophisticated query
+##     ## src %>% tbl(sql("SELECT * FROM mtcars WHERE cyl = 8"))
+##     tbl$src %>% tbl(sql)
+## })
+
+setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
+          function(x, i, j, ..., drop = TRUE)
+{
+    ## browser()
+    if (!identical(dbkey(x), union(dbkey(x), names(i))))
+        stop("Please use: \"", paste(dbkey(x), collapse=", "),
+             "\" as the query list name(s).")
+    i <- do.call(paste, c(i[dbkey(x)], sep="\b"))
+    callNextMethod()
 })
 
 ###--------------------
@@ -162,12 +188,32 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     return(keys)
 })
 
-setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
-          function(x, i, j, ..., drop = TRUE)
+## #' @param ... Logical predicates defined in terms of the variables in
+## #'     ‘.data’. Multiple conditions are combined with ‘&’. Only rows
+## #'     where the condition evaluates to ‘TRUE’ are kept.
+## #' @export S3mehod??
+## setMethod("filter", signature = "SQLDataFrame", function(.data, ...)
+## {
+filter.SQLDataFrame <- function(.data, ...)
 {
-    if (!identical(dbkey(x), dbkey(i)))
-        stop("The dbkey() must be same between \"", deparse(substitute(x)),
-             "\" and \"", deparse(substitute(i)), "\".", "\n")
-    i <- ROWNAMES(i)
-    callNextMethod()
-})
+    ## browser()
+    tbl <- .extract_tbl_from_SQLDataFrame(.data)
+    temp <- dplyr::filter(tbl, ...)
+    rnms <- temp %>% select(dbkey(.data)) %>% collect() %>%
+        transmute(concat = paste(!!!syms(dbkey(.data)), sep = "\b")) %>%
+        pull(concat)
+    idx <- match(rnms, ROWNAMES(.data))
+    if (!is.null(.data@indexes[[1]])) {
+        .data@indexes[[1]] <- .data@indexes[[1]][idx]
+    } else {
+        .data@indexes[[1]] <- idx
+    }
+    return(.data)
+}
+## want something like this to work:
+### `dplyr` functions: 
+## ss1[filter(col1 == "", col2 != "", col3 %in% c(...)), ] pass directly to: 
+## ss1@tblData %>% filter(col1 == "", col2 != "", col3 %in% c(...))
+
+### raw sql commands:
+## ss1[sql("SELECT * FROM table WHERE col1 == "", col2 != "", ...")]
