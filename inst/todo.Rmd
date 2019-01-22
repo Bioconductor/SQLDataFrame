@@ -1,14 +1,41 @@
-## TODO: 
+implement copy_to() to realize chunks of data and then save / rbind ... 
 
-- row subsetting with numeric indexes, must realize the key column? -- done! 
+
+### report: 
+1. `saveSQLDataFrame` create a new path is !exists()? 
+
+1. sdf[list(), ]
+2. sdf[sdf, ]
+3. filter(sdf, key1=="" & key2 > ..); sdf %>% filter(key1 ... key2 ... )
+4. rbind(), `copy_to/db_insert_into/dbWriteTable` ?? 
+5. SQLDataFrame show method, print the source? (refer `saveSQLDataFrame` print message). 
+
+### row subsetting with numeric indexes, 
+- use raw sql command instead of "dplyr::filter"...
+- rowsubsetting using "list()", or "filter() => list()". e.g.,
+  sdf[filter(col1 == "...", col1 %in% c("..."), ]. --- wait for the writing out function.  
+- col subsetting using "select(col1, col2, ...)", translate into col id and pass into `.extractCOLS`. 
+
+- must realize the key columns. -- done!
+
+- Add ROWNAMES(SQLDataFrame) for composite key. by concatenating key columns.   -- done!
+  (`unite` does not work on `tbl_dbi` directly, but `paste` works, or `collect%>%unite`)
+
+- Add row subsetting using `[list(key1 = c(...), key2 == c(...), ), ]`, and
+ translate into concatenated key values, then translate into numeric
+ indexes (`normalizeSingleBracketSubscript`) for [ subsetting.  -- done! 
+ 
+
+- write out subsetted SQL table? Write out into a new path, new
+  database (local?) file.  -- done!
+
 - row subsetting encourage to use column names instead of numeric indexes. 
 - new example, with 2 key columns. 
- 
 - [, subsetting using filter(c1 = , c2 %in%, c3 > ...) or using "&"
 - SQL raw filters translation. 
 - message for [numeric, ], to suggest language filtering. 
+
 - coercion of `DataFrame/data.frame/ANY` into `SQLDataFrame`. 
-- write out subsetted SQL table? 
 
 - numeric calculations, e.g., sum(), max(), min, row/colSums,
   row/colMeans, row/colMin, row/colMaxs, apply, ... need to define.
@@ -17,8 +44,9 @@
   reordering... `rbind,SQLDataFrame`? Maybe not, now one
   `SQLDataFrame` only corresponds to just one `tbl_dbi` object... Will
   there be any need for rbinding data from different database table?
+
 - inst/test.db? only keep "colDatal" and rename as "colData"?? update
-  testthat, examples...
+  testthat, examples...  -- done!
 
 ## DOING
 - `extractCOLS,SQLDataFrame`, add generic in `S4Vectors`, update

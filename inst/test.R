@@ -63,6 +63,7 @@ tbl <- .extract_tbl_from_SQLDataFrame(tt)
 compute(tbl)
 saveSQLDataFrame(tt, dbtable = "tt")
 
+
 tt@tblData$src$con
 dbListTables(tt@tblData$src$con)
 dbDisconnect(conn)
@@ -93,8 +94,26 @@ ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
 rownames(ss1)
 colnames(ss1)
 ss1[1:5, ]
-ROWNAMES(ss1)  ## only works for primary key. 
-ss1[c("Alabama", "Alaska"),]  ## expected ERROR because ROWNAMES(ss1) does not work. 
+ROWNAMES(ss1) 
+ss1[c("South", "3615"),]  ## expected ERROR because ROWNAMES(ss1) does not work. But could use something like "ss1[filter(region == "South" & population = "3615"), ]"
+ss1[c("South\b3615", "West\b2280"), ]
+ss1[list(c("South", "West"), c("3615", "2280")), ]
+
+ss2 <- ss1[1:9, ]
+ROWNAMES(ss2)
+## ss2[c("South\b3615.0", "West\b365.0"), ]  ## transmute(paste) %>% pull()
+ss2[c("South\b3615", "West\b365"), ]   ## collect(dbkey(x)) %>% transmute(paste) %>% pull()
+## row subsetting with list object works, checks dbkey(), but doesn't matter with ordering. 
+ss1[list(population = c("3615", "365", "4981"), region = c("South", "West", "South")), ]
+ss2[list(region = c("South", "West", "West"), population = c("3615", "365", "2280")), ]
+ss2[data.frame(region = c("South", "West", "West"), population = c("3615", "365", "2280")), ]
+ss2[tibble(region = c("South", "West", "West"), population = c("3615", "365", "2280")), ]
+
+ss1[list(region="South", population = "3615", other = "random"), ]
+## Error in ss1[list(region = "South", population = "3615", other = "random"),  : 
+##   Please use: "region, population" as the query list name(s).
+ss1[ROWNAMES(ss2), ]
+
 ss1[, 1:2]
 ss1[, 2:3]
 ss1[, 2, drop=FALSE]
@@ -248,3 +267,186 @@ DBI::dbGetQuery(conn,
 dbGetQuery(conn, "SELECT region || '_' || region || '_' || state as FullName FROM state")
 dbGetQuery(conn, "SELECT * FROM state WHERE state || '\b' || region LIKE '%a\bS%'")
 
+###
+## Join/bind
+###
+con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
+mtc <- mtcars
+mtc$id <- rownames(mtcars)
+m1 <- mtc[1:10, c("id", "mpg", "cyl", "disp")]
+m2 <- mtc[6:15, c("id", "hp", "drat", "wt")]
+copy_to(con1, m1)
+copy_to(con1, m2)
+m1.db <- tbl(con1, "m1")
+m2.db <- tbl(con1, "m2")
+
+### mutating join
+left_join(m1.db, m2.db, by = "id") %>% collect()
+left_join(m2.db, m1.db, by = "id") %>% collect()
+inner_join(m1.db, m2.db, by = "id")
+inner_join(m1.db, m2.db, by = "id") %>% show_query()
+
+right_join(m1.db, m2.db, by = "id")  ## ERROR
+full_join(m1.db, m2.db, by = "id")  ## ERROR
+## Error in result_create(conn@ptr, statement) : 
+##   RIGHT and FULL OUTER JOINs are not currently supported
+
+### filtering join
+semi_join(m1.db, m2.db, by = "id")  ## overlapping rows
+anti_join(m1.db, m2.db, by = "id")  ## non-overlapping rows in m1, not in m2
+anti_join(m2.db, m1.db, by = "id")  ## non-overlapping rows, in m2, not in m1
+
+### Binding
+bind_rows(m1.db, m2.db)  ## ERROR
+bind_cols(m1.db, m2.db)  ## ERROR
+## Error in cbind_all(x) : 
+##   Argument 1 must be a data frame or a named atomic vector, not a tbl_dbi/tbl_sql/tbl_lazy/tbl
+
+
+## QUESTION: how to save the binding rows/cols in SQLDataFrame? @tblData save as a list of `tbl_dbi`? Virtual class of `SQLDataFrame` and subclass after subsetting, rbind? ...
+
+## realize and use saveSQLDataFrame? rbind(dbname = , dbtable =, ), return(SQLDataFrame()). 
+## copy_to, the 1st copy_to(append). key cols... check key ... 
+
+## cbind: left_join, inner_join.
+
+## sql(). [filter(col1 %in% c(), col2 == ...), ]. ROWNAMES matching, sdf@indexes. 
+
+
+ss1 <- SQLDataFrame("inst/extdata/test.db", dbtable = "state", dbkey = c("region", "population"))
+ss2 <- ss1[1:10, 2:3]
+ss3 <- ss1[11:15, 2:3]
+
+###----------------------------------------------------------
+## copy_to(append?), db_insert_into, dbWriteTable(append)
+###----------------------------------------------------------
+### here, "src_memdb()$con" is equivalent to "dbConnect(RSQLite::SQLite(), ":memory:")"
+m1 <- mtcars[1:5, ]
+m2 <- mtcars[6:10, ]
+copy_to(src_memdb(), m1, "m1", overwrite = T)
+src_tbls(src_memdb())
+dbListTables(src_memdb()$con)  ## equivalent to above
+
+###----------------------------------------------------------------------
+### "db_insert_into": works for in-memory data.frame, not for "tbl_dbi"
+dbReadTable(src_memdb()$con, "m1")
+db_insert_into(src_memdb()$con, "m1", m2)  ## works!
+dbReadTable(src_memdb()$con, "m1")
+
+copy_to(src_memdb(), m1, "m1", overwrite = T)  ## overwrite m1 as original 5 rows.
+m2.db <- src_memdb() %>% copy_to(m2)
+db_insert_into(src_memdb()$con, "m1", m2.db)
+## Error in (function (classes, fdef, mtable)  : 
+##   unable to find an inherited method for function ‘dbWriteTable’ for signature ‘"SQLiteConnection", "character", "tbl_dbi"’
+
+###-------------------------------------------------------------------------------
+### "dbWriteTable": "append" works for in-memory data.frame, not for "tbl_dbi". 
+dbWriteTable(src_memdb()$con, name = "m1", value = m1, overwrite =T)
+dbWriteTable(src_memdb()$con, name = "m1", value = m2, append = T)  ## "append" works for in-memory data.frame. 
+dbReadTable(src_memdb()$con, "m1")
+
+dbWriteTable(src_memdb()$con, name = "m1", value = m1, overwrite =T)
+dbWriteTable(src_memdb()$con, name = "m1", value = m2.db, append = T)  
+## Error in (function (classes, fdef, mtable)  : 
+##   unable to find an inherited method for function ‘dbWriteTable’ for signature ‘"SQLiteConnection", "character", "tbl_dbi"’
+
+###-----------------------------------------------------------------
+### "copy_to": "overwrite" works, but "append" doesn't work!
+copy_to(src_memdb(), m1, "m1", overwrite = T)
+copy_to(src_memdb()$con, m2, "m1", append = T)
+## Error: Table `m1` exists in database, and both overwrite and append are FALSE
+
+###--------------
+## sdf[sdf, ]
+###--------------
+ss1[ss2, ]
+ss1[ss3, ]
+
+###---------------------
+## filter.SQLDataFrame
+###---------------------
+ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "state", dbkey = c("region", "population"))
+ss2 <- ss1[1:10, 2:3]
+filter.SQLDataFrame(ss2, region == "South")
+filter(ss2, region == "South")
+filter(ss2, region == "South" & population > 1000)  ## a bit more efficient than [TRUE, ]. 
+ss2 %>% filter(region == "South"& population > 1000)
+
+### non-key subsetting
+ss2 %>% filter(region == "South"& population > 1000)
+ss2 %>% filter(state %in% c("Alabama", "Arkansas"))
+ss2 %>% filter(size == "medium")  ## @indexes[[1]] not null, update
+ss1 %>% filter(size == "medium")  ## @indexes[[1]] is null, update
+
+## less-efficient way of filtering using "[i, ]"
+ss2[ss2$region == "South", ]
+ss2[ss2$region == "South" & ss2$population > 1000, ]
+
+### key-subsetting: must provide specific values
+ss2[list(region = "South", population = "3615"), ]
+
+###---------------------------------------
+## join, left_join, semi_join, anti_join
+###---------------------------------------
+ss4 <- ss1[6:15, 1, drop = FALSE]
+saveSQLDataFrame(ss4, "inst/extdata/test.db")
+ss2.tbl <- .extract_tbl_from_SQLDataFrame(ss2)
+ss4.tbl <- .extract_tbl_from_SQLDataFrame(ss4)
+left_join(ss2.tbl, ss4.tbl)
+temp <- left_join(ss2.tbl, ss4.tbl, by = dbkey(ss2))   ## same source
+temp %>% show_query()
+temp$src$con
+## want these to work: left_join(ss2, ss4), returns a SQLDataFrame(dbname=, dbtable=, dbkey=dbkey(ss2)) with @tblData ()
+
+## replaceSlot @tblData, update @indexes to be NULL. Update @dbnrows, update @dbtable.
+
+##-----------------------------------------------
+## dbExecute, build_sql, dbGetQuery, in_schema
+##-----------------------------------------------
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+copy_to(con, mtcars)
+tmp <- tempfile()
+DBI::dbExecute(con, paste0("ATTACH '", tmp, "' AS aux"))
+DBI::dbExecute(con, "CREATE TABLE aux.mtc(model text, mpg text)")
+## [1] 0
+DBI::dbExecute(con, "INSERT INTO aux.mtc SELECT model, mpg FROM mtcars")
+## [1] 32
+DBI::dbExecute(con, "CREATE TABLE aux.mtc AS SELECT mpg, cyl, drat FROM mtcars")
+## equivalent to above 2 lines.
+con %>% tbl(in_schema("aux", "mtc")) 
+bsql <- build_sql("SELECT * FROM ", in_schema("aux", "mtc"), " Limit 5")
+dbExecute(con, bsql)  
+dbGetQuery(con, bsql)
+bsql <- build_sql("SELECT * FROM ", in_schema("aux", "mtc"), " Limit ?")
+dbGetQuery(con, bsql1, params = list(6))
+## You can also use ‘dbExecute()’ to call a stored procedure that
+## performs data manipulation or other actions that do not return a
+## result set. To execute a stored procedure that returns a result
+## set use ‘dbGetQuery()’ instead.
+
+tbl(con, in_schema("aux", "mtc"))$src
+## src:  sqlite 3.22.0 [:memory:]
+## tbls: df, mtcars, sqlite_stat1, sqlite_stat1, sqlite_stat4, sqlite_stat4
+### NOTE: the "aux.mtc" has same source as "con".
+debug(dbplyr:::copy_to.src_sql)
+aa <- tbl(con, in_schema("aux", "mtc"))
+copy_to(con, aa, "mtc")  ## success! same source copy to calls "compute()"
+undebug(dbplyr:::copy_to.src_sql)
+
+##---------------------------
+## debug "overwrite = TRUE"
+##---------------------------
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+copy_to(con, mtcars)
+mtc.db <- tbl(con, "mtcars") %>% select(mpg:disp)
+copy_to(con, mtc.db, "mtc.db")
+tbl(con, "mtc.db")
+copy_to(con, mtc.db, "mtc.db", overwrite = TRUE, temporary = FALSE)
+## compute calls "do_compute.DBIConnection()", dbExecute(con, "CREATE TEMPORARY TABLE name AS query")
+## copy_to, copy_to.DBIConnection, copy_to.src_sql, compute(), compute.tbl_sql(), db_compute(), db_compute.DBIConnection(), db_save_query(), db_save_query.DBIConnection(), dbExecute(con, build_sql("CREATE TEMPORARY TABLE name AS ", show_query(mtc.db)), the last step of creating table does not have "overwrite" argument.  
+
+##------------------------
+## debug  copy_to(types)
+##------------------------
+copy_to(con, mtc.db, "mtc.db1", types = c("NUMERIC", "TEXT", "NUMERIC"))
+tbl(con, "mtc.db1")  ## data type didn't change...

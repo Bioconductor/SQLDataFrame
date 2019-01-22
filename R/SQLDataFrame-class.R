@@ -211,7 +211,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 .extract_tbl_from_SQLDataFrame <- function(x)
 {
     ridx <- x@indexes[[1]]
-    cidx <- x@indexes[[2]]
+    ## cidx <- x@indexes[[2]]
     tbl <- x@tblData
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)

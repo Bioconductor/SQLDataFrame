@@ -3,6 +3,7 @@
 export("]")
 export("b[letters[10:15],")
 export(coerce)
+export(saveSQLDataFrame)
 exportClasses(SQLDataFrame)
 exportMethods(as.data.frame)
 exportMethods(dbkey)
