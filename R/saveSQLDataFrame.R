@@ -23,7 +23,8 @@ saveSQLDataFrame <- function(x, dbname,
                              types = NULL, ...)
 {
     ## browser()
-    file.create(dbname) ## create if not already exists.
+    if (!file.exists(dbname))
+        file.create(dbname) 
     dbname <- file_path_as_absolute(dbname)
 
     ## open a new connection to write database table.
@@ -34,10 +35,7 @@ saveSQLDataFrame <- function(x, dbname,
     ## open the to-be-copied "lazy tbl" from new connection.
     tbl <- tbl(con, in_schema("aux", x@tblData$ops$x))
     ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
-    ridx <- x@indexes[[1]]
-    if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
-    tbl <- tbl %>% select(dbkey(x), colnames(x))  ## order by "key + otherCols"
+    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tbl, x) ## reorder by "key + otherCols"
 
     copy_to(con, tbl, name = dbtable, temporary = FALSE,
             ## overwrite = overwrite,
@@ -62,3 +60,11 @@ saveSQLDataFrame <- function(x, dbname,
     message(msg)
 }
 
+.extract_tbl_from_SQLDataFrame_indexes <- function(tbl, sdf)
+{
+    ridx <- sdf@indexes[[1]]
+    if (!is.null(ridx))
+        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf), ridx)
+    tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))  ## order by "key + otherCols"
+    return(tbl)
+}
