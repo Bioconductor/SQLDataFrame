@@ -10,25 +10,58 @@
     if (length(unique(cnms)) != 1 )
         stop("Input SQLDataFrame objects must have identical columns!")
     sdf1 <- objects[[1L]]
-    tbl1 <- .extract_tbl_from_SQLDataFrame(sdf1)
-    tbls_apend <- lapply(objects[-1L], .extract_tbl_from_SQLDataFrame)
-    ## open a new connection, or "src_dbi", and write database table.
+
+    ## use temporary dir and random table name. 
     dbname <- tempfile(fileext = ".db")
     dbtable <- dplyr:::random_table_name()
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)  ## dbname, using tempdir().
-    copy_to(con, tbl1, name = dbtable,    ## dbtable, randomly-generated table name.
+
+    ## open a new connection to write database table.
+    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+    ## attach the dbname of the to-be-copied "lazy tbl" to the new connection.
+    ## FIXME: possible to attach an online database?
+    auxName <- "aux"
+    DBI::dbExecute(con, paste0("ATTACH '", sdf1@tblData$src$con@dbname, "' AS ", auxName))
+    ## open the to-be-copied "lazy tbl" from new connection.
+    tbl1 <- tbl(con, in_schema("aux", sdf1@tblData$ops$x))
+    ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
+    tbl1 <- .extract_tbl_from_SQLDataFrame_indexes(tbl1, sdf1) ## reorder by "key + otherCols"
+
+    copy_to(con, tbl1, name = dbtable,
             temporary = FALSE, overwrite = TRUE,
             unique_indexes = NULL, indexes = list(dbkey(sdf1)),
             analyze = TRUE)
-    for (i in seq_len(length(tbls_apend))) {
-        ## copy_to(con, collect(tbls_apend[[i]]), name = dbtable, temporary = FALSE, append = TRUE)
-        dplyr::db_insert_into(con, table = dbtable, value = collect(tbls_apend[[i]]), temporary = FALSE, append = TRUE)
-        ## DBI::dbWriteTable()
-        ## DBI::db_insert_into()
+
+    for (i in seq_len(length(objects))[-1]) {
+        src_append <- objects[[i]]@tblData$src
+        if (! same_src(src_append, sdf1@tblData$src)) {
+            auxName <- paste0("aux", i)
+            DBI::dbExecute(con, paste0("ATTACH '", src_append$con@dbname, "' AS ", auxName))
+        }
+        tbl_append <- tbl(con, in_schema(auxName, objects[[i]]@tblData$ops$x))
+        tbl_append <- .extract_tbl_from_SQLDataFrame_indexes(tbl_append, objects[[i]])
+        temp_table_name <- paste0("temp", i)
+        copy_to(con, tbl_append, name = temp_table_name, temporary = TRUE)
+        dbExecute(con, build_sql("INSERT INTO ", sql(dbtable),
+                                 " SELECT * FROM ", sql(temp_table_name)))
     }
-    ## msg1: a new table is generated in a new database, use 'dbname()', 'dbtable()' to see details. 
-    msg <- paste0("## A temporary database table is generated. \n",
-                  "## Use dbname() and dbtable() to return the path. \n")
+    
+    ## dplyr::db_insert_into(con, table = dbtable, value =
+    ##     collect(tbls_apend[[i]]), temporary = FALSE, append = TRUE)
+
+    ## message 
+    nrow <- tbl(con, dbtable) %>% summarize(n=n()) %>% pull(n)
+    ncol <- length(colnames(tbl1))
+    msg <- paste0("## A temporary database table is generated: \n",
+                  "## Source: table<", dbtable, "> [", nrow, " X ", ncol, "] \n",
+                  "## Database: ", db_desc(con), "\n",
+                  "## Use the following command to reload into R: \n",
+                  "## dat <- SQLDataFrame(\n",
+                  "##   dbname = \"", dbname, "\",\n",
+                  "##   dbtable = \"", dbtable, "\",\n",
+                  "##   dbkey = ", ifelse(length(dbkey(sdf1)) == 1, "", "c("),
+                  paste(paste0("'", dbkey(sdf1), "'"), collapse=", "),
+                  ifelse(length(dbkey(sdf1)) == 1, "", ")"), ")", "\n")
+
     message(msg)
     dat <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(sdf1))
     return(dat)
@@ -40,10 +73,5 @@ setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)
 ## random_table_name <- function(n = 10) {
 ##     paste0(sample(letters, n, replace = TRUE), collapse = "")
 
-## wants to do: copy_to(dest=con, df="tbl_dbi"lazy tbl, name=deparse(substitute(df)), append = T)
-## would check identical(con, "tbl_dbi"$src$con), if TRUE, compute(df, name, temporary, indexes, analyze, ?append, ..)
-## we can make "compute()" call by attaching the "tbl_dbi" connected database to the "con" database before calling of "copy_to()" ??
-## next, would "compute(append=T)" work?
 
 
-append

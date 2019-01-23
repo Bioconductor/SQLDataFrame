@@ -386,6 +386,22 @@ ss2[ss2$region == "South" & ss2$population > 1000, ]
 ss2[list(region = "South", population = "3615"), ]
 
 ###---------------------------------------
+## rbind
+###---------------------------------------
+
+## same source
+ss3 <- ss1[11:15, 2:3]
+ss23 <- rbind(ss2, ss3)  ## works for same_src(ss2@tblData$src, ss3@tblData$src)
+str(ss23)
+ss23@tblData
+
+## different source
+saveSQLDataFrame(ss3, "../temp.db")
+ss3.new <- SQLDataFrame(dbname = "../temp.db", dbtable="ss3", dbkey = c("region", "population"))
+ss23.new <- rbind(ss2, ss3.new) 
+saveSQLDataFrame(ss23.new, "../temp.db")
+
+###---------------------------------------
 ## join, left_join, semi_join, anti_join
 ###---------------------------------------
 ss4 <- ss1[6:15, 1, drop = FALSE]
