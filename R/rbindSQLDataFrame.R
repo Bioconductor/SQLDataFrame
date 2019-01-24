@@ -39,14 +39,13 @@
         }
         tbl_append <- tbl(con, in_schema(auxName, objects[[i]]@tblData$ops$x))
         tbl_append <- .extract_tbl_from_SQLDataFrame_indexes(tbl_append, objects[[i]])
-        temp_table_name <- paste0("temp", i)
-        copy_to(con, tbl_append, name = temp_table_name, temporary = TRUE)
-        dbExecute(con, build_sql("INSERT INTO ", sql(dbtable),
-                                 " SELECT * FROM ", sql(temp_table_name)))
+
+        ## vars <- op_vars(tbl_append)
+        ## tbl_append_aliased <- select(tbl_append, !!!syms(vars))
+        ## sql <- db_sql_render(con, tbl_append_aliased$ops)
+        sql_tbl_append <- db_sql_render(con, tbl_append)
+        dbExecute(con, build_sql("INSERT INTO ", sql(dbtable), " ", sql_tbl_append))
     }
-    
-    ## dplyr::db_insert_into(con, table = dbtable, value =
-    ##     collect(tbls_apend[[i]]), temporary = FALSE, append = TRUE)
 
     ## message 
     nrow <- tbl(con, dbtable) %>% summarize(n=n()) %>% pull(n)
