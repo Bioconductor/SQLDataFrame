@@ -30,25 +30,30 @@
             temporary = FALSE, overwrite = TRUE,
             unique_indexes = NULL, indexes = list(dbkey(sdf1)),
             analyze = TRUE)
-
+    rnms <- ROWNAMES(sdf1)
+    
     for (i in seq_len(length(objects))[-1]) {
         src_append <- objects[[i]]@tblData$src
         if (! same_src(src_append, sdf1@tblData$src)) {
             auxName <- paste0("aux", i)
             DBI::dbExecute(con, paste0("ATTACH '", src_append$con@dbname, "' AS ", auxName))
         }
-        tbl_append <- tbl(con, in_schema(auxName, objects[[i]]@tblData$ops$x))
-        tbl_append <- .extract_tbl_from_SQLDataFrame_indexes(tbl_append, objects[[i]])
 
-        ## vars <- op_vars(tbl_append)
-        ## tbl_append_aliased <- select(tbl_append, !!!syms(vars))
-        ## sql <- db_sql_render(con, tbl_append_aliased$ops)
-        sql_tbl_append <- db_sql_render(con, tbl_append)
+        rnms_update <- union(rnms, ROWNAMES(objects[[i]]))
+        rnms_diff <- setdiff(rnms_update, rnms)
+
+        tbl_append <- tbl(con, in_schema(auxName, objects[[i]]@tblData$ops$x))
+        tbl_append <- .extract_tbl_from_SQLDataFrame_indexes(tbl_append, objects[[i]][rnms_diff, ])
+
+        sql_tbl_append <- dbplyr::db_sql_render(con, tbl_append)
+        ## equivalent to dbplyr::sql_render(tbl_append, con)
         dbExecute(con, build_sql("INSERT INTO ", sql(dbtable), " ", sql_tbl_append))
+        rnms <- rnms_update
     }
 
     ## message 
     nrow <- tbl(con, dbtable) %>% summarize(n=n()) %>% pull(n)
+    ## nrow <- do.call(sum, lapply(objects, nrow))
     ncol <- length(colnames(tbl1))
     msg <- paste0("## A temporary database table is generated: \n",
                   "## Source: table<", dbtable, "> [", nrow, " X ", ncol, "] \n",
@@ -63,11 +68,12 @@
 
     message(msg)
     dat <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(sdf1))
-    return(dat)
+    rnms_final <- do.call(c, lapply(objects, ROWNAMES))
+    res <- dat[match(rnms_final, rnms), ]
+    return(res)
 }
 
 setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)
-
 
 ## random_table_name <- function(n = 10) {
 ##     paste0(sample(letters, n, replace = TRUE), collapse = "")
