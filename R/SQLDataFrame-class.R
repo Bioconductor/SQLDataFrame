@@ -182,10 +182,12 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 #' @importFrom lazyeval interp
 #' @import S4Vectors
 
+## filter() makes sure it returns table with unique rows, no duplicate rows allowed...
 .extract_tbl_rows_by_key <- function(x, key, i)
 {
     ## browser()
     ## always require a dbkey(), and accommodate with multiple key columns. 
+    i <- sort(unique(i))
     if (length(key) == 1) {
         keys <- pull(x, grep(key, colnames(x)))
         ## expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i])
@@ -208,15 +210,14 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     return(out)
 }
 
+## Nothing special, just queried the ridx, and ordered tbl by "key+otherCols"
 .extract_tbl_from_SQLDataFrame <- function(x)
 {
     ridx <- x@indexes[[1]]
-    ## cidx <- x@indexes[[2]]
     tbl <- x@tblData
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
-    ## if (!is.null(cidx))
-    tbl <- tbl %>% select(dbkey(x), colnames(x))  ## order by "key + otherCols"
+    tbl <- tbl %>% select(dbkey(x), colnames(x))
     return(tbl)
 }
 
@@ -224,13 +225,15 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     ## browser()
     tbl <- .extract_tbl_from_SQLDataFrame(x)  ## already ordered by
                                               ## "key + otherCols".
-    i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bounds subscripts.
-    tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
+    ## i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bound subscripts.
+    i <- match(index, sort(unique(x@indexes[[1]]))) 
+    ## tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
+    
     out <- as.matrix(unname(cbind(
-        out.tbl[, seq_along(dbkey(x))],
+        out.tbl[i, seq_along(dbkey(x))],
         rep("|", length(i)),
-        out.tbl[, -seq_along(dbkey(x))])))
+        out.tbl[i, -seq_along(dbkey(x))])))
     return(out)
 }
 
@@ -247,18 +250,20 @@ setMethod("show", "SQLDataFrame", function (object)
     cat(class(object), " with ", nr, ifelse(nr == 1, " row and ", 
         " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
         sep = "")
-    if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column. 
-        ## nms <- rownames(object)
+    if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column?
+        ## nms <- rownames(object)  ## currently, sdf does not support rownames().
+        ridx <- object@indexes[[1]]
+        if (is.null(ridx)) ridx <- seq_len(nr)
         if (nr <= (nhead + ntail + 1L)) {
-            out <- .printROWS(object, seq_len(nr))
+            out <- .printROWS(object, ridx)
             ## if (!is.null(nms)) 
             ##     rownames(out) <- nms
         }
         else {
-            out <- rbind(.printROWS(object, seq_len(nhead)),
-                        c(rep.int("...", length(dbkey(object))),
-                         ".", rep.int("...", nc)),
-                         .printROWS(object, tail(seq_len(nr), ntail)))
+            out <- .printROWS(object, c(head(ridx, nhead), tail(ridx, ntail)))
+            out <- rbind(out[seq_len(nhead), ],
+                         c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
+                         out[-seq_len(nhead), ])
             ## rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
         classinfoFun <- function(tbl, colnames) {
