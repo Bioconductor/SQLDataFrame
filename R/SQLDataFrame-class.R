@@ -226,7 +226,9 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     tbl <- .extract_tbl_from_SQLDataFrame(x)  ## already ordered by
                                               ## "key + otherCols".
     ## i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bound subscripts.
-    i <- match(index, sort(unique(x@indexes[[1]]))) 
+    ridx <- x@indexes[[1]]
+    if (is.null(ridx)) ridx <- seq_len(nrow(x))
+    i <- match(index, sort(unique(ridx))) 
     ## tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
     
@@ -242,7 +244,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 #' @export
 setMethod("show", "SQLDataFrame", function (object) 
 {
-    ## browser()
+    browser()
     nhead <- get_showHeadLines()
     ntail <- get_showTailLines()
     nr <- nrow(object)
@@ -260,10 +262,16 @@ setMethod("show", "SQLDataFrame", function (object)
             ##     rownames(out) <- nms
         }
         else {
-            out <- .printROWS(object, c(head(ridx, nhead), tail(ridx, ntail)))
-            out <- rbind(out[seq_len(nhead), ],
+            sdf.head <- object[seq_len(nhead), ]
+            sdf.tail <- object[tail(seq_len(nrow(object)), ntail), ]
+            out <- rbind(.printROWS(sdf.head, sdf.head@indexes[[1]]),
                          c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
-                         out[-seq_len(nhead), ])
+                         .printROWS(sdf.tail, sdf.tail@indexes[[1]]))
+            
+            ## out <- .printROWS(object, c(head(ridx, nhead), tail(ridx, ntail)))
+            ## out <- rbind(out[seq_len(nhead), ],
+            ##              c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
+            ##              out[-seq_len(nhead), ])
             ## rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
         classinfoFun <- function(tbl, colnames) {
@@ -296,6 +304,7 @@ setMethod("as.data.frame", "SQLDataFrame",
     tbl <- .extract_tbl_from_SQLDataFrame(x)
     out.tbl <- tbl %>% collect()
     as.data.frame(out.tbl)
+    ## as.data.frame(.printROWS(aa, aa@indexes[[1]]))...
 })
 
 #' @name coerce
