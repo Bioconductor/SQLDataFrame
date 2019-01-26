@@ -8,7 +8,7 @@ setOldClass("tbl_dbi")
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
     slots = c(
-        dbtable = "character",
+        ## dbtable = "character",
         dbkey = "character",
         dbnrows = "integer",
         ## dbrownames = "character_OR_NULL",
@@ -82,7 +82,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         }
     }
     .SQLDataFrame(
-        dbtable = dbtable,
+        ## dbtable = dbtable,
         dbkey = dbkey,
         dbnrows = dbnrows,
         tblData = tbl,
@@ -164,8 +164,11 @@ setGeneric("dbtable", signature = "x", function(x)
 #' @rdname SQLDataFrame-class
 #' @aliases dbtable dbtable,SQLDataFrame
 #' @export
-setMethod("dbtable", "SQLDataFrame", function(x) x@dbtable)
-
+## setMethod("dbtable", "SQLDataFrame", function(x) x@dbtable)
+setMethod("dbtable", "SQLDataFrame", function(x)
+{
+    as.character(x@tblData$ops$x)
+})
 setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))
 
@@ -244,7 +247,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 #' @export
 setMethod("show", "SQLDataFrame", function (object) 
 {
-    browser()
+    ## browser()
     nhead <- get_showHeadLines()
     ntail <- get_showTailLines()
     nr <- nrow(object)

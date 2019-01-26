@@ -1,6 +1,6 @@
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    ## browser()
+    browser()
     objects <- list(...)
     ## check consistent dbkey(), colnames(),
     keys <- lapply(objects, dbkey)
@@ -20,9 +20,9 @@
     ## attach the dbname of the to-be-copied "lazy tbl" to the new connection.
     ## FIXME: possible to attach an online database?
     auxName <- "aux"
-    DBI::dbExecute(con, paste0("ATTACH '", sdf1@tblData$src$con@dbname, "' AS ", auxName))
+    DBI::dbExecute(con, paste0("ATTACH '", dbname(sdf1), "' AS ", auxName))
     ## open the to-be-copied "lazy tbl" from new connection.
-    tbl1 <- tbl(con, in_schema("aux", sdf1@tblData$ops$x))
+    tbl1 <- tbl(con, in_schema("aux", ident(dbtable(sdf1))))
     ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
     tbl1 <- .extract_tbl_from_SQLDataFrame_indexes(tbl1, sdf1) ## reorder by "key + otherCols"
 
