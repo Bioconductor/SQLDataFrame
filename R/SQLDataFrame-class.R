@@ -292,9 +292,9 @@ setMethod("as.data.frame", "SQLDataFrame",
           function(x, row.names = NULL, optional = FALSE, ...)
 {
     tbl <- .extract_tbl_from_SQLDataFrame(x)
-    out.tbl <- tbl %>% collect()
-    as.data.frame(out.tbl)
-    ## as.data.frame(.printROWS(aa, aa@indexes[[1]]))...
+    ridx <- normalizeRowIndex(x)
+    i <- match(ridx, sort(unique(ridx))) 
+    as.data.frame(tbl)[i, ]
 })
 
 #' @name coerce
