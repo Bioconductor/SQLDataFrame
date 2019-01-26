@@ -33,16 +33,16 @@
     rnms <- ROWNAMES(sdf1)[order(ridx(sdf1))]
     
     for (i in seq_len(length(objects))[-1]) {
-        src_append <- objects[[i]]@tblData$src
+        src_append <- src_dbi(.con_SQLDataFrame(objects[[i]]))
         if (! same_src(src_append, sdf1@tblData$src)) {
             auxName <- paste0("aux", i)
-            DBI::dbExecute(con, paste0("ATTACH '", src_append$con@dbname, "' AS ", auxName))
+            DBI::dbExecute(con, paste0("ATTACH '", dbname(objects[[i]]), "' AS ", auxName))
         }
         rnms_append <- ROWNAMES(objects[[i]])[order(ridx(objects[[i]]))]
         rnms_update <- union(rnms, rnms_append)
         rnms_diff <- setdiff(rnms_update, rnms)
 
-        tbl_append <- tbl(con, in_schema(auxName, objects[[i]]@tblData$ops$x))
+        tbl_append <- tbl(con, in_schema(auxName, ident(dbtable(objects[[i]]))))
         tbl_append <- .extract_tbl_from_SQLDataFrame_indexes(tbl_append, objects[[i]][rnms_diff, ])
 
         sql_tbl_append <- dbplyr::db_sql_render(con, tbl_append)
