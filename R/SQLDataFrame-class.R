@@ -119,14 +119,7 @@ setValidity("SQLDataFrame", .validity_SQLDataFrame)
 #' @exportMethod dim length names dimnames
 setMethod("dim", "SQLDataFrame", function(x)
 {
-    ## nrow
-    ridx <- x@indexes[[1]]
-    if (is.null(ridx)) {
-        nr <- x@dbnrows
-    } else {
-        nr <- length(ridx)
-    }
-    ## ncol
+    nr <- length(normalizeRowIndex(x))
     nc <- length(colnames(x))
     return(c(nr, nc))
 })
@@ -216,7 +209,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 ## Nothing special, just queried the ridx, and ordered tbl by "key+otherCols"
 .extract_tbl_from_SQLDataFrame <- function(x)
 {
-    ridx <- x@indexes[[1]]
+    ridx <- ridx(x)
     tbl <- x@tblData
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
@@ -224,16 +217,16 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     return(tbl)
 }
 
+## .printROWS realize all ridx(x), so be careful here to only use small x.
 .printROWS <- function(x, index){
     ## browser()
     tbl <- .extract_tbl_from_SQLDataFrame(x)  ## already ordered by
                                               ## "key + otherCols".
     ## i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bound subscripts.
-    ridx <- x@indexes[[1]]
-    if (is.null(ridx)) ridx <- seq_len(nrow(x))
-    i <- match(index, sort(unique(ridx))) 
     ## tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
     out.tbl <- tbl %>% collect()
+    ridx <- normalizeRowIndex(x)
+    i <- match(index, sort(unique(ridx))) 
     
     out <- as.matrix(unname(cbind(
         out.tbl[i, seq_along(dbkey(x))],
@@ -257,24 +250,18 @@ setMethod("show", "SQLDataFrame", function (object)
         sep = "")
     if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column?
         ## nms <- rownames(object)  ## currently, sdf does not support rownames().
-        ridx <- object@indexes[[1]]
-        if (is.null(ridx)) ridx <- seq_len(nr)
         if (nr <= (nhead + ntail + 1L)) {
-            out <- .printROWS(object, ridx)
+            out <- .printROWS(object, normalizeRowIndex(object))
             ## if (!is.null(nms)) 
             ##     rownames(out) <- nms
         }
         else {
             sdf.head <- object[seq_len(nhead), ]
             sdf.tail <- object[tail(seq_len(nrow(object)), ntail), ]
-            out <- rbind(.printROWS(sdf.head, sdf.head@indexes[[1]]),
-                         c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
-                         .printROWS(sdf.tail, sdf.tail@indexes[[1]]))
-            
-            ## out <- .printROWS(object, c(head(ridx, nhead), tail(ridx, ntail)))
-            ## out <- rbind(out[seq_len(nhead), ],
-            ##              c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
-            ##              out[-seq_len(nhead), ])
+            out <- rbind(
+                .printROWS(sdf.head, ridx(sdf.head)),
+                c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
+                .printROWS(sdf.tail, ridx(sdf.tail)))
             ## rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
         classinfoFun <- function(tbl, colnames) {
