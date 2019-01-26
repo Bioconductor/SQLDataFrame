@@ -1,6 +1,6 @@
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    browser()
+    ## browser()
     objects <- list(...)
     ## check consistent dbkey(), colnames(),
     keys <- lapply(objects, dbkey)
@@ -30,7 +30,7 @@
             temporary = FALSE, overwrite = TRUE,
             unique_indexes = NULL, indexes = list(dbkey(sdf1)),
             analyze = TRUE)
-    rnms <- ROWNAMES(sdf1)
+    rnms <- ROWNAMES(sdf1)[order(ridx(sdf1))]
     
     for (i in seq_len(length(objects))[-1]) {
         src_append <- objects[[i]]@tblData$src
@@ -38,8 +38,8 @@
             auxName <- paste0("aux", i)
             DBI::dbExecute(con, paste0("ATTACH '", src_append$con@dbname, "' AS ", auxName))
         }
-
-        rnms_update <- union(rnms, ROWNAMES(objects[[i]]))
+        rnms_append <- ROWNAMES(objects[[i]])[order(ridx(objects[[i]]))]
+        rnms_update <- union(rnms, rnms_append)
         rnms_diff <- setdiff(rnms_update, rnms)
 
         tbl_append <- tbl(con, in_schema(auxName, objects[[i]]@tblData$ops$x))
@@ -50,7 +50,9 @@
         dbExecute(con, build_sql("INSERT INTO ", sql(dbtable), " ", sql_tbl_append))
         rnms <- rnms_update
     }
-
+    rnms_final <- do.call(c, lapply(objects, ROWNAMES))
+    idx <- match(rnms_final, rnms)
+    
     ## message 
     nrow <- tbl(con, dbtable) %>% summarize(n=n()) %>% pull(n)
     ## nrow <- do.call(sum, lapply(objects, nrow))
@@ -64,12 +66,13 @@
                   "##   dbtable = \"", dbtable, "\",\n",
                   "##   dbkey = ", ifelse(length(dbkey(sdf1)) == 1, "", "c("),
                   paste(paste0("'", dbkey(sdf1), "'"), collapse=", "),
-                  ifelse(length(dbkey(sdf1)) == 1, "", ")"), ")", "\n")
+                  ifelse(length(dbkey(sdf1)) == 1, "", ")"), ")", "\n",
+                  "## dat <- dat[c(",
+                  paste(idx, collapse = ", "), "), ]", "\n")
 
     message(msg)
     dat <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(sdf1))
-    rnms_final <- do.call(c, lapply(objects, ROWNAMES))
-    res <- dat[match(rnms_final, rnms), ]
+    res <- dat[idx, ]
     return(res)
 }
 
