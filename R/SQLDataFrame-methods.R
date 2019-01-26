@@ -179,12 +179,15 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     ##     transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
     ##     pull(concat)
     ## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
-    keys <- x@tblData %>% select(dbkey(x)) %>% collect() %>%
+    tbl <- .extract_tbl_from_SQLDataFrame(x)
+    keys <- tbl %>% select(dbkey(x)) %>% collect() %>% 
         transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
         pull(concat)
-    ridx <- x@indexes[[1]]
-    if (!is.null(ridx))
-        keys <- keys[ridx]
+    ridx <- ridx(x)
+    if (!is.null(ridx)) {
+        i <- match(ridx, sort(unique(ridx)))
+        keys <- keys[i]
+    }
     return(keys)
 })
 
