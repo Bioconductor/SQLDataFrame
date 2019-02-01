@@ -160,7 +160,23 @@ setGeneric("dbtable", signature = "x", function(x)
 ## setMethod("dbtable", "SQLDataFrame", function(x) x@dbtable)
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
-    as.character(x@tblData$ops$x)
+    op <- x@tblData$ops
+    if (is(op, "op_base_remote")) {
+        return(as.character(op$x))
+    } else if (is(op, "op_join")) {
+        out1 <- op$x$ops$x
+        repeat {
+            out1 <- out1$x
+            if (is.ident(out1)) break
+        }
+        out2 <- op$y$ops$x
+        repeat {
+            out2 <- out2$x
+            if (is.ident(out2)) break
+        }
+        return(c(as.character(out1), as.character(out2)))
+        ## FIXME: print more informative msg here. 
+    }
 })
 setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))

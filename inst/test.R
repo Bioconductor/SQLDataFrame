@@ -267,56 +267,6 @@ DBI::dbGetQuery(conn,
 dbGetQuery(conn, "SELECT region || '_' || region || '_' || state as FullName FROM state")
 dbGetQuery(conn, "SELECT * FROM state WHERE state || '\b' || region LIKE '%a\bS%'")
 
-###
-## Join/bind
-###
-con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
-mtc <- mtcars
-mtc$id <- rownames(mtcars)
-m1 <- mtc[1:10, c("id", "mpg", "cyl", "disp")]
-m2 <- mtc[6:15, c("id", "hp", "drat", "wt")]
-copy_to(con1, m1)
-copy_to(con1, m2)
-m1.db <- tbl(con1, "m1")
-m2.db <- tbl(con1, "m2")
-
-### mutating join
-left_join(m1.db, m2.db, by = "id") %>% collect()
-left_join(m2.db, m1.db, by = "id") %>% collect()
-inner_join(m1.db, m2.db, by = "id")
-inner_join(m1.db, m2.db, by = "id") %>% show_query()
-
-right_join(m1.db, m2.db, by = "id")  ## ERROR
-full_join(m1.db, m2.db, by = "id")  ## ERROR
-## Error in result_create(conn@ptr, statement) : 
-##   RIGHT and FULL OUTER JOINs are not currently supported
-
-### filtering join
-semi_join(m1.db, m2.db, by = "id")  ## overlapping rows
-anti_join(m1.db, m2.db, by = "id")  ## non-overlapping rows in m1, not in m2
-anti_join(m2.db, m1.db, by = "id")  ## non-overlapping rows, in m2, not in m1
-
-### Binding
-bind_rows(m1.db, m2.db)  ## ERROR
-bind_cols(m1.db, m2.db)  ## ERROR
-## Error in cbind_all(x) : 
-##   Argument 1 must be a data frame or a named atomic vector, not a tbl_dbi/tbl_sql/tbl_lazy/tbl
-
-
-## QUESTION: how to save the binding rows/cols in SQLDataFrame? @tblData save as a list of `tbl_dbi`? Virtual class of `SQLDataFrame` and subclass after subsetting, rbind? ...
-
-## realize and use saveSQLDataFrame? rbind(dbname = , dbtable =, ), return(SQLDataFrame()). 
-## copy_to, the 1st copy_to(append). key cols... check key ... 
-
-## cbind: left_join, inner_join.
-
-## sql(). [filter(col1 %in% c(), col2 == ...), ]. ROWNAMES matching, sdf@indexes. 
-
-
-ss1 <- SQLDataFrame("inst/extdata/test.db", dbtable = "state", dbkey = c("region", "population"))
-ss2 <- ss1[1:10, 2:3]
-ss3 <- ss1[11:15, 2:3]
-
 ###----------------------------------------------------------
 ## copy_to(append?), db_insert_into, dbWriteTable(append)
 ###----------------------------------------------------------
@@ -401,20 +351,9 @@ ss3.new <- SQLDataFrame(dbname = "../temp.db", dbtable="ss3", dbkey = c("region"
 ss23.new <- rbind(ss2, ss3.new) 
 saveSQLDataFrame(ss23.new, "../temp.db")
 
-###---------------------------------------
-## join, left_join, semi_join, anti_join
-###---------------------------------------
-ss4 <- ss1[6:15, 1, drop = FALSE]
-saveSQLDataFrame(ss4, "inst/extdata/test.db")
-ss2.tbl <- .extract_tbl_from_SQLDataFrame(ss2)
-ss4.tbl <- .extract_tbl_from_SQLDataFrame(ss4)
-left_join(ss2.tbl, ss4.tbl)
-temp <- left_join(ss2.tbl, ss4.tbl, by = dbkey(ss2))   ## same source
-temp %>% show_query()
-temp$src$con
-## want these to work: left_join(ss2, ss4), returns a SQLDataFrame(dbname=, dbtable=, dbkey=dbkey(ss2)) with @tblData ()
-
-## replaceSlot @tblData, update @indexes to be NULL. Update @dbnrows, update @dbtable.
+## overlapping rows
+ss3 <- ss1[6:15, 2:3]
+ss23 <- rbind(ss2, ss3)
 
 ##-----------------------------------------------
 ## dbExecute, build_sql, dbGetQuery, in_schema
@@ -466,3 +405,124 @@ copy_to(con, mtc.db, "mtc.db", overwrite = TRUE, temporary = FALSE)
 ##------------------------
 copy_to(con, mtc.db, "mtc.db1", types = c("NUMERIC", "TEXT", "NUMERIC"))
 tbl(con, "mtc.db1")  ## data type didn't change...
+
+src_dbi(dbConnect(org.Hs.eg.db))
+library(organism.dplyr)
+src <- src_organism("TxDb.Hsapiens.UCSC.hg19.knownGene")
+tbl(src, "id")
+
+###------------
+## Join/bind
+###------------
+con1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = ":MEMORY:")
+mtc <- mtcars
+mtc$id <- rownames(mtcars)
+m1 <- mtc[1:10, c("id", "mpg", "cyl", "disp")]
+m2 <- mtc[6:15, c("id", "hp", "drat", "wt")]
+copy_to(con1, m1)
+copy_to(con1, m2)
+m1.db <- tbl(con1, "m1")
+m2.db <- tbl(con1, "m2")
+
+### mutating join
+left_join(m1.db, m2.db, by = "id") %>% collect()
+left_join(m2.db, m1.db, by = "id") %>% collect()
+inner_join(m1.db, m2.db, by = "id")
+inner_join(m1.db, m2.db, by = "id") %>% show_query()
+
+right_join(m1.db, m2.db, by = "id")  ## ERROR
+full_join(m1.db, m2.db, by = "id")  ## ERROR
+## Error in result_create(conn@ptr, statement) : 
+##   RIGHT and FULL OUTER JOINs are not currently supported
+
+### filtering join
+semi_join(m1.db, m2.db, by = "id")  ## overlapping rows
+anti_join(m1.db, m2.db, by = "id")  ## non-overlapping rows in m1, not in m2
+anti_join(m2.db, m1.db, by = "id")  ## non-overlapping rows, in m2, not in m1
+
+### Binding
+bind_rows(m1.db, m2.db)  ## ERROR
+bind_cols(m1.db, m2.db)  ## ERROR
+## Error in cbind_all(x) : 
+##   Argument 1 must be a data frame or a named atomic vector, not a tbl_dbi/tbl_sql/tbl_lazy/tbl
+
+
+## QUESTION: how to save the binding rows/cols in SQLDataFrame? @tblData save as a list of `tbl_dbi`? Virtual class of `SQLDataFrame` and subclass after subsetting, rbind? ...
+
+## realize and use saveSQLDataFrame? rbind(dbname = , dbtable =, ), return(SQLDataFrame()). 
+## copy_to, the 1st copy_to(append). key cols... check key ... 
+
+## cbind: left_join, inner_join.
+
+## sql(). [filter(col1 %in% c(), col2 == ...), ]. ROWNAMES matching, sdf@indexes. 
+
+
+ss1 <- SQLDataFrame("inst/extdata/test.db", dbtable = "state", dbkey = c("region", "population"))
+ss2 <- ss1[1:10, 2:3]
+ss3 <- ss1[11:15, 2:3]
+
+###---------------------------------------
+## join, left_join, semi_join, anti_join
+###---------------------------------------
+ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+ss2 <- ss1[1:10, 2:3]
+ss4 <- ss1[6:15, 1, drop = FALSE]
+saveSQLDataFrame(ss4, "inst/extdata/test.db")
+## FIXME:
+## Error in result_create(conn@ptr, statement) : database is locked
+ss2.tbl <- .extract_tbl_from_SQLDataFrame(ss2)
+ss4.tbl <- .extract_tbl_from_SQLDataFrame(ss4)
+left_join(ss2.tbl, ss4.tbl)  ## only takes 2 arguments for "x" and "y"!! 
+temp <- left_join(ss2.tbl, ss4.tbl, by = dbkey(ss2))   ## same source
+temp %>% show_query()
+temp$src$con
+
+is(temp)
+## [1] "tbl_dbi"  "oldClass"
+names(temp)
+temp$src   ## single output
+## src:  sqlite 3.22.0 [/home/qian/Documents/Research/rsqlite/SQLDataFrame/inst/extdata/test.db]
+## tbls: colData, mtc, mtcars, new, sqlite_stat1, sqlite_stat4, state
+names(temp$ops)  
+## [1] "name" "x"    "y"    "args"
+temp$ops$name
+## [1] "join"
+temp$ops$args
+is(temp$ops$x)
+## [1] "tbl_dbi"  "oldClass"
+is(temp$ops$y)
+## [1] "tbl_dbi"  "oldClass"
+
+str(temp$ops$x)
+names(temp$ops$x)
+## [1] "src" "ops"
+temp$ops$x$src
+## src:  sqlite 3.22.0 [/home/qian/Documents/Research/rsqlite/SQLDataFrame/inst/extdata/test.db]
+## tbls: colData, mtc, mtcars, new, sqlite_stat1, sqlite_stat4, state
+temp$ops$x$src$con
+## <SQLiteConnection>
+##   Path: /home/qian/Documents/Research/rsqlite/SQLDataFrame/inst/extdata/test.db
+##   Extensions: TRUE
+names(temp$ops$x$ops)
+## [1] "name" "x"    "dots" "args"
+temp$ops$x$ops$name
+## [1] "select"
+is(temp$ops$x$ops$x)
+## [1] "op_select"
+str(temp$ops$x$ops$x)
+names(temp$ops$x$ops$x)
+## [1] "name" "x"    "dots" "args"
+
+aa <- left_join(ss2, ss4, by = dbkey(ss2))
+
+## Summary: tbl_dbi$ops, depending on the "$name", "$x" would be "op_**". E.g.,
+## if $name == "select", then $x is "op_select"; names($ops): name, x, dots, args
+## if $name == "mutate", then $x is "op_mutate"; names($ops): name, x, dots, args
+## if $name == "join", then $x is "tbl_dbi", $y is "tbl_dbi", names($ops): name, x, y, args
+## "tbl_dbi" is a list of 2: "src", "ops"
+
+## want these to work: left_join(ss2, ss4), returns a SQLDataFrame(dbname=, dbtable=, dbkey=dbkey(ss2)) with @tblData ()
+
+## replaceSlot @tblData, update @indexes to be NULL. Update @dbnrows, update @dbtable.
