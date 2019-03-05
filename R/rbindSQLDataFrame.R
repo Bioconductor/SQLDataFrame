@@ -52,7 +52,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    browser()
+    ## browser()
     objects <- list(...)
     ## check consistent dbkey(), colnames(),
     keys <- lapply(objects, dbkey)
@@ -77,6 +77,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     keyUnion <- out@tblData %>%
         mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
         pull(concatKey)
+    out@dbconcatKey <- keyUnion
     idx <- match(concatKeys, keyUnion)
     out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
     return(out)
