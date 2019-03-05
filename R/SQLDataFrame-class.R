@@ -13,7 +13,8 @@ setOldClass("tbl_dbi")
         dbnrows = "integer",
         ## dbrownames = "character_OR_NULL",
         tblData = "tbl_dbi",
-        indexes = "list"
+        indexes = "list",
+        dbconcatKey = "character"
         ## includeKey = "logical"
         ## elementType = "character",
         ## elementMetadata = "DataTable_OR_NULL",
@@ -81,13 +82,20 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
             cidx <- match(col.names, cns)
         }
     }
+
+    ## concatKey
+    if (length(dbkey) == 1) {
+        concatKey <- pull(tbl, grep(dbkey, colnames(tbl)))
+    } else {
+        concatKey <- tbl %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
+    }
+
     .SQLDataFrame(
-        ## dbtable = dbtable,
         dbkey = dbkey,
         dbnrows = dbnrows,
         tblData = tbl,
-        indexes = list(NULL, cidx)  ## unnamed, for row & col indexes. 
-        ## includeKey = TRUE
+        indexes = list(NULL, cidx),
+        dbconcatKey = concatKey
     )
 }
 
@@ -181,6 +189,7 @@ setMethod("dbtable", "SQLDataFrame", function(x)
         
     }
 })
+
 setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))
 
@@ -188,6 +197,14 @@ setGeneric("dbkey", signature = "x", function(x)
 #' @aliases dbkey dbkey,SQLDataFrame
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
+
+setGeneric("dbconcatKey", signature = "x", function(x)
+    standardGeneric("dbconcatKey"))
+
+#' @rdname SQLDataFrame-class
+#' @aliases dbconcatKey dbconcatKey,SQLDataFrame
+#' @export
+setMethod("dbconcatKey", "SQLDataFrame", function(x) x@dbconcatKey )
 
 ###--------------
 ### show method
@@ -198,21 +215,21 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 #' @import S4Vectors
 
 ## filter() makes sure it returns table with unique rows, no duplicate rows allowed...
-.extract_tbl_rows_by_key <- function(x, key, i)
+.extract_tbl_rows_by_key <- function(x, key, concatKey, i)  ## "concatKey" must correspond to "x"
 {
     ## browser()
     ## always require a dbkey(), and accommodate with multiple key columns. 
     i <- sort(unique(i))
     if (length(key) == 1) {
-        keys <- pull(x, grep(key, colnames(x)))
+        ### keys <- pull(x, grep(key, colnames(x)))
         ## expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i])
-        out <- x %>% filter(!!as.name(key) %in% keys[i])
+        out <- x %>% filter(!!as.name(key) %in% concatKey[i])
         ## out <- x %>% filter_(paste(key, "%in%", "c(", paste(shQuote(keys[i]), collapse=","), ")"))
         ## works, keep for now. 
     } else {
-        x <- x %>% mutate(concatKey = paste(!!!syms(key), sep="\b"))
-        keys <- x %>% pull(concatKey)
-        out <- x %>% filter(concatKey %in% keys[i]) %>% select(-concatKey)
+        x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep="\b"))
+        ### keys <- x %>% pull(concatKeys)
+        out <- x %>% filter(concatKeys %in% concatKey[i]) %>% select(-concatKeys)
         ## returns "tbl_dbi" object, no realization. 
 
         ## keys <- x %>% transmute(concatKey = paste(!!!syms(key), sep="\b")) %>% pull(concatKey)
@@ -232,7 +249,7 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
     ridx <- ridx(x)
     tbl <- x@tblData
     if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
+        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), dbconcatKey(x), ridx)
     if (collect)
         tbl <- collect(tbl)
     tbl.out <- tbl %>% select(dbkey(x), colnames(x))
