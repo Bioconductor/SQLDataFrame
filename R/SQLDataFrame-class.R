@@ -84,11 +84,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
     }
 
     ### concatKey
-    ## if (length(dbkey) == 1) {
-    ##     concatKey <- pull(tbl, grep(dbkey, colnames(tbl)))
-    ## } else {
     concatKey <- tbl %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
-    ## }
 
     .SQLDataFrame(
         dbkey = dbkey,
@@ -206,13 +202,13 @@ setGeneric("dbconcatKey", signature = "x", function(x)
 #' @export
 setMethod("dbconcatKey", "SQLDataFrame", function(x) x@dbconcatKey )
 
-setGeneric("concatKey", signature = "x", function(x)
-    standardGeneric("concatKey"))
+## setGeneric("concatKey", signature = "x", function(x)
+##     standardGeneric("concatKey"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases concatKey concatKey,SQLDataFrame
+#' @aliases ROWNAMES ROWNAMES,SQLDataFrame
 #' @export
-setMethod("concatKey", "SQLDataFrame", function(x)
+setMethod("ROWNAMES", "SQLDataFrame", function(x)
 {
     ridx <- ridx(x)
     res <- dbconcatKey(x)

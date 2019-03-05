@@ -172,24 +172,25 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ## #' ROWNAMES(b)
 ## #' ROWNAMES(b[c(TRUE, FALSE), ])
 #' b[letters[10:15], ]
-setMethod("ROWNAMES", "SQLDataFrame", function(x)
-{
-    ## browser()
-    ## keys <- x@tblData %>%
-    ##     transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
-    ##     pull(concat)
-    ## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
-    tbl <- .extract_tbl_from_SQLDataFrame(x)
-    keys <- tbl %>% select(dbkey(x)) %>% collect() %>% 
-        transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
-        pull(concat)
-    ridx <- ridx(x)
-    if (!is.null(ridx)) {
-        i <- match(ridx, sort(unique(ridx)))
-        keys <- keys[i]
-    }
-    return(keys)
-})
+## setMethod("ROWNAMES", "SQLDataFrame", function(x)
+## {
+##     ## browser()
+##     ## keys <- x@tblData %>%
+##     ##     transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
+##     ##     pull(concat)
+##     ## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
+##     tbl <- .extract_tbl_from_SQLDataFrame(x)
+##     keys <- tbl %>% select(dbkey(x)) %>% collect() %>% 
+##         transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
+##         pull(concat)
+##     ridx <- ridx(x)
+##     if (!is.null(ridx)) {
+##         i <- match(ridx, sort(unique(ridx)))
+##         keys <- keys[i]
+##     }
+##     return(keys)
+## })
+## setMethod("ROWNAMES", "SQLDataFrame", function(x) concatKey(x))
 
 ## #' @param ... Logical predicates defined in terms of the variables in
 ## #'     ‘.data’. Multiple conditions are combined with ‘&’. Only rows
@@ -202,7 +203,10 @@ filter.SQLDataFrame <- function(.data, ...)
     ## browser()
     tbl <- .extract_tbl_from_SQLDataFrame(.data)
     temp <- dplyr::filter(tbl, ...)
-    rnms <- temp %>% select(dbkey(.data)) %>% collect() %>%
+    ## rnms <- temp %>% select(dbkey(.data)) %>% collect() %>%
+    ##     transmute(concat = paste(!!!syms(dbkey(.data)), sep = "\b")) %>%
+    ##     pull(concat)
+    rnms <- temp %>%
         transmute(concat = paste(!!!syms(dbkey(.data)), sep = "\b")) %>%
         pull(concat)
     idx <- match(rnms, ROWNAMES(.data))

@@ -63,7 +63,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         stop("Input SQLDataFrame objects must have identical columns!")
     dbkey <- keys[[1]]
     cnm <- cnms[[1]]
-    concatKeys <- unlist(lapply(objects, concatKey))
+    rnms_final <- do.call(c, lapply(objects, ROWNAMES))
 
     ## 1) iterative "union" with multiple input. 
     out <- union(objects[[1]], objects[[2]])
@@ -78,7 +78,8 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
         pull(concatKey)
     out@dbconcatKey <- keyUnion
-    idx <- match(concatKeys, keyUnion)
+
+    idx <- match(rnms_final, keyUnion)
     out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
     return(out)
 }
