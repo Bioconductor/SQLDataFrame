@@ -1,7 +1,47 @@
-implement copy_to() to realize chunks of data and then save / rbind ... 
 
 
-### report: 
+add a new table "table_metadata", 
+2 additional tables to add to database: 
+1) dbkey info. serialize(dbkey(x), NULL) to convert to "raw", in "BLOB" (long binary??).  OR try to retrieve the index() table in database??
+2) ridx / rownames. 
+
+## todo: 
+- add "union" method for SDF, which returns union with unique rows and maintain the original order.  -- done!
+- modify the "state" table, for unique "region+population". 
+- modify `dbtable()` accessor for `op_distinct` or other ops...
+- reimplement "rbind" method, which extend "union" and update the @indexes. 
+- modify "saveSQLDataFrame" to be compatible with `op_join` and `op_set_op`. 
+- add new table for metadata (@indexes) within `saveSQLDataFrame`? See
+  how to retrieve the SQL index table and make use of it. 
+- debug, ```aa <- union(ss2, ss3)```, shows correctly, then
+  `devtools::document()`, doesn't show. Reconstruct, and show
+  correctly again...
+
+- rewrite "dbtable()" method for sdf with "op_join".   -- done!
+- debug "saveSQLDataFrame(ss4, "inst/extdata/test.db") 
+  ERROR: Error in result_create(conn@ptr, statement) : database is locked
+- debug "saveSQLDataFrame(sdf with @tblData$ops$name == "op_join")
+
+
+## Update: 
+1. `.fun()` to do complicated calls like $src$con@dbname.
+   ident(dbtable(sdf)), ridx(sdf), normalizeRowindex(sdf) ...
+2. rbind(), 1) write database table as unique rows. 2) return SDF with updateded @indexes.
+  - debug: rbind(ss3, ss2) 
+  - ** union, then rbind.  -- todo! (sql union? )
+  - ** union, lazy? dbplyr::union.tbl_lazy
+  
+3. printROWS for show method, subset again [1:nhead, ]
+  - `.printROWS()`, rewrite.
+  - `.extract_tbl_rows_by_key`,
+4. as.data.frame() rewrite ( match ridx to sort(unique(ridx)) ).
+
+## sprint update for `rbind`
+1st trick: attach database as aux
+2nd trick: insert into from aux.* with queries. (lazy tbl from aux.*)
+3rd trick: unique database table, updated indexes with returned sdf. 
+
+### Update: 
 1. `saveSQLDataFrame` create a new path is !exists()? 
 
 1. sdf[list(), ]

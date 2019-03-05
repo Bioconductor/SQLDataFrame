@@ -1,85 +1,65 @@
-.rbind_SQLDataFrame <- function(..., deparse.level = 1)
+## "union" method is defined for both S3 and S4 classes. Since
+## SQLDataFrame is a S4 object, here I am using "setMethod" instead of
+## "union.SQLDataFrame".
+
+## "union" itself removes duplicates, and reorder by default using 1st column, then 2nd, ...
+## SQL::union_all, I guess, no automatic ordering...
+
+## setMethod("union", signature = "SQLDataFrame", function(x, y, ...)
+## {
+##     browser()
+##     x1 <- .extract_tbl_from_SQLDataFrame(x)
+##     y1 <- .extract_tbl_from_SQLDataFrame(y)
+##     tbl.union <- dbplyr:::union.tbl_lazy(x1, y1)
+##     x@tblData <- tbl.union
+##     x@dbnrows <- tbl.union %>% summarize(n=n()) %>% pull(n)
+##     x@indexes <- vector("list", 2)
+##     return(x)
+## })
+
+## works as "rbind"... Be cautious to save the @tblData, which is
+## supposed to be unique rows. So need to modify the @tblData and
+## update @indexes. Call "union.tbl_lazy", reverse the automatic
+## ordering, and then update @indexes.
+
+## possible strategy:
+## 1. use "union", then reverse the ordering.
+## 2. use "union_all", then only extract unique lines. "SQL::unique?"
+
+## following function works like "union" without automatic
+## ordering. Could rename as just "union", and explain the strategy in
+## documentation. Extend to "rbind" function by updating @indexes
+## slot.
+#' @export
+setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y, ...)
 {
     ## browser()
-    objects <- list(...)
-    ## check consistent dbkey(), colnames(),
-    keys <- lapply(objects, dbkey)
-    if (length(unique(keys)) != 1)
-        stop("Input SQLDataFrame objects must have identical dbkey()!")
-    cnms <- lapply(objects, colnames)
-    if (length(unique(cnms)) != 1 )
-        stop("Input SQLDataFrame objects must have identical columns!")
-    sdf1 <- objects[[1L]]
+    x1 <- .extract_tbl_from_SQLDataFrame(x)
+    y1 <- .extract_tbl_from_SQLDataFrame(y)
 
-    ## use temporary dir and random table name. 
-    dbname <- tempfile(fileext = ".db")
-    dbtable <- dplyr:::random_table_name()
+    ## tbl.ua <- dbplyr:::union_all.tbl_lazy(x1, y1)
+    ## tbl.uad <- distinct(tbl.ua)
+    ## x@tblData <- tbl.uad
+    ## x@dbnrows <- tbl.uad %>% summarize(n=n()) %>% pull(n)
 
-    ## open a new connection to write database table.
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-    ## attach the dbname of the to-be-copied "lazy tbl" to the new connection.
-    ## FIXME: possible to attach an online database?
-    auxName <- "aux"
-    DBI::dbExecute(con, paste0("ATTACH '", dbname(sdf1), "' AS ", auxName))
-    ## open the to-be-copied "lazy tbl" from new connection.
-    tbl1 <- tbl(con, in_schema("aux", ident(dbtable(sdf1))))
-    ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
-    tbl1 <- .extract_tbl_from_SQLDataFrame_indexes(tbl1, sdf1) ## reorder by "key + otherCols"
+    tbl.ua <- dbplyr:::union.tbl_lazy(x1, y1)
+    x@tblData <- tbl.ua
+    x@dbnrows <- tbl.ua %>% summarize(n=n()) %>% pull(n)
 
-    copy_to(con, tbl1, name = dbtable,
-            temporary = FALSE, overwrite = TRUE,
-            unique_indexes = NULL, indexes = list(dbkey(sdf1)),
-            analyze = TRUE)
-    rnms <- ROWNAMES(sdf1)[order(ridx(sdf1))]
-    
-    for (i in seq_len(length(objects))[-1]) {
-        src_append <- src_dbi(.con_SQLDataFrame(objects[[i]]))
-        if (! same_src(src_append, sdf1@tblData$src)) {
-            auxName <- paste0("aux", i)
-            DBI::dbExecute(con, paste0("ATTACH '", dbname(objects[[i]]), "' AS ", auxName))
-        }
-        rnms_append <- ROWNAMES(objects[[i]])[order(ridx(objects[[i]]))]
-        rnms_update <- union(rnms, rnms_append)
-        rnms_diff <- setdiff(rnms_update, rnms)
+    x@indexes <- vector("list", 2)  ## debug: 
+    return(x)
+})
 
-        tbl_append <- tbl(con, in_schema(auxName, ident(dbtable(objects[[i]]))))
-        tbl_append <- .extract_tbl_from_SQLDataFrame_indexes(tbl_append, objects[[i]][rnms_diff, ])
+## rbind takes 2 arguments only, like "union", but add additional ridx(). 
+.rbind_SQLDataFrame <- function(..., deparse.level = 1)
+{
+    ## number of input argument? do union iteratively? 
+    ## temp <- union(...)
+    ## 1) extract the concat key values.
 
-        sql_tbl_append <- dbplyr::db_sql_render(con, tbl_append)
-        ## equivalent to dbplyr::sql_render(tbl_append, con)
-        dbExecute(con, build_sql("INSERT INTO ", sql(dbtable), " ", sql_tbl_append))
-        rnms <- rnms_update
-    }
-    rnms_final <- do.call(c, lapply(objects, ROWNAMES))
-    idx <- match(rnms_final, rnms)
-    
-    ## message 
-    nrow <- tbl(con, dbtable) %>% summarize(n=n()) %>% pull(n)
-    ## nrow <- do.call(sum, lapply(objects, nrow))
-    ncol <- length(colnames(tbl1))
-    msg <- paste0("## A temporary database table is generated: \n",
-                  "## Source: table<", dbtable, "> [", nrow, " X ", ncol, "] \n",
-                  "## Database: ", db_desc(con), "\n",
-                  "## Use the following command to reload into R: \n",
-                  "## dat <- SQLDataFrame(\n",
-                  "##   dbname = \"", dbname, "\",\n",
-                  "##   dbtable = \"", dbtable, "\",\n",
-                  "##   dbkey = ", ifelse(length(dbkey(sdf1)) == 1, "", "c("),
-                  paste(paste0("'", dbkey(sdf1), "'"), collapse=", "),
-                  ifelse(length(dbkey(sdf1)) == 1, "", ")"), ")", "\n",
-                  "## dat <- dat[c(",
-                  paste(idx, collapse = ", "), "), ]", "\n")
+    ## 2) iterative "union" with multiple input. 
 
-    message(msg)
-    dat <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(sdf1))
-    res <- dat[idx, ]
-    return(res)
+    ## 3) match he concat key to union_ed output concatkey. 
+    NULL
 }
-
-setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)
-
-## random_table_name <- function(n = 10) {
-##     paste0(sample(letters, n, replace = TRUE), collapse = "")
-
-
-
+## setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)

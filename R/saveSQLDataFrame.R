@@ -33,7 +33,7 @@ saveSQLDataFrame <- function(x, dbname,
     ## FIXME: possible to attach an online database?
     DBI::dbExecute(con, paste0("ATTACH '", x@tblData$src$con@dbname, "' AS aux"))
     ## open the to-be-copied "lazy tbl" from new connection.
-    tbl <- tbl(con, in_schema("aux", x@tblData$ops$x))
+    tbl <- tbl(con, in_schema("aux", x@tblData$ops$x))  ## make modifications for "join" functions, to compatible with "op_join" class, and repeat necessarily until get "ident" for $ops$x$x$x...
     ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
     tbl <- .extract_tbl_from_SQLDataFrame_indexes(tbl, x) ## reorder by "key + otherCols"
 

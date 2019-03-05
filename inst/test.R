@@ -23,11 +23,11 @@ state <- data.frame(division = as.character(state.division),
                     population = state.x77[,"Population"],
                     row.names = NULL,
                     stringsAsFactors = FALSE)
-## change $population column a little bit so not unique
+## change $population column a little bit so not unique, but "region+population" still unique.
 state$population[state$state == "Arizona"] <- state$population[state$state == "Kansas"]
-state$population[state$state == "Kentucky"] <- state$population[state$state == "Louisiana"]
+state$population[state$state == "Kentucky"] <- state$population[state$state == "Michigan"]
 state$population[state$state == "New Mexico"] <- state$population[state$state == "West Virginia"]
-state$population[state$state == "South Dakota"] <- state$population[state$state == "North Dakota"]
+state$population[state$state == "South Dakota"] <- state$population[state$state == "Montana"]
 state$size <- cut(state$population, breaks = c(0, 1000, 5000, 30000), labels = c("small", "medium", "large"))
 
 DBI::dbWriteTable(conn, "state", state)
@@ -355,6 +355,83 @@ saveSQLDataFrame(ss23.new, "../temp.db")
 ss3 <- ss1[6:15, 2:3]
 ss23 <- rbind(ss2, ss3)
 
+ss2 <- ss1[10:1, 2:3]
+set.seed(123)
+idx <- sample(15, 5)
+ss3 <- ss1[idx, 2:3]
+ss23 <- rbind(ss2, ss3)
+
+ss32 <- rbind(ss3, ss2)
+
+###---------
+## union
+###---------
+ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "state", dbkey = c("region", "population"))
+ss2 <- ss1[1:10, 2:3]
+ss3 <- ss1[8:15, 2:3]
+ss4 <- ss1[15:17, 2:3]
+ss5 <- ss1[20:30, 2:3]
+ss6 <- ss1[31:50, 2:3]
+ss7 <- ss1[18:19, 2:3]
+aa <- SQLDataFrame::union(ss2, ss3)
+aa1 <- SQLDataFrame::union(aa, ss4)
+
+aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5) ## works, union 4 elements. 
+aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5), ss6) ## Error in result_create(conn@ptr, statement) : parser stack overflow
+## reproducible dbplyr error for bug report: https://github.com/tidyverse/dbplyr/issues/253
+
+## reverse "sort".
+aa <- sample(letters)
+
+
+## bug1, after "devtools::document()", need to reconstruct aa, and
+## aa1, otherwise, doesn't show correctly.
+## bug2, show method for "aa1" returns error from ".extract_tbl_from_SQLDataFrame".
+## Error in result_create(conn@ptr, statement) : parser stack overflow... 
+
+aa2 <- SQLDataFrame::union(ss3, ss4)  ## works, dim: 10X2
+aa3 <- SQLDataFrame::union(ss2, ss4)  ## works, dim: 13X2
+aa4 <- SQLDataFrame::union(aa2, aa3)  ## works, dim: 17*2
+aa5 <- SQLDataFrame::union(aa4, ss4)  ## Error in result_create(conn@ptr, statement) : parser stack overflow. With internal dbplyr:::union_all.tbl_lazy, then distinct()
+
+aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5), ss6)  ## now works, with internal of dbplyr:::union.tbl_lazy. 
+
+x1 <- .extract_tbl_from_SQLDataFrame(ss2)
+y1 <- .extract_tbl_from_SQLDataFrame(ss3)
+tbl.union <- union(x1, y1)
+show_query(tbl.union)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+query.sql <- dbplyr::db_sql_render(con, tbl.union)
+dbExecute(con, build_sql("CREATE TABLE aaunion AS ", query.sql))
+dbExecute(con, build_sql("CREATE TABLE ", sql("aaunion1"), " AS ", query.sql))
+dbExecute(con, build_sql("CREATE TABLE ", "aaunion2", " AS ", query.sql))
+
+tbl.unionall <- union_all(x1, y1)
+
+## explore the SQL ordering
+dbExecute(con, build_sql("CREATE TABLE mtc1 AS SELECT * FROM mtcars LIMIT 6"))
+dbExecute(con, build_sql("CREATE TABLE mtc2 AS SELECT * FROM mtcars WHERE carb == 1"))
+dbGetQuery(con, build_sql("SELECT mpg,cyl,carb FROM mtc1 UNION SELECT mpg,cyl,carb FROM mtc2"))
+dbGetQuery(con, build_sql("SELECT mpg,cyl,carb FROM mtc1 UNION SELECT mpg,cyl,carb FROM mtc2 ORDER BY mpg"))  ## identical with above. so by default "order by" first column. 
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION SELECT cyl,mpg,carb FROM mtc2"))
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION SELECT cyl,mpg,carb FROM mtc2 ORDER BY cyl,mpg"))  ## identical with above. so by default "order by" first column, then 2nd, ...
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION SELECT cyl,mpg,carb FROM mtc2 ORDER BY cyl,carb"))  ## with specific orders given by user. 
+
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION ALL SELECT cyl,mpg,carb FROM mtc2"))
+## "UNION ALL" doesn't do any automatic ordering, need user to provide. 
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION ALL SELECT cyl,mpg,carb FROM mtc2 UNIQUE mpg")) 
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION SELECT cyl,mpg,carb FROM mtc2 ORDER BY cyl,carb")) 
+
+## multiple "UNION ALL"
+dbGetQuery(con, build_sql("SELECT cyl,mpg,carb FROM mtc1 UNION ALL SELECT cyl,mpg,carb FROM mtc2 UNION ALL SELECT cyl, mpg, carb FROM mtcars WHERE cyl == 6"))
+
+##---------------------------------------
+## modify the "state" table, to make "region+population" unique. 2/7/2019. 
+##---------------------------------------
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname="inst/extdata/test.db")
+stt <- dbReadTable(con, "state")
+
 ##-----------------------------------------------
 ## dbExecute, build_sql, dbGetQuery, in_schema
 ##-----------------------------------------------
@@ -441,7 +518,7 @@ anti_join(m1.db, m2.db, by = "id")  ## non-overlapping rows in m1, not in m2
 anti_join(m2.db, m1.db, by = "id")  ## non-overlapping rows, in m2, not in m1
 
 ### Binding
-bind_rows(m1.db, m2.db)  ## ERROR
+bind_rows(m1.db, m2.db)  ## ERROR, doesn't work for lazy tbl like "tbl_dbi" object. 
 bind_cols(m1.db, m2.db)  ## ERROR
 ## Error in cbind_all(x) : 
 ##   Argument 1 must be a data frame or a named atomic vector, not a tbl_dbi/tbl_sql/tbl_lazy/tbl
@@ -472,6 +549,20 @@ ss4 <- ss1[6:15, 1, drop = FALSE]
 saveSQLDataFrame(ss4, "inst/extdata/test.db")
 ## FIXME:
 ## Error in result_create(conn@ptr, statement) : database is locked
+
+aa <- left_join(ss2, ss4, by = dbkey(ss2))
+sql.aa <- dbplyr::db_sql_render(.con_SQLDataFrame(aa), aa@tblData)
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+sql.aa1 <- build_sql("CREATE TABLE aa AS ", sql.aa)
+dbExecute(con, sql.aa1)
+dbRemoveTable(con, "aa")
+dbDisconnect(con)
+
+sql.paste <- gsub("FROM `state`", paste0("FROM `", in_schema("aux", "state"), "`"), sql.aa1)
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "../temp.db")
+dbExecute(con, paste0("ATTACH '", .con_SQLDataFrame(aa)@dbname, "' AS aux"))
+dbExecute(con, sql.paste)
+
 ss2.tbl <- .extract_tbl_from_SQLDataFrame(ss2)
 ss4.tbl <- .extract_tbl_from_SQLDataFrame(ss4)
 left_join(ss2.tbl, ss4.tbl)  ## only takes 2 arguments for "x" and "y"!! 

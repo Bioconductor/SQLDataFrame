@@ -160,6 +160,7 @@ setGeneric("dbtable", signature = "x", function(x)
 ## setMethod("dbtable", "SQLDataFrame", function(x) x@dbtable)
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
+    ## browser()
     op <- x@tblData$ops
     if (is(op, "op_base_remote")) {
         return(as.character(op$x))
@@ -176,6 +177,8 @@ setMethod("dbtable", "SQLDataFrame", function(x)
         }
         return(c(as.character(out1), as.character(out2)))
         ## FIXME: print more informative msg here. 
+    } else if (is(op, "op_distinct")) {
+        
     }
 })
 setGeneric("dbkey", signature = "x", function(x)
@@ -223,24 +226,27 @@ setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 }
 
 ## Nothing special, just queried the ridx, and ordered tbl by "key+otherCols"
-.extract_tbl_from_SQLDataFrame <- function(x)
+.extract_tbl_from_SQLDataFrame <- function(x, collect = FALSE)
 {
+    ## browser()
     ridx <- ridx(x)
     tbl <- x@tblData
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), ridx)
-    tbl <- tbl %>% select(dbkey(x), colnames(x))
-    return(tbl)
+    if (collect)
+        tbl <- collect(tbl)
+    tbl.out <- tbl %>% select(dbkey(x), colnames(x))
+    return(tbl.out)
 }
 
 ## .printROWS realize all ridx(x), so be careful here to only use small x.
 .printROWS <- function(x, index){
     ## browser()
-    tbl <- .extract_tbl_from_SQLDataFrame(x)  ## already ordered by
+    tbl <- .extract_tbl_from_SQLDataFrame(x, collect = T)  ## already ordered by
                                               ## "key + otherCols".
     ## i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bound subscripts.
     ## tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
-    out.tbl <- tbl %>% collect()
+    out.tbl <- collect(tbl)
     ridx <- normalizeRowIndex(x)
     i <- match(index, sort(unique(ridx))) 
     
