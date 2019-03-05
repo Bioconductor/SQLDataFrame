@@ -53,13 +53,31 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 ## rbind takes 2 arguments only, like "union", but add additional ridx(). 
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    ## number of input argument? do union iteratively? 
-    ## temp <- union(...)
-    ## 1) extract the concat key values.
+    ## browser()
+    ## 1) iterative "union" with multiple input. 
+    objects <- list(...)
+        ## check consistent dbkey(), colnames(),
+    keys <- lapply(objects, dbkey)
+    if (length(unique(keys)) != 1)
+        stop("Input SQLDataFrame objects must have identical dbkey()!")
+    cnms <- lapply(objects, colnames)
+    if (length(unique(cnms)) != 1 )
+        stop("Input SQLDataFrame objects must have identical columns!")
+    dbkey <- keys[[1]]
+    cnm <- cnms[[1]]
+    concatKeys <- unlist(lapply(objects, concatKey))
 
-    ## 2) iterative "union" with multiple input. 
-
-    ## 3) match he concat key to union_ed output concatkey. 
-    NULL
+    out <- union(objects[[1]], objects[[2]])
+    objects <- objects[-c(1:2)]
+    repeat{
+        out <- union(out, objects[[1]])
+        objects <- objects[-1]
+        if(length(objects) == 0) break
+    }
+    ## 2) extract the concat key values, match and update to @indexes[[1]].
+    keyUnion <- out@tblData %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
+    idx <- match(concatKeys, keyUnion)
+    out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
+    return(out)
 }
-## setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)
+setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)

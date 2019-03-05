@@ -206,6 +206,19 @@ setGeneric("dbconcatKey", signature = "x", function(x)
 #' @export
 setMethod("dbconcatKey", "SQLDataFrame", function(x) x@dbconcatKey )
 
+setGeneric("concatKey", signature = "x", function(x)
+    standardGeneric("concatKey"))
+
+#' @rdname SQLDataFrame-class
+#' @aliases concatKey concatKey,SQLDataFrame
+#' @export
+setMethod("concatKey", "SQLDataFrame", function(x)
+{
+    ridx <- ridx(x)
+    if (!is.null(ridx))
+        dbconcatKey(x)[ridx]
+})
+
 ###--------------
 ### show method
 ###--------------
