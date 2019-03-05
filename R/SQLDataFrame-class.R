@@ -83,12 +83,12 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         }
     }
 
-    ## concatKey
-    if (length(dbkey) == 1) {
-        concatKey <- pull(tbl, grep(dbkey, colnames(tbl)))
-    } else {
-        concatKey <- tbl %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
-    }
+    ### concatKey
+    ## if (length(dbkey) == 1) {
+    ##     concatKey <- pull(tbl, grep(dbkey, colnames(tbl)))
+    ## } else {
+    concatKey <- tbl %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
+    ## }
 
     .SQLDataFrame(
         dbkey = dbkey,
@@ -215,8 +215,10 @@ setGeneric("concatKey", signature = "x", function(x)
 setMethod("concatKey", "SQLDataFrame", function(x)
 {
     ridx <- ridx(x)
+    res <- dbconcatKey(x)
     if (!is.null(ridx))
-        dbconcatKey(x)[ridx]
+        res <- dbconcatKey(x)[ridx]
+    return(res)
 })
 
 ###--------------
