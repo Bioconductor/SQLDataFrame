@@ -23,7 +23,7 @@ bb
 ## 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
 ## # ... with more rows
 
-aa <- paste(paste(rep("distinct(", 14), collapse = ""), "mtc", paste(rep(")", 14), collapse=""), sep="")
+aa <- paste(paste(rep("distinct(", 100), collapse = ""), "mtc", paste(rep(")", 100), collapse=""), sep="")
 bb <- eval(parse(text = aa))
 bb
 ## Error in result_create(conn@ptr, statement) : parser stack overflow
@@ -44,3 +44,37 @@ show_query(bb)
 ## FROM (SELECT DISTINCT *
 ## FROM (SELECT DISTINCT *
 ## FROM `mtcars`)))))))))))))
+
+
+#################
+## 3/6/2019
+#################
+## $ sudo mysql -u root -p
+## mysql> GRANT ALL PRIVILEGES ON *.* TO 'liuqian'@'localhost' IDENTIFIED BY 'Jessy@mysql';
+## $ mysql -u liuqian -p
+## mysql> show databases;
+library(DBI)
+library(RMySQL)
+library(dbplyr)
+library(dplyr)
+con <- dbConnect(dbDriver("MySQL"), dbname = "test", user = "liuqian", password = "Jessy@mysql", host="127.0.0.1")
+dbWriteTable(con, "mtcars", mtcars, overwrite = T)
+mtc <- dplyr:::tbl(con, "mtcars")
+mtc
+# Source:   table<mtcars> [?? x 12]
+# Database: mysql 5.7.25-0ubuntu0.18.04.2 [liuqian@127.0.0.1:/test]
+# ... with 12 variables: row_names <chr>, mpg <dbl>, cyl <dbl>, disp <dbl>,
+#   hp <dbl>, drat <dbl>, wt <dbl>, qsec <dbl>, vs <dbl>, am <dbl>, gear <dbl>,
+#   carb <dbl>
+aa <- paste(paste(rep("distinct(", 51), collapse = ""), "mtc", paste(rep(")", 51), collapse=""), sep="")
+bb <- eval(parse(text = aa))
+## Error in parse(text = aa) : contextstack overflow at line 1
+
+tt <- distinct(union_all(mtc, mtc))
+
+## rbind:: union_all(x, y),
+##  @tblData: distinct(union_all)
+##  @indexes[[1]]: match(rnms_final, concatKey)
+
+library(RPostgres)
+con1 <- dbConnect(dbDriver("Postgres"), dbname = "test")
