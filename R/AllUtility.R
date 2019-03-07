@@ -27,3 +27,12 @@ normalizeRowIndex <- function(x)
         ridx <- seq_len(x@dbnrows)
     return(ridx)
 }
+
+.extract_tbl_from_SQLDataFrame_indexes <- function(tbl, sdf)
+{
+    ridx <- ridx(sdf)
+    if (!is.null(ridx))
+        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf), dbconcatKey(sdf), ridx)
+    tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))  ## order by "key + otherCols"
+    return(tbl)
+}
