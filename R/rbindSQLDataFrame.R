@@ -31,21 +31,26 @@
 ## documentation. Extend to "rbind" function by updating @indexes
 ## slot.
 #' @export
+
+## Since "dbplyr:::union.tbl_lazy(x,y)" only evaluates data from same source, need to rewrite, using the dbExecute(con, "ATTACH dbname AS aux")
 setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y, ...)
 {
     ## browser()
     x1 <- .extract_tbl_from_SQLDataFrame(x)
     y1 <- .extract_tbl_from_SQLDataFrame(y)
 
-    ## tbl.ua <- dbplyr:::union_all.tbl_lazy(x1, y1)
-    ## tbl.uad <- distinct(tbl.ua)
-    ## x@tblData <- tbl.uad
-    ## x@dbnrows <- tbl.uad %>% summarize(n=n()) %>% pull(n)
-
+    ## make sure x and y are from same source. 
+    if (!same_src(x1, y1)) {
+        con <- .con_SQLDataFrame(x)
+        auxName <- dplyr:::random_table_name()
+        dbExecute(con, paste0("ATTACH '", dbname(y), "' AS ", auxName))
+        tbly <- tbl(con, in_schema("aux", ident(dbtable(y))))
+        tbly <- .extract_tbl_from_SQLDataFrame_indexes(tbly, y)
+        y1 <- tbly
+    }
     tbl.ua <- dbplyr:::union.tbl_lazy(x1, y1)
     x@tblData <- tbl.ua
     x@dbnrows <- tbl.ua %>% summarize(n=n()) %>% pull(n)
-
     x@indexes <- vector("list", 2)
     return(x)
 })
@@ -65,7 +70,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     cnm <- cnms[[1]]
     rnms_final <- do.call(c, lapply(objects, ROWNAMES))
 
-    ## 1) iterative "union" with multiple input. 
+    ## 1) pairwise "union" with multiple input. 
     out <- union(objects[[1]], objects[[2]])
     objects <- objects[-c(1:2)]
     repeat{
@@ -79,6 +84,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         pull(concatKey)
     out@dbconcatKey <- keyUnion
 
+    ## Possible enhancement: save 'idx' as separate database table. 
     idx <- match(rnms_final, keyUnion)
     out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
     return(out)
