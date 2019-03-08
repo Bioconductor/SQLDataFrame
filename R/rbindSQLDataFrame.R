@@ -42,10 +42,12 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     ## make sure x and y are from same source. 
     if (!same_src(x1, y1)) {
         con <- .con_SQLDataFrame(x)
-        auxName <- dplyr:::random_table_name()
+        auxName <- dplyr:::random_table_name()  ## need to record somewhere... 
         dbExecute(con, paste0("ATTACH '", dbname(y), "' AS ", auxName))
-        tbly <- tbl(con, in_schema("aux", ident(dbtable(y))))
+        auxSchema <- in_schema(auxName, ident(dbtable(y)))
+        tbly <- tbl(con, auxSchema)
         tbly <- .extract_tbl_from_SQLDataFrame_indexes(tbly, y)
+        tbly$ops$args <- list(auxSchema)
         y1 <- tbly
     }
     tbl.ua <- dbplyr:::union.tbl_lazy(x1, y1)
