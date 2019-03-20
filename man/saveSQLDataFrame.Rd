@@ -5,7 +5,7 @@
 \title{Save SQLDataFrame object as a new database table.}
 \usage{
 saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"),
-  dbtable = deparse(substitute(x)), types = NULL, ...)
+  dbtable = deparse(substitute(x)), overwrite = FALSE, ...)
 }
 \arguments{
 \item{x}{The \code{SQLDataFrame} object to be saved.}
