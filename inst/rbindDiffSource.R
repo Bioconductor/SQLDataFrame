@@ -44,10 +44,10 @@ identical(as.data.frame(u5), as.data.frame(u6))
 
 aa <- rbind(ss11, ss22)
 aa <- rbind(ss11, ss22, ss12) 
+aa <- rbind(ss11, ss21, ss31)
+aa <- rbind(ss11, ss21, ss31, ss22)  ## ss31 has same contents as ss22, but from different database.
 
 ## debug saveSQLDataFrame.
-
-aa <- rbind(ss11, ss21, ss31)
 saveSQLDataFrame(aa)
 
 

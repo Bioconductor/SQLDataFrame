@@ -77,6 +77,9 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     x@tblData <- tbl.ua
     x@dbnrows <- tbl.ua %>% summarize(n=n()) %>% pull(n)
     x@indexes <- vector("list", 2)
+    x@dbconcatKey <- tbl.ua %>%
+        mutate(concatKey = paste(!!!syms(dbkey(x)), sep="\b")) %>%
+        pull(concatKey)
     return(x)
 })
 
@@ -101,7 +104,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    ## browser()
+    browser()
     objects <- list(...)
     ## check consistent dbkey(), colnames(),
     keys <- lapply(objects, dbkey)
@@ -114,7 +117,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     cnm <- cnms[[1]]
     rnms_final <- do.call(c, lapply(objects, ROWNAMES))
 
-    ## 1) pairwise "union" with multiple input. 
+    ## pairwise "union" with multiple input. 
     out <- union(objects[[1]], objects[[2]])
     objects <- objects[-c(1:2)]
     repeat{
@@ -122,14 +125,9 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         out <- union(out, objects[[1]])
         objects <- objects[-1]
     }
-    ## 2) extract the concat key values, match and update to @indexes[[1]].
-    keyUnion <- out@tblData %>%
-        mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
-        pull(concatKey)
-    out@dbconcatKey <- keyUnion
 
     ## Possible enhancement: save 'idx' as separate database table. 
-    idx <- match(rnms_final, keyUnion)
+    idx <- match(rnms_final, out@dbconcatKey)
     out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
     return(out)
 }
