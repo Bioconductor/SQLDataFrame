@@ -1,21 +1,18 @@
+## todo: 
+- rbind dbtable from different source. 
+  add example for "state1"
+- dbtable() method for lazy tbl with "op_double". 
+- saveSQLDataFrame 
 
-
-add a new table "table_metadata", 
+### add a new table "table_metadata", 
 2 additional tables to add to database: 
 1) dbkey info. serialize(dbkey(x), NULL) to convert to "raw", in "BLOB" (long binary??).  OR try to retrieve the index() table in database??
 2) ridx / rownames. 
 
-## todo: 
-- add "union" method for SDF, which returns union with unique rows and maintain the original order.  -- done!
-- modify the "state" table, for unique "region+population". 
 - modify `dbtable()` accessor for `op_distinct` or other ops...
-- reimplement "rbind" method, which extend "union" and update the @indexes. 
 - modify "saveSQLDataFrame" to be compatible with `op_join` and `op_set_op`. 
 - add new table for metadata (@indexes) within `saveSQLDataFrame`? See
   how to retrieve the SQL index table and make use of it. 
-- debug, ```aa <- union(ss2, ss3)```, shows correctly, then
-  `devtools::document()`, doesn't show. Reconstruct, and show
-  correctly again...
 
 - rewrite "dbtable()" method for sdf with "op_join".   -- done!
 - debug "saveSQLDataFrame(ss4, "inst/extdata/test.db") 
@@ -69,8 +66,6 @@ add a new table "table_metadata",
 - write out subsetted SQL table? Write out into a new path, new
   database (local?) file.  -- done!
 
-- row subsetting encourage to use column names instead of numeric indexes. 
-- new example, with 2 key columns. 
 - [, subsetting using filter(c1 = , c2 %in%, c3 > ...) or using "&"
 - SQL raw filters translation. 
 - message for [numeric, ], to suggest language filtering. 
@@ -93,6 +88,15 @@ add a new table "table_metadata",
   `DelayedDataFrame` and `SQLDataFrame`...
 
 ## DONE
+
+3/5/2019
+- modify the "state" table, for unique "region+population". 
+- add "union" method for SDF, which returns union with unique rows with automatic sorting.
+- reimplement "rbind" method, which extend "union" and update slots of "dbconcatKey" and "indexes".
+- add `@dbconcatKey` slot which corresponds to `@tblData` (has '.0' for numeric columns).
+**now each SQLDF has @dbconcatKey, which is heavy... But anyway it will have the key cols evaluated when [ subsetting. ?? connect the current slot with the** 
+- `ROWNAMES()` applies `ridx(x)`to `dbconcatKey(x)`, good for `filter(, condition)` where 'condition' has or doesn't have '.0' in the end. But for '[rnm, ]', has to include '.0' to match. Do not encourage.
+
 - remove `includeKey` slot. 
 - remove "rownames", from slots/constructor/accessor/, test functions..
 - add head(), tail() methods

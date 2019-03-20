@@ -16,31 +16,69 @@
 #' ss1 <- ss[1:10, 2:3]
 #' saveSQLDataFrame(ss1, tempfile(fileext = ".db"))
 
-saveSQLDataFrame <- function(x, dbname, 
+saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
                              dbtable = deparse(substitute(x)),
                              ## overwrite = FALSE, ## couldn't pass to
                              ## "copy_to" then "compute"
                              types = NULL, ...)
 {
-    ## browser()
+    browser()
     if (!file.exists(dbname))
         file.create(dbname) 
     dbname <- file_path_as_absolute(dbname)
 
+    ## open the existing connection
+    con <- .con_SQLDataFrame(x)
+    ops <- x@tblData$ops
+
+    ## save intermediate y's as list elements
+    res <- list()
+    res[[1]] <- ops$y
+    chk <- ops$x$ops$x
+    if(is(chk, "op_double")) {
+        i <- 2
+        repeat{
+            res[[i]] <- chk$y
+            xx <- chk$x
+            chk <- chk$x$ops$x
+            i <- i+1
+            if (is(chk, "op_single")) {
+                res[[i]] <- xx
+                break        
+            }
+        }
+    }
+
+    ## open a new connection to the new "dbname". 
+    copy_to(con, res[[length(res)]], name = dbtable,
+            temporary = FALSE, overwrite = TRUE,  ## overwrite? 
+            unique_indexes = NULL, indexes = list(dbkey(x)),
+            analyze = TRUE, ...)
+
+    for (i in rev(seq_len(length(res)-1))){
+        sql_tbl_append <- dbplyr::db_sql_render(con, res[[i]])
+        ## check ROWNAMES, only append unique rows
+        dbExecute(con, build_sql("INSERT INTO ", sql(dbtable), " ", sql_tbl_append))
+        
+        
+    }
+    ## dbGetQuery(con, paste0("SELECT * FROM ", in_schema()))
     ## open a new connection to write database table.
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
     ## attach the dbname of the to-be-copied "lazy tbl" to the new connection.
     ## FIXME: possible to attach an online database?
-    DBI::dbExecute(con, paste0("ATTACH '", x@tblData$src$con@dbname, "' AS aux"))
+    auxName <- "aux"
+    DBI::dbExecute(con, paste0("ATTACH '", dbname(x), "' AS ", auxName))
+    
     ## open the to-be-copied "lazy tbl" from new connection.
-    tbl <- tbl(con, in_schema("aux", x@tblData$ops$x))  ## make modifications for "join" functions, to compatible with "op_join" class, and repeat necessarily until get "ident" for $ops$x$x$x...
+    tbl1 <- tbl(con, in_schema("aux", ident(dbtable(sdf1))))
     ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
-    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tbl, x) ## reorder by "key + otherCols"
+    tbl1 <- .extract_tbl_from_SQLDataFrame_indexes(tbl1, sdf1) ## reorder by "key + otherCols"
 
-    copy_to(con, tbl, name = dbtable, temporary = FALSE,
-            ## overwrite = overwrite,
-            types = types, unique_indexes = NULL,
-            indexes = list(dbkey(x)), analyze = TRUE, ...)
+    copy_to(con, tbl1, name = dbtable,
+            temporary = FALSE, overwrite = TRUE,  ## overwrite? 
+            unique_indexes = NULL, indexes = list(dbkey(sdf1)),
+            analyze = TRUE, ...)
     ## by default "temporary = FALSE", to physically write the table,
     ## not only in the current connection. "indexes = dbkey(x)", to
     ## accelerate the query lookup
@@ -60,11 +98,3 @@ saveSQLDataFrame <- function(x, dbname,
     message(msg)
 }
 
-.extract_tbl_from_SQLDataFrame_indexes <- function(tbl, sdf)
-{
-    ridx <- sdf@indexes[[1]]
-    if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf), ridx)
-    tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))  ## order by "key + otherCols"
-    return(tbl)
-}

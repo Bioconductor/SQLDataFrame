@@ -33,6 +33,20 @@ state$size <- cut(state$population, breaks = c(0, 1000, 5000, 30000), labels = c
 DBI::dbWriteTable(conn, "state", state)
 DBI::dbListTables(conn)
 
+## 3/8/2019, added a new database as example for difference source.
+conn1 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test1.db")
+DBI::dbListTables(conn1)
+DBI::dbWriteTable(conn1, "state1", state)
+DBI::dbListTables(conn1)
+dbDisconnect(conn1)
+
+## 3/9/2019, added a 2nd new database as example for difference source.
+conn2 <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test2.db")
+DBI::dbListTables(conn2)
+DBI::dbWriteTable(conn2, "state2", state)
+DBI::dbListTables(conn2)
+dbDisconnect(conn2)
+
 ###
 ## primary key
 ###
@@ -373,34 +387,29 @@ ss4 <- ss1[15:17, 2:3]
 ss5 <- ss1[20:30, 2:3]
 ss6 <- ss1[31:50, 2:3]
 ss7 <- ss1[18:19, 2:3]
-aa <- SQLDataFrame::union(ss2, ss3)
-aa1 <- SQLDataFrame::union(aa, ss4)
 
-aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5) ## works, union 4 elements. 
-aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5), ss6) ## Error in result_create(conn@ptr, statement) : parser stack overflow
-## reproducible dbplyr error for bug report: https://github.com/tidyverse/dbplyr/issues/253
+aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5) ## works!
+aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5), ss6)
+aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5), ss6), ss7)
+## aa1 <- union(union(union(union(union(ss2,ss3),ss4),ss5),ss6),ss7)
 
-## reverse "sort".
-aa <- sample(letters)
+###---------------
+## union => rbind
+###---------------
+aa <- rbind(ss4, ss3)  ## works!
+aa <- rbind(ss7, ss6)  ## works! 
 
+ss1["South\b3615", ]  ## doesn't work!
+ss1["South\b3615.0", ]  ## works!
+filter(ss1, region=="South" & population == "3615")  ## works!
+filter(ss1, region=="South" & population == "3615.0") ## works!
+filter(ss1, region=="South" & population == "3615.00") ## works!
 
-## bug1, after "devtools::document()", need to reconstruct aa, and
-## aa1, otherwise, doesn't show correctly.
-## bug2, show method for "aa1" returns error from ".extract_tbl_from_SQLDataFrame".
-## Error in result_create(conn@ptr, statement) : parser stack overflow... 
-
-aa2 <- SQLDataFrame::union(ss3, ss4)  ## works, dim: 10X2
-aa3 <- SQLDataFrame::union(ss2, ss4)  ## works, dim: 13X2
-aa4 <- SQLDataFrame::union(aa2, aa3)  ## works, dim: 17*2
-aa5 <- SQLDataFrame::union(aa4, ss4)  ## Error in result_create(conn@ptr, statement) : parser stack overflow. With internal dbplyr:::union_all.tbl_lazy, then distinct()
-
-aa <- SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(SQLDataFrame::union(ss2, ss3), ss4), ss5), ss6)  ## now works, with internal of dbplyr:::union.tbl_lazy. 
 
 x1 <- .extract_tbl_from_SQLDataFrame(ss2)
 y1 <- .extract_tbl_from_SQLDataFrame(ss3)
 tbl.union <- union(x1, y1)
 show_query(tbl.union)
-
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
 query.sql <- dbplyr::db_sql_render(con, tbl.union)
 dbExecute(con, build_sql("CREATE TABLE aaunion AS ", query.sql))

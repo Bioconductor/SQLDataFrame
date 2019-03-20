@@ -4,7 +4,9 @@
 #' @importFrom methods setOldClass
 #' @aliases SQLDataFrame-class
 #' @description NULL
+setOldClass("tbl_SQLiteConnection")
 setOldClass("tbl_dbi")
+setClassUnion("tbl_dbi_inherited", c("tbl_SQLiteConnection"))
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
     slots = c(
@@ -12,7 +14,7 @@ setOldClass("tbl_dbi")
         dbkey = "character",
         dbnrows = "integer",
         ## dbrownames = "character_OR_NULL",
-        tblData = "tbl_dbi",
+        tblData = "tbl_dbi_inherited",   ## ? 
         indexes = "list",
         dbconcatKey = "character"
         ## includeKey = "logical"
