@@ -74,12 +74,23 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         y1 <- tbly
     }
     tbl.ua <- dbplyr:::union.tbl_lazy(x1, y1)
-    x@tblData <- tbl.ua
-    x@dbnrows <- tbl.ua %>% summarize(n=n()) %>% pull(n)
-    x@indexes <- vector("list", 2)
+
+    ## recalculate the @dbconcatKey
     x@dbconcatKey <- tbl.ua %>%
         mutate(concatKey = paste(!!!syms(dbkey(x)), sep="\b")) %>%
         pull(concatKey)
+    
+    ## ## extract the new @dbconcatKey instead of recalculating
+    ## tt <- do.call(rbind, strsplit(c(ROWNAMES(x), ROWNAMES(y)), split = "\b"))
+    ## tt <- as.data.frame(tt, stringsAsFactors = FALSE)
+    ## cls <- x1 %>% head %>% select(dbkey(x)) %>% as.data.frame() %>% sapply(class)
+    ## for (i in seq_len(length(tt))) class(tt[,i]) <- unname(cls)[i]
+    ## tt[with(tt, order(!!!syms(dbkey(x)))), ] ## doesn't work ... 
+    
+    x@tblData <- tbl.ua
+    x@dbnrows <- tbl.ua %>% summarize(n=n()) %>% pull(n)
+    x@indexes <- vector("list", 2)
+    
     return(x)
 })
 
