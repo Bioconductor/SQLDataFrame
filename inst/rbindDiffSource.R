@@ -26,9 +26,21 @@ u2 <- dbplyr:::union.tbl_lazy(tbl11, tbl21)
 ## Call `rlang::last_error()` to see a backtrace
 
 
-## 3/19/2019. reimplement "union" function. 
+## 3/19/2019. re-implement "union" function. 
 u2 <- SQLDataFrame::union(ss11, ss21)
+
 u3 <- SQLDataFrame::union(u2, ss22)
+u4 <- SQLDataFrame::union(ss22, u2)
+
+identical(as.data.frame(u3), as.data.frame(u4))
+## [1] TRUE
+
+u5 <- SQLDataFrame::union(u2, ss31)
+u6 <- SQLDataFrame::union(ss31, u2)
+identical(as.data.frame(u4), as.data.frame(u5))
+## [1] TRUE
+identical(as.data.frame(u5), as.data.frame(u6))
+## [1] TRUE
 
 aa <- rbind(ss11, ss22)
 aa <- rbind(ss11, ss22, ss12) 
