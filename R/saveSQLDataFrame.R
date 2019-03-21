@@ -28,14 +28,40 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                  "OR change 'overwrite = TRUE'. ")
     }
 
-    ## use the existing connection (if "op_union")
-    con <- .con_SQLDataFrame(x)
-    ## Write database table.
-    sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
-    dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
-    ## error if "dbtable" already exist. "Error: table aa already exists"
-    file.copy(dbname(x), dbname, overwrite = overwrite)
+    if (is(x@tblData$ops, "op_base")) {
+        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+        aux <- .attach_database_from_SQLDataFrame(con, x)
+        tblx <- .open_tbl_from_new_connection(con, aux, x)
+        sql_cmd <- dbplyr::db_sql_render(con, tblx)
+        dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
+    } else if (is(x@tblData$ops, "op_double")) {  ## "op_union" works. try "op_join". 
+        con <- .con_SQLDataFrame(x)
+        sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
+        dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
+        ## error if "dbtable" already exist. "Error: table aa already exists"
+        file.copy(dbname(x), dbname, overwrite = overwrite)
+
+        ## FIXME: need to save ridx for if SQLDF comes from "rbind". Save as separate file in database???
+        ## in construction, read the separate ridx file if exist! 
+    } 
     msg_saveSQLDataFrame(x, dbname, dbtable)
+}
+
+msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
+    msg <- paste0("## A new database table is saved! \n",
+                  "## Source: table<", dbtable, "> [",
+                  paste(dim(x), collapse = " X "), "] \n",
+                  ## "## Database: ", db_desc(con), "\n",    ## con??
+                  "## Database: ",
+                  paste("sqlite ", dbplyr:::sqlite_version(), " [", dbname, "] \n"),
+                  "## Use the following command to reload into R: \n",
+                  "## dat <- SQLDataFrame(\n",
+                  "##   dbname = \"", dbname, "\",\n",
+                  "##   dbtable = \"", dbtable, "\",\n",
+                  "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
+                  paste(paste0("'", dbkey(x), "'"), collapse=", "),
+                  ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
+    message(msg)
 }
 
 ## ## open a new connection to the new "dbname". 
@@ -73,20 +99,4 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
 ##     ## accelerate the query lookup
 ##     ## (https://www.sqlite.org/queryplanner.html).
     
-msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
-    msg <- paste0("## A new database table is saved! \n",
-                  "## Source: table<", dbtable, "> [",
-                  paste(dim(x), collapse = " X "), "] \n",
-                  ## "## Database: ", db_desc(con), "\n",    ## con??
-                  "## Database: ",
-                  paste("sqlite ", dbplyr:::sqlite_version(), " [", dbname, "] \n"),
-                  "## Use the following command to reload into R: \n",
-                  "## dat <- SQLDataFrame(\n",
-                  "##   dbname = \"", dbname, "\",\n",
-                  "##   dbtable = \"", dbtable, "\",\n",
-                  "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
-                  paste(paste0("'", dbkey(x), "'"), collapse=", "),
-                  ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
-    message(msg)
-}
 

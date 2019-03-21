@@ -35,48 +35,17 @@
 ## Since "dbplyr:::union.tbl_lazy(x,y)" only evaluates data from same source, need to rewrite, using the dbExecute(con, "ATTACH dbname AS aux")
 setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y, ...)
 {
-    browser()  
-    if (is(x@tblData$ops, "op_set_op")) {
-        ## con <- x1$src$con
-        con <- .con_SQLDataFrame(x)
-        x1 <- .extract_tbl_from_SQLDataFrame(x)
-        ## check if the y1$src$con@dbname already attached.
-        dbs <- dbGetQuery(con, "PRAGMA database_list")
-        aux_y <- dbs[match(dbname(y), dbs$file), "name"]
-        if (is.na(aux_y))
-            aux_y <- .attach_database_from_SQLDataFrame(con, y)
-        y1 <- .open_tbl_from_new_connection(con, aux_y, y)
-    } else if (is(y@tblData$ops, "op_set_op")) {  ## this paragraph could be removed if keeping current rbind.
-        ## con <- y1$src$con
-        con <- .con_SQLDataFrame(y)
-        y1 <- .extract_tbl_from_SQLDataFrame(y)
-        dbs <- dbGetQuery(con, "PRAGMA database_list")
-        aux_x <- dbs[match(dbname(x), dbs$file), "name"]
-        if (is.na(aux_x)) {
-            aux_x <- .attach_database_from_SQLDataFrame(con, x)
-        }
-        x1 <- .open_tbl_from_new_connection(con, aux_x, x)
-    } else {
-        dbname <- tempfile(fileext = ".db")
-        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        
-        ## attach database into the existing connection.
-        aux_x <- .attach_database_from_SQLDataFrame(con, x)
-        x1 <- .open_tbl_from_new_connection(con, aux_x, x)
-        if (same_src(x@tblData, y@tblData)) {
-            aux_y <- aux_x
-        } else {
-            aux_y <- .attach_database_from_SQLDataFrame(con, y)
-        } 
-        y1 <- .open_tbl_from_new_connection(con, aux_y, y)
-    }
-    tbl.ua <- dbplyr:::union.tbl_lazy(x1, y1)
+    tbls <- .join_union_prepare(x, y)
+    tbl.out <- dbplyr:::union.tbl_lazy(tbls[[1]], tbls[[2]])
+  
+    x@tblData <- tbl.out
+    x@dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
+    x@indexes <- vector("list", 2)
 
     ## recalculate the @dbconcatKey
-    x@dbconcatKey <- tbl.ua %>%
+    x@dbconcatKey <- tbl.out %>%
         mutate(concatKey = paste(!!!syms(dbkey(x)), sep="\b")) %>%
-        pull(concatKey)
-    
+        pull(concatKey)  
     ## ## extract the new @dbconcatKey instead of recalculating
     ## tt <- do.call(rbind, strsplit(c(ROWNAMES(x), ROWNAMES(y)), split = "\b"))
     ## tt <- as.data.frame(tt, stringsAsFactors = FALSE)
@@ -84,30 +53,73 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     ## for (i in seq_len(length(tt))) class(tt[,i]) <- unname(cls)[i]
     ## tt[with(tt, order(!!!syms(dbkey(x)))), ] ## doesn't work ... 
     
-    x@tblData <- tbl.ua
-    x@dbnrows <- tbl.ua %>% summarize(n=n()) %>% pull(n)
-    x@indexes <- vector("list", 2)
-    
     return(x)
 })
+
+.join_union_prepare <- function(x, y)
+{
+    browser()  
+    if (is(x@tblData$ops, "op_double")) {
+        con <- .con_SQLDataFrame(x)
+        x1 <- .extract_tbl_from_SQLDataFrame(x)
+        ## check if the y1$src$con@dbname already attached.
+        dbs <- dbGetQuery(con, "PRAGMA database_list")
+        aux_y <- dbs[match(dbname(y), dbs$file), "name"]
+        if (is.na(aux_y)) {
+            y1 <- .attach_and_open_tbl_in_new_connection(con, y)
+        } else {
+            y1 <- .open_tbl_from_connection(con, aux_y, y)
+        }
+    } else if (is(y@tblData$ops, "op_double")) {  ## this paragraph could be removed if keeping current rbind.
+        con <- .con_SQLDataFrame(y)
+        y1 <- .extract_tbl_from_SQLDataFrame(y)
+        dbs <- dbGetQuery(con, "PRAGMA database_list")
+        aux_x <- dbs[match(dbname(x), dbs$file), "name"]
+        if (is.na(aux_x)) {
+            x1 <- .attach_and_open_tbl_in_new_connection(con, x)
+        } else {
+            x1 <- .open_tbl_from_connection(con, aux_x, x)
+        }
+    } else {
+        dbname <- tempfile(fileext = ".db")
+        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)        
+        ## attach database into the local connection.
+        x1 <- .attach_and_open_tbl_in_new_connection(con, x)
+        dbs <- dbGetQuery(con, "PRAGMA database_list")
+        aux_y <- dbs[match(dbname(y), dbs$file), "name"]
+        if (is.na(aux_y)) {
+            y1 <- .attach_and_open_tbl_in_new_connection(con, y)
+        } else {
+            y1 <- .open_tbl_from_connection(con, aux_y, y)
+        }
+    }
+    return(list(x1, y1))
+}
 
 .attach_database_from_SQLDataFrame <- function(con, sdf) {
     aux <- dbplyr:::random_table_name()
     dbExecute(con, paste0("ATTACH '", dbname(sdf), "' AS ", aux))
     return(aux)
 }
-.open_tbl_from_new_connection <- function(con, aux, sdf) {
-    auxSchema <- in_schema(aux, ident(dbtable(sdf)))
-    tblx <- tbl(con, auxSchema)
-    tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblx, sdf)
+.open_tbl_from_connection <- function(con, aux, sdf) {
+    if (aux == "main") {
+        tblx <- .extract_tbl_from_SQLDataFrame(sdf)
+    } else {
+        ## auxSchema <- in_schema(aux, ident(dbtable(sdf)))
+        auxSchema <- in_schema(aux, ident(dbtable(sdf)[1]))
+        ## dirty and lazy fix ... works only when sdf connects to 1 dbtable...  
+        ## FIXME: dbtable() for SDF generated from union/join, how to extract the dbtable()? 
+        tblx <- tbl(con, auxSchema)
+        tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblx, sdf)
+    }
     ## tblx$ops$args <- list(auxSchema)
     return(tblx)
 }
 
 .attach_and_open_tbl_in_new_connection <- function(con, sdf) {
-    aux <- .attach_dbname_from_SQLDataFrame(con, sdf)
+    aux <- .attach_database_from_SQLDataFrame(con, sdf)
     ## dbs <- dbGetQuery(con, "PRAGMA database_list")
-    .open_tbl_from_new_connection(con, aux, sdf)
+    .open_tbl_from_connection(con, aux, sdf)
 }
 
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
@@ -139,4 +151,6 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
     return(out)
 }
+
+#' @export
 setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)

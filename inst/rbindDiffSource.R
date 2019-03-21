@@ -48,7 +48,8 @@ aa <- rbind(ss11, ss21, ss31)
 aa <- rbind(ss11, ss21, ss31, ss22)  ## ss31 has same contents as ss22, but from different database.
 
 ## debug saveSQLDataFrame.
-saveSQLDataFrame(aa)
+saveSQLDataFrame(aa)  ## works!
+saveSQLDataFrame(ss11)
 
 
 ## tryCatch error message from "union" where the attaching databases were done. 

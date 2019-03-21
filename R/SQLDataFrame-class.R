@@ -12,17 +12,25 @@ setClassUnion("tbl_dbi_inherited", c("tbl_SQLiteConnection"))
     slots = c(
         ## dbtable = "character",
         dbkey = "character",
-        dbnrows = "integer",
+        dbnrows = "integer",  
         ## dbrownames = "character_OR_NULL",
-        tblData = "tbl_dbi_inherited",   ## ? 
+        tblData = "tbl_dbi_inherited",   ## ?
         indexes = "list",
-        dbconcatKey = "character"
+        dbconcatKey = "character"  ## consistent with dbtable(SDF), not related to ridx(SDF)
         ## includeKey = "logical"
         ## elementType = "character",
         ## elementMetadata = "DataTable_OR_NULL",
         ## metadata = "list"
     )
 )
+## NOTE: "@dbnrows" and "@dbconcatKey" slots are consistent with
+## dbtable(SDF), not related to ridx(SDF). But for SDF constructed
+## from "*join" or "rbind", the "dbnrows" and "dbconcatKey" will be
+## updated to be consistent with the lazy tbl in that local connection
+## (now are using RSQLite::SQLite() connection with "union" or
+## "*join"). the lazy tbl was a virtual dbtable(SDF) that not actually
+## written. Realization incurred with "saveSQLDataFrame". "ROWNAMES()"
+## realize the "ridx()" on top of "@dbconcatKey".
 
 ###
 ### Constructor
@@ -308,8 +316,8 @@ setMethod("show", "SQLDataFrame", function (object)
             ##     rownames(out) <- nms
         }
         else {
-            sdf.head <- object[seq_len(nhead), ]
-            sdf.tail <- object[tail(seq_len(nrow(object)), ntail), ]
+            sdf.head <- object[seq_len(nhead), , drop=FALSE]
+            sdf.tail <- object[tail(seq_len(nrow(object)), ntail), , drop=FALSE]
             out <- rbind(
                 .printROWS(sdf.head, ridx(sdf.head)),
                 c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
