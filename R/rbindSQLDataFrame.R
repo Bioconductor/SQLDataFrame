@@ -35,43 +35,40 @@
 ## Since "dbplyr:::union.tbl_lazy(x,y)" only evaluates data from same source, need to rewrite, using the dbExecute(con, "ATTACH dbname AS aux")
 setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y, ...)
 {
-    browser()
-    x1 <- .extract_tbl_from_SQLDataFrame(x)
-    y1 <- .extract_tbl_from_SQLDataFrame(y)
-    
-    if (is(x1$ops$x, "op_set_op")) {
-        con <- x1$src$con
+    browser()  
+    if (is(x@tblData$ops, "op_set_op")) {
+        ## con <- x1$src$con
+        con <- .con_SQLDataFrame(x)
+        x1 <- .extract_tbl_from_SQLDataFrame(x)
         ## check if the y1$src$con@dbname already attached.
         dbs <- dbGetQuery(con, "PRAGMA database_list")
         aux_y <- dbs[match(dbname(y), dbs$file), "name"]
         if (is.na(aux_y))
             aux_y <- .attach_database_from_SQLDataFrame(con, y)
-        tbly <- .open_tbl_from_new_connection(con, aux_y, y)
-        y1 <- tbly
-    } else if (is(y1$ops$x, "op_set_op")) {
-        con <- y1$src$con
+        y1 <- .open_tbl_from_new_connection(con, aux_y, y)
+    } else if (is(y@tblData$ops, "op_set_op")) {  ## this paragraph could be removed if keeping current rbind.
+        ## con <- y1$src$con
+        con <- .con_SQLDataFrame(y)
+        y1 <- .extract_tbl_from_SQLDataFrame(y)
         dbs <- dbGetQuery(con, "PRAGMA database_list")
         aux_x <- dbs[match(dbname(x), dbs$file), "name"]
         if (is.na(aux_x)) {
             aux_x <- .attach_database_from_SQLDataFrame(con, x)
         }
-        tblx <- .open_tbl_from_new_connection(con, aux_x, x)
-        x1 <- tblx
+        x1 <- .open_tbl_from_new_connection(con, aux_x, x)
     } else {
         dbname <- tempfile(fileext = ".db")
         con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
         
         ## attach database into the existing connection.
         aux_x <- .attach_database_from_SQLDataFrame(con, x)
-        tblx <- .open_tbl_from_new_connection(con, aux_x, x)
-        if (same_src(x1, y1)) {
+        x1 <- .open_tbl_from_new_connection(con, aux_x, x)
+        if (same_src(x@tblData, y@tblData)) {
             aux_y <- aux_x
         } else {
             aux_y <- .attach_database_from_SQLDataFrame(con, y)
         } 
-        tbly <- .open_tbl_from_new_connection(con, aux_y, y)
-        x1 <- tblx
-        y1 <- tbly
+        y1 <- .open_tbl_from_new_connection(con, aux_y, y)
     }
     tbl.ua <- dbplyr:::union.tbl_lazy(x1, y1)
 
@@ -115,7 +112,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    browser()
+    ## browser()
     objects <- list(...)
     ## check consistent dbkey(), colnames(),
     keys <- lapply(objects, dbkey)
