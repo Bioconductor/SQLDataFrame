@@ -80,8 +80,8 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
                 }
             }
             ## open the lazy tbl from new connection
-            sqlCmd <- dbplyr::db_sql_render(cony, y1)
-            y1 <- tbl(con, sqlCmd)
+            sql_cmd <- dbplyr::db_sql_render(cony, y1)
+            y1 <- tbl(con, sql_cmd)
         } else {
             aux_y <- dbs[match(dbname(y), dbs$file), "name"]
             if (is.na(aux_y)) {
@@ -134,9 +134,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     if (aux == "main") {
         tblx <- .extract_tbl_from_SQLDataFrame(sdf)
     } else {
-        ## auxSchema <- in_schema(aux, ident(dbtable(sdf)))
-        auxSchema <- in_schema(aux, ident(dbtable(sdf)[1]))
-        ## dirty and lazy fix ... works only when sdf connects to 1 dbtable...  
+        auxSchema <- in_schema(aux, ident(dbtable(sdf)))
         ## FIXME: dbtable() for SDF generated from union/join, how to extract the dbtable()? 
         tblx <- tbl(con, auxSchema)
         tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblx, sdf)
