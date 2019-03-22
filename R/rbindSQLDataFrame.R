@@ -58,22 +58,42 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 
 .join_union_prepare <- function(x, y)
 {
-    browser()  
+    ## browser()  
     if (is(x@tblData$ops, "op_double")) {
         con <- .con_SQLDataFrame(x)
-        x1 <- .extract_tbl_from_SQLDataFrame(x)
-        ## check if the y1$src$con@dbname already attached.
-        dbs <- dbGetQuery(con, "PRAGMA database_list")
-        aux_y <- dbs[match(dbname(y), dbs$file), "name"]
-        if (is.na(aux_y)) {
-            y1 <- .attach_and_open_tbl_in_new_connection(con, y)
+        x1 <- .extract_tbl_from_SQLDataFrame(x)  ## lazy tbl. 
+        dbs <- .dblist(con)
+
+        if (is(y@tblData$ops, "op_double")) {
+            ## attach all databases from y except "main", which is
+            ## temporary connection from "union" or "join"
+            cony <- .con_SQLDataFrame(y)
+            y1 <- .extract_tbl_from_SQLDataFrame(y)
+            dbsy <- .dblist(cony)[-1,]
+            
+            idx <- match(paste(dbsy$name, dbsy$file, sep=":"), paste(dbs$name, dbs$file, sep=":"))
+            idx <- which(!is.na(idx))          
+            if (length(idx)) dbsy <- dbsy[-idx, ]
+            if (nrow(dbsy)) {
+                for (i in seq_len(nrow(dbsy))) {
+                    .attach_database(con, dbsy[i, "file"], dbsy[i, "name"])
+                }
+            }
+            ## open the lazy tbl from new connection
+            sqlCmd <- dbplyr::db_sql_render(cony, y1)
+            y1 <- tbl(con, sqlCmd)
         } else {
-            y1 <- .open_tbl_from_connection(con, aux_y, y)
+            aux_y <- dbs[match(dbname(y), dbs$file), "name"]
+            if (is.na(aux_y)) {
+                y1 <- .attach_and_open_tbl_in_new_connection(con, y)
+            } else {
+                y1 <- .open_tbl_from_connection(con, aux_y, y)
+            }
         }
-    } else if (is(y@tblData$ops, "op_double")) {  ## this paragraph could be removed if keeping current rbind.
+    } else if (is(y@tblData$ops, "op_double")) {  
         con <- .con_SQLDataFrame(y)
         y1 <- .extract_tbl_from_SQLDataFrame(y)
-        dbs <- dbGetQuery(con, "PRAGMA database_list")
+        dbs <- .dblist(con)
         aux_x <- dbs[match(dbname(x), dbs$file), "name"]
         if (is.na(aux_x)) {
             x1 <- .attach_and_open_tbl_in_new_connection(con, x)
@@ -85,7 +105,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)        
         ## attach database into the local connection.
         x1 <- .attach_and_open_tbl_in_new_connection(con, x)
-        dbs <- dbGetQuery(con, "PRAGMA database_list")
+        dbs <- .dblist(con)
         aux_y <- dbs[match(dbname(y), dbs$file), "name"]
         if (is.na(aux_y)) {
             y1 <- .attach_and_open_tbl_in_new_connection(con, y)
@@ -96,9 +116,18 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     return(list(x1, y1))
 }
 
-.attach_database_from_SQLDataFrame <- function(con, sdf) {
-    aux <- dbplyr:::random_table_name()
-    dbExecute(con, paste0("ATTACH '", dbname(sdf), "' AS ", aux))
+.dblist <- function(con) {
+    res <- dbGetQuery(con, "PRAGMA database_list")
+    return(res)
+}
+.dblist_SQLDataFrame <- function(sdf) {
+    con <- .con_SQLDataFrame(sdf)
+    .dblist(con)
+}
+.attach_database <- function(con, dbname, aux = NULL) {
+    if (is.null(aux))
+        aux <- dbplyr:::random_table_name()
+    dbExecute(con, paste0("ATTACH '", dbname, "' AS ", aux))
     return(aux)
 }
 .open_tbl_from_connection <- function(con, aux, sdf) {
@@ -117,7 +146,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 }
 
 .attach_and_open_tbl_in_new_connection <- function(con, sdf) {
-    aux <- .attach_database_from_SQLDataFrame(con, sdf)
+    aux <- .attach_database(con, dbname(sdf))
     ## dbs <- dbGetQuery(con, "PRAGMA database_list")
     .open_tbl_from_connection(con, aux, sdf)
 }

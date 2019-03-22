@@ -24,12 +24,17 @@ saveSQLDataFrame(aa1)  ## works!
 aa <- inner_join(ss1, ss2, by = dbkey(ss1))  ## 5:10
 aa1 <- inner_join(aa, ss3, by = dbkey(ss1))  ## 8:10
 aa2 <- left_join(ss1, aa1, by = dbkey(ss1))  ## 1:10
+
 aa3 <- left_join(aa, aa1, by = dbkey(ss1))   ## 8:10, duplicate cols. 
+aa4 <- left_join(aa, aa1, by = c(dbkey(ss1), "division", "state"))   ## 8:10, unique cols.
+aa5 <- inner_join(aa, aa1, by = c(dbkey(ss1), "division", "state"))  ## works!
+aa6 <- inner_join(aa, aa1, by = c(dbkey(ss1), "division"))  ## works!
+aa6 <- inner_join(aa, aa1)  ## works! By default, using overlapping cols as "by="
 
 ## semi_join, left_join, inner_join
 aa <- semi_join(ss1, ss2)  ## 5:10 rows
 aa1 <- left_join(aa, ss3)  ## 5:10 rows
-aa2 <- inner_join(aa1, ss4)  ## inner(5:10, 6:15) => 6:10
+aa2 <- inner_join(aa1, ss4)  ## inner(5:10, 6:15) => 6:10. By default, using overlapping cols as "by="
 aa3 <- left_join(ss4, aa1)  ## left(6:15, 5:10) => 6:15
 
 ## anti_join, 
@@ -49,7 +54,7 @@ bb <- rbind(aa, aa1)
 ## Error in rbind(...) : 
 ##   Input SQLDataFrame objects must have identical columns!
 bb <- rbind(aa[,2, drop=FALSE], aa1[,2,drop=FALSE])  ## FAIL! rewrite dbtable() method!! 
-
+saveSQLDataFrame(bb)
 
 ##########################
 ### test dbplyr:: *_join
@@ -67,7 +72,6 @@ full_join(tb1, tb2)  ## not supported!
 ## Joining, by = c("region", "population")
 ## Error in result_create(conn@ptr, statement) : 
 ##   RIGHT and FULL OUTER JOINs are not currently supported
-
 
 ## join(union), or union(join)...
 ## saveSQLDataFrame()
