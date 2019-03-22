@@ -1,4 +1,6 @@
 ## todo: 
+- create index table in SQL database? 
+- rewrite the "union" method for `@dbconcatKey`. Not efficient now! 
 - write a temporary table in local connection??? current usage of
   `dbtable()` are all related to `op_base_xx`. so maybe disable the
   `dbtable()` method for SDF that generated from `join` or
@@ -6,7 +8,7 @@
   lazy tbl as a realized tblData. Reopen with SDF constructor, and
   then `dbtable()` could be used again!
 - leave the current `dbtable()` method as is. When determined with the
-  above, disable the `dbtable()` for non-`op_base_xx` SDF objects.
+  above, disable the `dbtable()` for non-`op_base_xx` SDF objects. -- done!
 - write ridx(SDF) setter?
 - write getter for SDF@tblData? 
 - rbind dbtable from different source.   -- done!
