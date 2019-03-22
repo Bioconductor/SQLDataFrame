@@ -48,9 +48,9 @@ left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    browser()
+    ## browser()
     tbls <- .join_union_prepare(x, y)
-    tbl.out <- left_join(tbls[[1]], tbls[[2]], by = dbkey(x))
+    tbl.out <- left_join(tbls[[1]], tbls[[2]], by = by)
     x@tblData <- tbl.out
     x@dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
     x@dbconcatKey <- ROWNAMES(x)  ## inner_join
@@ -62,9 +62,9 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                     suffix = c(".x", ".y"),
                                     auto_index = FALSE, ...) 
 {
-    browser()
+    ## browser()
     tbls <- .join_union_prepare(x, y)
-    tbl.out <- inner_join(tbls[[1]], tbls[[2]], by = dbkey(x))
+    tbl.out <- inner_join(tbls[[1]], tbls[[2]], by = by)
     x@tblData <- tbl.out
     x@dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
     x@dbconcatKey <- intersect(ROWNAMES(x), ROWNAMES(y))  ## inner_join
@@ -80,9 +80,9 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    browser()
+    ## browser()
     tbls <- .join_union_prepare(x, y)
-    tbl.out <- semi_join(tbls[[1]], tbls[[2]], by = dbkey(x))
+    tbl.out <- semi_join(tbls[[1]], tbls[[2]], by = by)
     x@tblData <- tbl.out
     x@dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
     x@dbconcatKey <- intersect(ROWNAMES(x), ROWNAMES(y))  ## semi_join
@@ -97,9 +97,9 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    browser()
+    ## browser()
     tbls <- .join_union_prepare(x, y)
-    tbl.out <- anti_join(tbls[[1]], tbls[[2]], by = dbkey(x))
+    tbl.out <- anti_join(tbls[[1]], tbls[[2]], by = by)
     x@tblData <- tbl.out
     x@dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
     x@dbconcatKey <- setdiff(ROWNAMES(x), ROWNAMES(y))  ## anti_join
