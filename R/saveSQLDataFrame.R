@@ -30,8 +30,10 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
 
     if (is(x@tblData$ops, "op_base")) {
         con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        aux <- .attach_database_from_SQLDataFrame(con, x)
-        tblx <- .open_tbl_from_new_connection(con, aux, x)
+        aux <- .attach_database(con, dbname(x))
+        tblx <- .open_tbl_from_connection(con, aux, x)  ## already
+                                                        ## evaluated
+                                                        ## ridx here.
         sql_cmd <- dbplyr::db_sql_render(con, tblx)
     } else if (is(x@tblData$ops, "op_double")) {
         con <- .con_SQLDataFrame(x)
