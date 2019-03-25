@@ -20,7 +20,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                              dbtable = deparse(substitute(x)),
                              overwrite = FALSE, ...)
 {
-    browser()
+    ## browser()
     if (file.exists(dbname)) {
         dbname <- file_path_as_absolute(dbname)
         if (overwrite == FALSE)
@@ -33,17 +33,26 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
         aux <- .attach_database_from_SQLDataFrame(con, x)
         tblx <- .open_tbl_from_new_connection(con, aux, x)
         sql_cmd <- dbplyr::db_sql_render(con, tblx)
-        dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
-    } else if (is(x@tblData$ops, "op_double")) {  ## "op_union" works. try "op_join". 
+    } else if (is(x@tblData$ops, "op_double")) {
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
-        dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
-        ## error if "dbtable" already exist. "Error: table aa already exists"
-        file.copy(dbname(x), dbname, overwrite = overwrite)
+        ## add "dbtable_ridx" table if SQLDataFrame comes from "rbind". how about "join"?
+        if (!is.null(ridx(x))) {
+            dbWriteTable(con, paste0(dbtable, "_ridx"), value = data.frame(ridx = ridx(x)))
+        }
+    }
+    dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
+    ## error if "dbtable" already exist. "Error: table aa already
+    ## exists". Not likely happen here, because SQLDataFrame generated
+    ## from "join" or "union" has connection to a new temporary .db
+    ## file with empty contents.
 
-        ## FIXME: need to save ridx for if SQLDF comes from "rbind". Save as separate file in database???
-        ## in construction, read the separate ridx file if exist! 
-    } 
+    ## add unique index file with dbkey(x)
+    dbplyr:::db_create_indexes.DBIConnection(con, dbtable, indexes = list(dbkey(x)), unique = TRUE)
+
+    if (is(x@tblData$ops, "op_double")) {
+        file.copy(dbname(x), dbname, overwrite = overwrite)
+    }
     msg_saveSQLDataFrame(x, dbname, dbtable)
 }
 

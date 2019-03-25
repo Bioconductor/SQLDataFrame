@@ -58,3 +58,14 @@ saveSQLDataFrame(ss11)
 
 ## union, open new connection to a local database (temp), reuse in saveSQLDataFrame.
 ## rbind, pairwise union, go down the tree, lhs, rhs, fun(), leaf()... 
+
+#############################
+### create (unique) index
+#############################
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "inst/extdata/test.db")
+dbListTables(con)
+
+dbplyr:::db_create_indexes.DBIConnection(con, "state", indexes = list(c("region", "population")), unique = T)
+## <SQL> CREATE UNIQUE INDEX `state_region_population` ON `state` (`region`, `population`)
+

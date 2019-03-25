@@ -48,15 +48,15 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                          col.names = NULL ## used to specify certain
                                           ## columns to read
                          ){
-    ## browser()
+    browser()
     dbname <- tools::file_path_as_absolute(dbname)
     ## error if file does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
     ## src <- src_dbi(con, auto_disconnect = TRUE)
     ## on.exit(DBI::dbDisconnect(con))
+    tbls <- DBI::dbListTables(con)
     
     if (missing(dbtable)) {
-        tbls <- DBI::dbListTables(con)
         if (length(tbls) == 1) {
             dbtable <- tbls
         } else {
@@ -93,6 +93,13 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         }
     }
 
+    ## ridx
+    ridx <- NULL
+    ridxTableName <- paste0(dbtable, "_ridx")
+    if (ridxTableName %in% tbls) {
+        ridx <- dbReadTable(con, ridxTableName)$ridx
+    }
+    
     ### concatKey
     concatKey <- tbl %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
 
@@ -100,7 +107,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         dbkey = dbkey,
         dbnrows = dbnrows,
         tblData = tbl,
-        indexes = list(NULL, cidx),
+        indexes = list(ridx, cidx),
         dbconcatKey = concatKey
     )
 }
