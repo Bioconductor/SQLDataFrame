@@ -35,6 +35,7 @@
 ## Since "dbplyr:::union.tbl_lazy(x,y)" only evaluates data from same source, need to rewrite, using the dbExecute(con, "ATTACH dbname AS aux")
 setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y, ...)
 {
+    browser()
     tbls <- .join_union_prepare(x, y)
     tbl.out <- dbplyr:::union.tbl_lazy(tbls[[1]], tbls[[2]])
   
@@ -46,6 +47,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     x@dbconcatKey <- tbl.out %>%
         mutate(concatKey = paste(!!!syms(dbkey(x)), sep="\b")) %>%
         pull(concatKey)  
+    ## ?? using SQL index? 
     ## ## extract the new @dbconcatKey instead of recalculating
     ## tt <- do.call(rbind, strsplit(c(ROWNAMES(x), ROWNAMES(y)), split = "\b"))
     ## tt <- as.data.frame(tt, stringsAsFactors = FALSE)
@@ -58,7 +60,7 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
 
 .join_union_prepare <- function(x, y)
 {
-    ## browser()  
+    browser()  
     if (is(x@tblData$ops, "op_double")) {
         con <- .con_SQLDataFrame(x)
         x1 <- .extract_tbl_from_SQLDataFrame(x)  ## lazy tbl. 
@@ -74,10 +76,8 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
             idx <- match(paste(dbsy$name, dbsy$file, sep=":"), paste(dbs$name, dbs$file, sep=":"))
             idx <- which(!is.na(idx))          
             if (length(idx)) dbsy <- dbsy[-idx, ]
-            if (nrow(dbsy)) {
-                for (i in seq_len(nrow(dbsy))) {
-                    .attach_database(con, dbsy[i, "file"], dbsy[i, "name"])
-                }
+            for (i in seq_len(nrow(dbsy))) {
+                .attach_database(con, dbsy[i, "file"], dbsy[i, "name"])
             }
             ## open the lazy tbl from new connection
             sql_cmd <- dbplyr::db_sql_render(cony, y1)
@@ -173,9 +173,8 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
         objects <- objects[-1]
     }
 
-    ## Possible enhancement: save 'idx' as separate database table. 
     idx <- match(rnms_final, out@dbconcatKey)
-    out@indexes[[1]] <- idx   ## need a slot setter here? so ridx(out) <- idx
+    out@indexes[[1]] <- idx
     return(out)
 }
 

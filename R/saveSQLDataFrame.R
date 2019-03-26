@@ -38,8 +38,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
     } else if (is(x@tblData$ops, "op_double")) {
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
-        ## add "dbtable_ridx" table if SQLDataFrame comes from "rbind". how about "join"?
-        if (!is.null(ridx(x))) {
+        if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
             dbWriteTable(con, paste0(dbtable, "_ridx"), value = data.frame(ridx = ridx(x)))
         }
     }
@@ -62,7 +61,7 @@ msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
     msg <- paste0("## A new database table is saved! \n",
                   "## Source: table<", dbtable, "> [",
                   paste(dim(x), collapse = " X "), "] \n",
-                  ## "## Database: ", db_desc(con), "\n",    ## con??
+                  ## "## Database: ", db_desc(con), "\n", 
                   "## Database: ",
                   paste("sqlite ", dbplyr:::sqlite_version(), " [", dbname, "] \n"),
                   "## Use the following command to reload into R: \n",
