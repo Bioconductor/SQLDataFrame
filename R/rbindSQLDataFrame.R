@@ -4,30 +4,25 @@
 ## "union" itself removes duplicates, and reorder by default using 1st column, then 2nd, ...
 ## SQL::union_all, I guess, no automatic ordering??
 
-#' @export
-
-setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y, ...)
+.union_SQLDataFrame <- function(x, y, copy = FALSE)
 {
-    browser()
-    tbls <- .join_union_prepare(x, y)
-    tbl.out <- dbplyr:::union.tbl_lazy(tbls[[1]], tbls[[2]])
-    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
-
+    ## browser()
+    out <- .doCompatibleFunction(x, y, copy = copy,
+                                 FUN = dbplyr:::union.tbl_lazy)  ## dbplyr:::union.tbl_lazy
     ## @dbconcatKey
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))
     tt <- as.data.frame(do.call(rbind, strsplit(rnms, split = "\b")),
                         stringsAsFactors = FALSE)
-    cls <- tbl.out %>% head %>% select(dbkey(x)) %>% as.data.frame() %>% sapply(class)
+    cls <- out@tblData %>% head %>% select(dbkey(x)) %>% as.data.frame() %>% sapply(class)
     for (i in seq_len(length(tt))) class(tt[,i]) <- unname(cls)[i]
     od <- do.call(order, tt)
     dbrnms <- rnms[od]
+    
+    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
+}
 
-    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
-                                       dbnrows = dbnrows,
-                                       dbconcatKey = dbrnms,
-                                       indexes = vector("list", 2))
-    return(out)
-})
+#' @export
+setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), .union_SQLDataFrame)
 
 .join_union_prepare <- function(x, y)
 {

@@ -1,20 +1,13 @@
-.rownamesFun <- function (rx, ry, type)
-    switch(type,
-           left_join = rx,
-           inner_join = intersect(rx, ry),
-           semi_join = intersect(rx, ry),
-           anti_join = setdiff(rx, ry)
-           )
-
 .doCompatibleFunction <- function(x, y, ..., FUN) {
+    ## browser()
     tbls <- .join_union_prepare(x, y)
     tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
-    x@tblData <- tbl.out
-    x@dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
-    x@dbconcatKey <- .rownamesFun(ROWNAMES(x), ROWNAMES(y),
-                                 deparse(substitute(FUN)))
-    x@indexes <- vector("list", 2)
-    return(x)
+    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
+
+    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
+                                       dbnrows = dbnrows,
+                                       indexes = vector("list", 2))
+    return(out)
 }
 
 #########################
@@ -25,16 +18,24 @@ left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    .doCompatibleFunction(x, y, by = by, copy = copy, suffix = suffix,
-                          auto_index = auto_index, FUN = left_join)
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                 suffix = suffix,
+                                 auto_index = auto_index,
+                                 FUN = dbplyr:::left_join.tbl_lazy)
+    dbrnms <- ROWNAMES(x)
+    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
 }
 
 inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                     suffix = c(".x", ".y"),
                                     auto_index = FALSE, ...) 
 {
-    .doCompatibleFunction(x, y, by = by, copy = copy, suffix = suffix,
-                          auto_index = auto_index, FUN = inner_join)
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                 suffix = suffix,
+                                 auto_index = auto_index,
+                                 FUN = dbplyr:::inner_join.tbl_lazy)
+    dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
+    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
 }
 
 #########################
@@ -48,8 +49,12 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    .doCompatibleFunction(x, y, by = by, copy = copy, suffix = suffix,
-                          auto_index = auto_index, FUN = semi_join)
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                 suffix = suffix,
+                                 auto_index = auto_index,
+                                 FUN = dbplyr:::semi_join.tbl_lazy)
+    dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
+    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
 }
 
 
@@ -60,7 +65,11 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    .doCompatibleFunction(x, y, by = by, copy = copy, suffix = suffix,
-                          auto_index = auto_index, FUN = anti_join)
+    OUT <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                 suffix = suffix,
+                                 auto_index = auto_index,
+                                 FUN = dbplyr:::anti_join.tbl_lazy)
+    dbrnms <- setdiff(ROWNAMES(x), ROWNAMES(y))
+    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
 }
 

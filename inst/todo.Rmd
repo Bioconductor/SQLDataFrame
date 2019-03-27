@@ -1,35 +1,38 @@
+## update:
+1. `.join_union_prepare` for attaching database to current connection. 
+2. `rbind` do take-one-at-a-time union. 
+3. `saveSQLDataFrame` write unique index with `dbkey(x)`. Save
+   `ridx(x)` if input SQLDataFrame comes from `rbind` (with non-null
+   `ridx(x)`).
+4. `SQLDataFrame()` constructor read `ridx()` if exists.
+5. rewrote `dbtable()` method. Only works for `@tbldata` with real
+   database on disk. Doesn't work for lazy tbl. 
+
 ## todo: 
-- create index table in SQL database? 
-- rewrite the "union" method for `@dbconcatKey`. Not efficient now! 
-- write a temporary table in local connection??? current usage of
-  `dbtable()` are all related to `op_base_xx`. so maybe disable the
-  `dbtable()` method for SDF that generated from `join` or
-  `union/rbind`? Message for users to `saveSQLDataFrame()` to save the
-  lazy tbl as a realized tblData. Reopen with SDF constructor, and
-  then `dbtable()` could be used again!
-- leave the current `dbtable()` method as is. When determined with the
-  above, disable the `dbtable()` for non-`op_base_xx` SDF objects. -- done!
+1. tidy code for `joinSQLDataFrame.R` to avoid duplicate code. -- done!
+2. `union()@dbconcatKey` not efficient.
+save @dbconcatKey as a data.frame, which contains same information as the SQL index. (add index file for SQLDataFrame constructor if not already exists!)
+3. Try real database with different SQL format. (MySQL, BigQuery, ...)
+4. write `readSQLtable()` function, with ordinary format (.csv, .txt...)
+   as input, write database with optional SQLite format, open as
+   SQLDataFrame. (`dbWriteTable(con, name, value = "filename")`)
+5. `apply()`?? (e.g., print...) 
+6. coerce into matrix for `row/colSums`, etc. 
+7. tryCatch: Error in result_create(conn@ptr, statement) : parser stack overflow
+8. as.data.frame(), show(), extra layer of query? 
+9. BiocGenerics:::replaceSlots()
+
+## misc:
 - write ridx(SDF) setter?
 - write getter for SDF@tblData? 
-- rbind dbtable from different source.   -- done!
-  add example for "state1"  -- done!
-- dbtable() method for lazy tbl with "op_double". 
-- saveSQLDataFrame 
 
 ### add a new table "table_metadata", 
 2 additional tables to add to database: 
-1) dbkey info. serialize(dbkey(x), NULL) to convert to "raw", in "BLOB" (long binary??).  OR try to retrieve the index() table in database??
-2) ridx / rownames. 
+1) dbkey info. serialize(dbkey(x), NULL) to convert to "raw", in "BLOB" (long binary??).
 
-- modify `dbtable()` accessor for `op_distinct` or other ops...
-- modify "saveSQLDataFrame" to be compatible with `op_join` and `op_set_op`. 
+- modify "saveSQLDataFrame" to be compatible with `op_double` that from `join` or `union`. 
 - add new table for metadata (@indexes) within `saveSQLDataFrame`? See
   how to retrieve the SQL index table and make use of it. 
-
-- rewrite "dbtable()" method for sdf with "op_join".   -- done!
-- debug "saveSQLDataFrame(ss4, "inst/extdata/test.db") 
-  ERROR: Error in result_create(conn@ptr, statement) : database is locked
-- debug "saveSQLDataFrame(sdf with @tblData$ops$name == "op_join")
 
 
 ## Update: 
