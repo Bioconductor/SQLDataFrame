@@ -12,29 +12,21 @@ setMethod("union", signature = c("SQLDataFrame", "SQLDataFrame"), function(x, y,
     tbls <- .join_union_prepare(x, y)
     tbl.out <- dbplyr:::union.tbl_lazy(tbls[[1]], tbls[[2]])
     dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
-    ## recalculate the @dbconcatKey
-    ## concatKeys <- tbl.out %>%
-    ##     mutate(concatKey = paste(!!!syms(dbkey(x)), sep="\b")) %>%
-    ##     pull(concatKey)  
-    ## ?? using SQL index? 
-    ## ## extract the new @dbconcatKey instead of recalculating
-    tt <- do.call(rbind, strsplit(c(ROWNAMES(x), ROWNAMES(y)), split = "\b"))
-    tt <- unique(as.data.frame(tt, stringsAsFactors = FALSE))
-    ## colnames(tt) <- dbkey(x)
+
+    ## @dbconcatKey
+    rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))
+    tt <- as.data.frame(do.call(rbind, strsplit(rnms, split = "\b")),
+                        stringsAsFactors = FALSE)
     cls <- tbl.out %>% head %>% select(dbkey(x)) %>% as.data.frame() %>% sapply(class)
     for (i in seq_len(length(tt))) class(tt[,i]) <- unname(cls)[i]
     od <- do.call(order, tt)
-    tt <- tt[od, ]
-    concatKeys <- do.call(paste, c(tt, sep="\b"))
-    x@tblData <- tbl.out
-    x@dbnrows <- dbnrows
-    x@dbconcatKey <- concatKeys
-    x@indexes <- vector("list", 2)
-    ## BiocGenerics:::replaceSlots(x, tblData = tbl.out,
-    ##                            dbnrows = dbnrows,
-    ##                            dbconcatKey = concatKeys,
-    ##                            indexes = vector("list", 2))
-    return(x)
+    dbrnms <- rnms[od]
+
+    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
+                                       dbnrows = dbnrows,
+                                       dbconcatKey = dbrnms,
+                                       indexes = vector("list", 2))
+    return(out)
 })
 
 .join_union_prepare <- function(x, y)
