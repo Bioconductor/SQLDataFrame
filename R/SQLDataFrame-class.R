@@ -17,6 +17,7 @@ setClassUnion("tbl_dbi_inherited", c("tbl_SQLiteConnection"))
         tblData = "tbl_dbi_inherited",   ## ?
         indexes = "list",
         dbconcatKey = "character"  ## consistent with dbtable(SDF), not related to ridx(SDF)
+        ## keyDF = "DataFrame"
         ## includeKey = "logical"
         ## elementType = "character",
         ## elementMetadata = "DataTable_OR_NULL",
@@ -48,7 +49,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                          col.names = NULL ## used to specify certain
                                           ## columns to read
                          ){
-    browser()
+    ## browser()
     dbname <- tools::file_path_as_absolute(dbname)
     ## error if file does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
@@ -100,7 +101,8 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         ridx <- dbReadTable(con, ridxTableName)$ridx
     }
     
-    ### concatKey
+    ## concatKey
+    ## keyDF <- DataFrame(select(tbl, dbkey))  ## attemp for DF format
     concatKey <- tbl %>% mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>% pull(concatKey)
 
     .SQLDataFrame(
@@ -122,9 +124,9 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
 .validity_SQLDataFrame <- function(object)
 {
     ## dbtable match
-    tbls <- .available_tbls(dbname(object))
-    if (! dbtable(object) %in% tbls)
-        stop('"dbtable" must be one of :', tbls)    
+    ## tbls <- .available_tbls(dbname(object))
+    ## if (! dbtable(object) %in% tbls)
+    ##     stop('"dbtable" must be one of :', tbls)    
     ## @indexes length
     idx <- object@indexes
     if (length(idx) != 2)
@@ -218,7 +220,11 @@ setGeneric("dbconcatKey", signature = "x", function(x)
 #' @rdname SQLDataFrame-class
 #' @aliases dbconcatKey dbconcatKey,SQLDataFrame
 #' @export
-setMethod("dbconcatKey", "SQLDataFrame", function(x) x@dbconcatKey )
+setMethod("dbconcatKey", "SQLDataFrame", function(x)
+{
+    x@dbconcatKey
+    ## do.call(paste, c(as.list(x@keyDF), sep="\b"))
+})
 
 ## setGeneric("concatKey", signature = "x", function(x)
 ##     standardGeneric("concatKey"))
@@ -257,6 +263,8 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
         ## works, keep for now. 
     } else {
         x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep="\b"))
+        ## FIXME: possible to remove the ".0" trailing after numeric values?
+        ## FIXME: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
         ### keys <- x %>% pull(concatKeys)
         out <- x %>% filter(concatKeys %in% concatKey[i]) %>% select(-concatKeys)
         ## returns "tbl_dbi" object, no realization. 
