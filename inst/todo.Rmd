@@ -10,8 +10,7 @@
 
 ## todo: 
 1. tidy code for `joinSQLDataFrame.R` to avoid duplicate code. -- done!
-2. `union()@dbconcatKey` not efficient.
-save @dbconcatKey as a data.frame, which contains same information as the SQL index. (add index file for SQLDataFrame constructor if not already exists!)
+2. `union()@dbconcatKey` not efficient.  --done!
 3. Try real database with different SQL format. (MySQL, BigQuery, ...)
 4. write `readSQLtable()` function, with ordinary format (.csv, .txt...)
    as input, write database with optional SQLite format, open as
@@ -20,8 +19,13 @@ save @dbconcatKey as a data.frame, which contains same information as the SQL in
 6. coerce into matrix for `row/colSums`, etc. 
 7. tryCatch: Error in result_create(conn@ptr, statement) : parser stack overflow
 8. as.data.frame(), show(), extra layer of query? 
-9. BiocGenerics:::replaceSlots()
-
+9. BiocGenerics:::replaceSlots()  -- done!
+10. *_join no S4 generics. Should we keep S3 method or add S4 generic? 
+11. show() of rbind(ss11, ss21, ss31, ss22) slow. But after
+    saveSQLDataFrame, show is fast. So the many layers of queries
+    slowed down the total performance, including showing of @tblData.
+	Message for users: when you notice slow down, do "saveSQLDataFrame"!
+	
 ## misc:
 - write ridx(SDF) setter?
 - write getter for SDF@tblData? 

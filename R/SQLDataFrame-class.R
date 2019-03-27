@@ -342,7 +342,7 @@ setMethod("show", "SQLDataFrame", function (object)
         }
         classinfoFun <- function(tbl, colnames) {
             matrix(unlist(lapply(
-            as.data.frame(head(tbl %>% select(colnames))),
+            as.data.frame(head(tbl %>% select(colnames))),  ## added a layer on lazy tbl. 
             function(x)
             { paste0("<", classNameForDisplay(x)[1], ">") }),
             use.names = FALSE), nrow = 1,
