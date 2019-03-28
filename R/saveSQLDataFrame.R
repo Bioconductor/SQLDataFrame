@@ -11,14 +11,17 @@
 #' @param overwrite Whether to overwrite the \code{dbtable} if already
 #'     exists. Default is FALSE.
 #' @param ... other parameters passed to methods.
-#' @examples dbname <- system.file("extdata/test.db", package =
-#'     "SQLDataFrame") ss <- SQLDataFrame(dbname = dbname, dbtable =
-#'     "state", dbkey = "state") ss1 <- ss[1:10, 2:3]
-#'     saveSQLDataFrame(ss1)
 #' @import DBI
 #' @import dbplyr
 #' @rawNamespace import(dplyr, except = c("first", "rename",
 #'     "setequal", "setdiff", "intersect", "union", "ident", "sql"))
+#' @examples
+#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+#' ss1 <- ss[1:10, 2:3]
+#' ss1 <- saveSQLDataFrame(ss1, dbtable = "ss_subset")
+#' dbname(ss1)
+#' dbtable(ss1)
 #' @export
 
 saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
@@ -60,6 +63,8 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
         file.copy(dbname(x), dbname, overwrite = overwrite)
     }
     msg_saveSQLDataFrame(x, dbname, dbtable)
+    res <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(x))
+    invisible(res)
 }
 
 msg_saveSQLDataFrame <- function(x, dbname, dbtable) {

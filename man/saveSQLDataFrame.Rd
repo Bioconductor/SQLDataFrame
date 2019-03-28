@@ -27,8 +27,10 @@ The function to save \code{SQLDataFrame} object as a
     database table with a supplied path to database.
 }
 \examples{
-dbname <- system.file("extdata/test.db", package =
-    "SQLDataFrame") ss <- SQLDataFrame(dbname = dbname, dbtable =
-    "state", dbkey = "state") ss1 <- ss[1:10, 2:3]
-    saveSQLDataFrame(ss1)
+dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+ss1 <- ss[1:10, 2:3]
+ss1 <- saveSQLDataFrame(ss1, dbtable = "ss_subset")
+dbname(ss1)
+dbtable(ss1)
 }
