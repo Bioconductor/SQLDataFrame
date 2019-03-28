@@ -1,20 +1,25 @@
-#' Save SQLDataFrame object as a new database table. 
-#' @description The function to save \code{SQLDataFrame} object as a
-#'     database table with a supplied path to database. 
-#' @param x The \code{SQLDataFrame} object to be saved.
-#' @param dbname A database file path to save the \code{SQLDataFrame}
-#'     object.
-#' @param dbtable The name of the new database table.
-# #' @param types a character vector giving variable types to use for the
-# #' columns. See http://www.sqlite.org/datatype3.html for available types.
-#' @param ... other parameters passed to methods.
-#' @export
+#' Save SQLDataFrame object as a new database table.
 #' @rdname saveSQLDataFrame
-#' @examples
-#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
-#' ss1 <- ss[1:10, 2:3]
-#' saveSQLDataFrame(ss1, tempfile(fileext = ".db"))
+#' @description The function to save \code{SQLDataFrame} object as a
+#'     database table with a supplied path to database.
+#' @param x The \code{SQLDataFrame} object to be saved.
+#' @param dbname A character string of the file path of to be saved
+#'     database file.
+#' @param dbtable A character string for the to be saved database
+#'     table name. Default is the name of the input
+#'     \code{SQLDataFrame}.
+#' @param overwrite Whether to overwrite the \code{dbtable} if already
+#'     exists. Default is FALSE.
+#' @param ... other parameters passed to methods.
+#' @examples dbname <- system.file("extdata/test.db", package =
+#'     "SQLDataFrame") ss <- SQLDataFrame(dbname = dbname, dbtable =
+#'     "state", dbkey = "state") ss1 <- ss[1:10, 2:3]
+#'     saveSQLDataFrame(ss1)
+#' @import DBI
+#' @import dbplyr
+#' @rawNamespace import(dplyr, except = c("first", "rename",
+#'     "setequal", "setdiff", "intersect", "union", "ident", "sql"))
+#' @export
 
 saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
                              dbtable = deparse(substitute(x)),

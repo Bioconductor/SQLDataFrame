@@ -10,10 +10,15 @@ saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"),
 \arguments{
 \item{x}{The \code{SQLDataFrame} object to be saved.}
 
-\item{dbname}{A database file path to save the \code{SQLDataFrame}
-object.}
+\item{dbname}{A character string of the file path of to be saved
+database file.}
 
-\item{dbtable}{The name of the new database table.}
+\item{dbtable}{A character string for the to be saved database
+table name. Default is the name of the input
+\code{SQLDataFrame}.}
+
+\item{overwrite}{Whether to overwrite the \code{dbtable} if already
+exists. Default is FALSE.}
 
 \item{...}{other parameters passed to methods.}
 }
@@ -22,8 +27,8 @@ The function to save \code{SQLDataFrame} object as a
     database table with a supplied path to database.
 }
 \examples{
-dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
-ss1 <- ss[1:10, 2:3]
-saveSQLDataFrame(ss1, tempfile(fileext = ".db"))
+dbname <- system.file("extdata/test.db", package =
+    "SQLDataFrame") ss <- SQLDataFrame(dbname = dbname, dbtable =
+    "state", dbkey = "state") ss1 <- ss[1:10, 2:3]
+    saveSQLDataFrame(ss1)
 }

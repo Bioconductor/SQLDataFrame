@@ -24,6 +24,8 @@ exportMethods(union)
 import(DBI)
 import(S4Vectors)
 import(dbplyr)
+import(dplyr, except = c("first", "rename",
+    "setequal", "setdiff", "intersect", "union", "ident", "sql"))
 importFrom(lazyeval,interp)
 importFrom(methods,setOldClass)
 importFrom(tools,file_path_as_absolute)
