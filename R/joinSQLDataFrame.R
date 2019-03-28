@@ -65,7 +65,7 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    auto_index = FALSE, ...) 
 {
-    OUT <- .doCompatibleFunction(x, y, by = by, copy = copy,
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = auto_index,
                                  FUN = dbplyr:::anti_join.tbl_lazy)
