@@ -4,12 +4,13 @@
 \alias{makeSQLDataFrame}
 \title{Construct SQLDataFrame from file.}
 \usage{
-makeSQLDataFrame(filename = character(), dbkey = character(),
-  dbname = NULL, dbtable = NULL, overwrite = FALSE, sep = ",", ...)
+makeSQLDataFrame(filename, dbkey = character(), dbname = NULL,
+  dbtable = NULL, overwrite = FALSE, sep = ",", index = TRUE, ...)
 }
 \arguments{
-\item{filename}{A character string of the filepath to the text file
-that to be saved as SQL database table.}
+\item{filename}{A \code{data.frame} or \code{DataFrame} object, or
+a character string of the filepath to the text file that to be
+saved as SQL database table.}
 
 \item{dbkey}{A character vector of column name(s) that could
 uniquely identify each row of the filename. Must be provided in
@@ -20,8 +21,10 @@ database file. If not provided, will use a
 \code{tempfile(fileext = ".db")}.}
 
 \item{dbtable}{A character string for the to be saved database
-table name. If not provided, will use the
-\code{basename(filename)} without extension.}
+table name. If not provided, will use the name of the input
+\code{data.frame} or \code{DataFrame} object, or the
+\code{basename(filename)} without extension if \code{filename}
+is a character string.}
 
 \item{overwrite}{Whether to overwrite the \code{dbtable} if already
 exists. Default is FALSE.}
@@ -42,9 +45,15 @@ The provided file must has one or more columns to unique
 }
 \examples{
 mtc <- tibble::rownames_to_column(mtcars)
+
+## data.frame input
+obj <- makeSQLDataFrame(mtc, dbkey = "rowname")
+obj
+
+## character input
 filename <- file.path(tempdir(), "mtc.csv")
 write.csv(mtc, file= filename, row.names = FALSE)
-aa <- makeSQLDataFrame(filename, dbkey = "rowname")
-aa
+obj <- makeSQLDataFrame(filename, dbkey = "rowname")
+obj
 
 }
