@@ -123,7 +123,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
 
 .validity_SQLDataFrame <- function(object)
 {
-    ## dbtable match
+    ## dbtable match ## dbExistsTable(con, "tablename")
     ## tbls <- .available_tbls(dbname(object))
     ## if (! dbtable(object) %in% tbls)
     ##     stop('"dbtable" must be one of :', tbls)    
@@ -202,7 +202,9 @@ setMethod("dbtable", "SQLDataFrame", function(x)
     ##     ## FIXME: print more informative msg here. 
     ## } else if (is(op, "op_distinct")) {
     else {
-        message("## not available for SQLDataFrame with lazy tbl.")
+        message("## not available for SQLDataFrame with lazy tbl. \n",
+                "## call 'saveSQLDataFrame()' to save the lazy tbl in ",
+                "'@tblData' slot \n", "## and call 'dbtable()' again!")
     }
 })
 
