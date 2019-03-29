@@ -58,7 +58,11 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
 
     ## add unique index file with dbkey(x)
     dbplyr:::db_create_indexes.DBIConnection(con, dbtable, indexes = list(dbkey(x)), unique = TRUE)
-
+    ## FIXME: implement "overwrite" argument here for the index file. if (found & overwrite)
+    ## https://www.w3schools.com/sql/sql_create_index.asp
+    ## DROP INDEX table_name.index_name;
+    ## see also: dbRemoveTable()
+    
     if (is(x@tblData$ops, "op_double")) {
         file.copy(dbname(x), dbname, overwrite = overwrite)
     }
