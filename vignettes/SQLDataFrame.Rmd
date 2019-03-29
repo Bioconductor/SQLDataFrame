@@ -1,5 +1,5 @@
 ---
-title: "SQLDataFrame: Representation of database table in DataFrame metaphor"
+title: "SQLDataFrame: Lazy representation of database table in DataFrame metaphor"
 author:
 - name: Qian Liu
   affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
@@ -12,7 +12,7 @@ output:
         toc_float: true
 package: SQLDataFrame
 vignette: >
-  %\VignetteIndexEntry{SQLDataFrame: Representation of database table in DataFrame metaphor}
+  %\VignetteIndexEntry{SQLDataFrame: Lazy representation of database table in DataFrame metaphor}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -23,10 +23,9 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 11/30/2018"
+date: "last edit: 3/29/2018"
 
 # Introduction
-
 
 Theoretically, users could choose to use different database backend
 when doing the `SQLDataFrame` constructor. Five commonly used
@@ -54,7 +53,6 @@ The development version is also available to download from Github.
 ```{r getDevel, eval=FALSE}
 BiocManager::install("Liubuntu/SQLDataFrame")
 ```
-
 2. Load the package into R session.
 ```{r Load, message=FALSE}
 library(SQLDataFrame)
@@ -64,8 +62,8 @@ library(SQLDataFrame)
 ## SQLDataFrame constructor
 To construct a `SQLDataFrame` object, 3 arguments are needed:
 `dbname`, `dbtable` and `dbkey`. The `dbname` is the file path to the
-database that is saved on-disk. `dbtable` argument specifies the
-database table name that is going to be represented in `SQLDataFrame`
+database that is on-disk or remote. `dbtable` argument specifies the
+database table name that is going to be represented as `SQLDataFrame`
 object. If only one table is available in the specified database name,
 this argument could be left blank. The `dbkey` argument is used to
 specify the column name in the table which could uniquely identify all
@@ -75,7 +73,7 @@ Note that after reading the database table into `SQLDataFrame`, the
 key columns will be kept as fixed columns showing on the left hand
 side, with `|` separating key column(s) with the other columns. The
 `ncol`, `colnames`, and corresponding column subsetting will only
-corresponds to the non-key-columns.
+apply to the non-key-columns.
 
 
 ```{r constructor}
@@ -87,34 +85,84 @@ dim(obj)
 colnames(obj)
 ```
 
+## makeSQLDataFrame
+
+We could also construct a `SQLDataFrame` object directly from a file
+name. The `makeSQLDataFrame` function takes input of character value
+of file name for common text files (.csv, .txt, etc.), write into
+database tables, and open as `SQLDataFrame` object. Users could
+provide values for the `dbname` and `dbtable` argument. If NULL,
+default value for `dbname` would be a temporary database file, and
+`dbtable` would be the `basename(filename)` without extension.
+
+**NOTE** that the input file must have one or multiple columns that
+could uniquely identify each observation (row) to be used the
+`dbkey()` for `SQLDataFrame`. Also the file must be rectangular, i.e.,
+rownames are not accepted. But users could save rownames as a separate
+column. 
+
+```{r}
+mtc <- tibble::rownames_to_column(mtcars)
+filename <- file.path(tempdir(), "mtc.csv")
+write.csv(mtc, file= filename, row.names = FALSE)
+aa <- makeSQLDataFrame(filename, dbkey = "rowname", sep = ",",
+                       overwrite = TRUE)
+aa
+dbname(aa)
+dbtable(aa)
+```
+
+## saveSQLDataFrame
+
+With all the methods (`[` subsetting, `rbind`, `*_join`, etc.,)
+provided in the next section, the `SQLDataFrame` always work like a
+lazy representation until users explicitly call the `saveSQLDataFrame`
+function for realization. `saveSQLDataFrame` write the lazy tbl
+carried in `@tblData` into an on-disk database table, and reopen the
+`SQLDataFrame` object from the new path.
+
+It's also recommended that users call `saveSQLDataFrame` frequently to
+avoid too many lazy layers which slows down the data processing. 
+
+```{r}
+dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+## ss1 <- ss[1:10, 2:3]
+## ss1
+dbname(ss)
+dbtable(ss)
+ss1 <- saveSQLDataFrame(ss, dbname = tempfile(fileext = ".db"),
+                        dbtable = "ss_copy")
+dbname(ss1)
+dbtable(ss1)
+```
+
 ## SQLDataFrame methods
-### Slot accessors
+### Slot accessors & basic methods
 
 To make the `SQLDataFrame` object as light and compact as possible,
-there are only 5 slots contained in the object. Metadata information
-could be returned through these 5 slots using slot accessors or other
-utility functions.
-
+there are only 5 slots contained in the object: `tblData`, `dbkey`,
+`dbnrows`, `dbconcatKey`, `indexes`. Metadata information could be
+returned through these 5 slots using slot accessors or other utility
+functions.  
 ```{r}
 slotNames(obj)
 dbname(obj)
 dbtable(obj)
 dbkey(obj)
-colnames(obj)
+dbconcatKey(obj)
 ```
 
 The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
 table, which is a light-weight representation of the database table in
-_R_. The `dbnrow` slot saves the row information for the original
-database table. 
-
-When subsetting `SQLDataFrame` objects using `[`,
-these 2 slots remains unchanged, but the `nrow()`, `ncol()`,
-`colnames()` and `show()` method will reflect the data subsetting.
+_R_. The `dbnrows` slot saves the number of rows corresponding to the
+`obj@tblData`, and `dbconcatKey` saves the realized (concatenated) key
+column values corresponding to the `obj@tblData`.  
 
 ```{r}
 obj@tblData
 obj@dbnrows
+obj@dbconcatKey
 ```
 
 Besides, many useful common methods are defined on `SQLDataFrame`
@@ -125,14 +173,33 @@ unnamed list, with the first element being rownames which is always
 method). `dim()` method is defined to return the dimension of the
 database table, which enables the `nrow()/ncol()` to extract a
 specific dimension. `length()` method is also defined which works same
-as `ncol()`.   
+as `ncol()`.  
 Note that the `rownames(SQLDataFrame)` would always be `NULL` as
-rownames are not supported in `SQLDataFrame`.
-
+rownames are not supported in `SQLDataFrame`. However, `ROWNAMES(obj)`
+was implemented for the `[` subsetting with characters. 
+ 
 ```{r methods}
 dim(obj)
 dimnames(obj)
 length(obj)
+ROWNAMES(obj)
+```
+
+**NOTE** that the `dbtable()` accessor only works for a `SQLDataFrame`
+object that the lazy tbl carried in `@tblData` slot corresponds to a
+single database. If the `SQLDataFrame` was generated from `rbind`,
+`union` or `*_join`, call `saveSQLDataFrame()` to save the lazy tbl to
+disk so that `dbtable()` will be activated.
+
+```{r}
+dbtable(obj)
+aa <- rbind(obj[1:5, ], obj[6:10, ])
+aa
+dbtable(aa)  ## message
+bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
+                       dbtable = "aa", overwrite = TRUE)
+dbtable(bb)
+dbname(bb)
 ```
 
 ### `[[` subsetting
@@ -159,10 +226,9 @@ obj[["sampleID"]]
 character or logical vectors; logical vectors are recycled to the
 appropriate length. 
 
-**NOTE**, use `drop=FALSE` explicitly for single
-column subsetting if you want a `SQLDataFrame` object, otherwise, the
-default `drop=TRUE` would always return a realized value for that
-column.
+**NOTE**, use `drop=FALSE` explicitly for single column subsetting if
+you want to return a `SQLDataFrame` object, otherwise, the default
+`drop=TRUE` would always return a realized value for that column.
 
 ```{r, subsetting}
 obj[1:3, 1:2]
@@ -171,14 +237,35 @@ obj[1:3, "Ages", drop=FALSE]
 obj[, "Ages"]  ## realized column value
 ```
 
-The `ROWNAMES,SQLDataFrame` method is defined to return the key column
-name (only works for `SQLDataFrame` object with a single key column),
-so that the row subsetting with character vector works for the
-**single-key-SQLDataFrame** objects.
+When subsetting `SQLDataFrame` objects using `[`, the slots of
+`@tblData`, `@dbnrows`, and `@dbconcatKey` remain
+unchanged. `@indexes` was updated to reflect the data subsetting, and
+so does the methods of `nrow()`, `ncol()`, `colnames()` and `show()`.  
+
+```{r}
+obj1 <- obj[1:3, 1, drop = FALSE]
+identical(obj@tblData, obj1@tblData)
+identical(obj@dbnrows, obj1@dbnrows)
+identical(obj@dbconcatKey, obj1@dbconcatKey)
+obj1@indexes
+colnames(obj1)
+obj1
+```
+
+The `ROWNAMES,SQLDataFrame` method is defined to return the
+(concatenated if multiple) key column name(s), so that the row
+subsetting with character vector works for the `SQLDataFrame` objects.
 
 ```{r}
 ROWNAMES(obj)
 obj[c("a", "c", "d", "e"), ]
+```
+
+```{r}
+obj1 <- SQLDataFrame(dbname = test.db, dbtable = "state",
+                     dbkey = c("region", "population"))
+ROWNAMES(obj1)
+obj1[c("South\b3615.0", "West\b365.0"), ]
 ```
 
 List style subsetting is also allowed to extract certain columns from
@@ -188,6 +275,31 @@ the `SQLDataFrame` object which returns `SQLDataFrame` by default.
 obj[1]
 obj["Ages"]
 ```
+
+### union & rbind
+
+To be consistent with `DataFrame`, `union` method 
+
+
+
+### *_join methods
+
+The `*_join` family methods was implemented for `SQLDataFrame`
+objects. 
+
+```{r}
+ss <- SQLDataFrame(dbname = "inst/extdata/test.db",
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+ss1 <- ss[1:10, 1, drop = FALSE]
+ss2 <- ss[5:15, 2, drop=FALSE]
+
+ss3 <- ss[8:15, 3, drop=FALSE]
+ss4 <- ss[6:15, 3, drop = FALSE]
+
+```
+
+
 
 ### Numeric calculation / Data manipulation (todo)
 
