@@ -626,3 +626,12 @@ aa <- left_join(ss2, ss4, by = dbkey(ss2))
 ## want these to work: left_join(ss2, ss4), returns a SQLDataFrame(dbname=, dbtable=, dbkey=dbkey(ss2)) with @tblData ()
 
 ## replaceSlot @tblData, update @indexes to be NULL. Update @dbnrows, update @dbtable.
+
+
+dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+ss1 <- ss[1:10, 2:3]
+ss1 <- saveSQLDataFrame(ss1, dbtable = "ss_subset")
+dbname(ss1)
+dbtable(ss1)
+

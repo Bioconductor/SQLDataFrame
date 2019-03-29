@@ -1,4 +1,17 @@
-## update:
+## update (3/29/2019) 
+1. `saveSQLDataFrame` returns SQLDataFrame constructed from new
+   database and table.
+2. `makeSQLDataFrame` function added to read text files into SQLite
+   database and return the SQLDataFrame constructed according to the
+   database, table, and dbkey. 
+3. Combined `*_join` and `union` functions with utility function to
+   avoid duplicate code.
+4. Rewrote `union()@dbconcatKey` to be more efficient. 
+5. BiocGenerics:::replaceSlots().
+
+
+
+## update (3/25/2019)
 1. `.join_union_prepare` for attaching database to current connection. 
 2. `rbind` do take-one-at-a-time union. 
 3. `saveSQLDataFrame` write unique index with `dbkey(x)`. Save
@@ -8,23 +21,20 @@
 5. rewrote `dbtable()` method. Only works for `@tbldata` with real
    database on disk. Doesn't work for lazy tbl. 
 
-## todo: 
-1. tidy code for `joinSQLDataFrame.R` to avoid duplicate code. -- done!
-2. `union()@dbconcatKey` not efficient.  --done!
+## Questions: 
 3. Try real database with different SQL format. (MySQL, BigQuery, ...)
-4. write `readSQLtable()` function, with ordinary format (.csv, .txt...)
-   as input, write database with optional SQLite format, open as
-   SQLDataFrame. (`dbWriteTable(con, name, value = "filename")`)
 5. `apply()`?? (e.g., print...) 
 6. coerce into matrix for `row/colSums`, etc. 
-7. tryCatch: Error in result_create(conn@ptr, statement) : parser stack overflow
+7. tryCatch: Error in result_create(conn@ptr, statement) : parser stack overflow. -- show, `.join_union_prepare`.
 8. as.data.frame(), show(), extra layer of query? 
-9. BiocGenerics:::replaceSlots()  -- done!
-10. *_join no S4 generics. Should we keep S3 method or add S4 generic? 
+10. *_join no S4 generics. -- Keep S3 method. 
 11. show() of rbind(ss11, ss21, ss31, ss22) slow. But after
     saveSQLDataFrame, show is fast. So the many layers of queries
     slowed down the total performance, including showing of @tblData.
 	Message for users: when you notice slow down, do "saveSQLDataFrame"!
+12. Should `overwrite = FALSE` check `dbname` or `dbtable`? (in `makeSQLDataFrame()` and
+ `saveSQLDataFrame()`). Use 2 arguments. add "index = TRUE" for saveSQLDF. 
+13. try big database.  
 	
 ## misc:
 - write ridx(SDF) setter?

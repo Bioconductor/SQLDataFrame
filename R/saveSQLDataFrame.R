@@ -36,14 +36,14 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                  "OR change 'overwrite = TRUE'. ")
     }
 
-    if (is(x@tblData$ops, "op_base")) {
+    if (is(x@tblData$ops, "op_base") ) {  ## FIXME: mutate? / filter
         con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
         aux <- .attach_database(con, dbname(x))
         tblx <- .open_tbl_from_connection(con, aux, x)  ## already
                                                         ## evaluated
                                                         ## ridx here.
         sql_cmd <- dbplyr::db_sql_render(con, tblx)
-    } else if (is(x@tblData$ops, "op_double")) {
+    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
         if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
@@ -63,7 +63,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
     ## DROP INDEX table_name.index_name;
     ## see also: dbRemoveTable()
     
-    if (is(x@tblData$ops, "op_double")) {
+    if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {
         file.copy(dbname(x), dbname, overwrite = overwrite)
     }
     msg_saveSQLDataFrame(x, dbname, dbtable)

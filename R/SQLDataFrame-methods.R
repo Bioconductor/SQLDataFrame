@@ -203,17 +203,18 @@ filter.SQLDataFrame <- function(.data, ...)
     ## browser()
     tbl <- .extract_tbl_from_SQLDataFrame(.data)
     temp <- dplyr::filter(tbl, ...)
-    ## rnms <- temp %>% select(dbkey(.data)) %>% collect() %>%
-    ##     transmute(concat = paste(!!!syms(dbkey(.data)), sep = "\b")) %>%
-    ##     pull(concat)
+
     rnms <- temp %>%
         transmute(concat = paste(!!!syms(dbkey(.data)), sep = "\b")) %>%
         pull(concat)
     idx <- match(rnms, ROWNAMES(.data))
-    if (!is.null(.data@indexes[[1]])) {
-        .data@indexes[[1]] <- .data@indexes[[1]][idx]
-    } else {
-        .data@indexes[[1]] <- idx
+
+    if (!identical(idx, normalizeRowIndex(.data))) {
+        if (!is.null(ridx(.data))) {
+            .data@indexes[[1]] <- ridx(.data)[idx]
+        } else {
+            .data@indexes[[1]] <- idx
+        }
     }
     return(.data)
 }
@@ -224,3 +225,22 @@ filter.SQLDataFrame <- function(.data, ...)
 
 ### raw sql commands:
 ## ss1[sql("SELECT * FROM table WHERE col1 == "", col2 != "", ...")]
+
+mutate.SQLDataFrame <- function(.data, ...)
+{
+    browser()
+    ## FIXME: refer to ".join_union_prepare", check if already a con. "op_mutate" or "op_double", if yes, open that temp connection. Otherwise, open a new connection.
+    if (is(.data@tblData$ops, "op_double") | is(.data@tblData$ops, "op_mutate")) {
+        con <- .con_SQLDataFrame(.data)
+        tbl <- .data@tblData
+    } else {
+        dbname <- tempfile(fileext = ".db")
+        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+        aux <- .attach_database(con, dbname(.data))
+        auxSchema <- in_schema(aux, ident(dbtable(.data)))
+        tbl <- tbl(con, auxSchema)
+    }
+    tbl_out <- dplyr::mutate(tbl, ...)
+        
+    BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
+}

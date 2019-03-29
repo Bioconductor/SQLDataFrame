@@ -1,6 +1,5 @@
 ss1 <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "state", dbkey = c("region", "population"))
 ss2 <- SQLDataFrame(dbname = "inst/extdata/test1.db", dbtable = "state1", dbkey = c("region", "population"))
-
 ss3 <- SQLDataFrame(dbname = "inst/extdata/test2.db", dbtable = "state2", dbkey = c("region", "population"))
 
 ss11 <- ss1[1:10, 2:3]
@@ -19,8 +18,6 @@ tbl21 <- .extract_tbl_from_SQLDataFrame(ss21)
 tbl22 <- .extract_tbl_from_SQLDataFrame(ss22)
 
 u1 <- dbplyr:::union.tbl_lazy(tbl11, tbl12)
-
-
 u2 <- dbplyr:::union.tbl_lazy(tbl11, tbl21)
 ## Error: `x` and `y` must share the same src, set `copy` = TRUE (may be slow)
 ## Call `rlang::last_error()` to see a backtrace

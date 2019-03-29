@@ -185,23 +185,14 @@ setMethod("dbtable", "SQLDataFrame", function(x)
 {
     ## browser()
     op <- x@tblData$ops
-    if (is(op, "op_base_remote")) {
-        return(as.character(op$x))
-    } ## else if (is(op, "op_join")) {
-    ##     out1 <- op$x$ops$x
-    ##     repeat {
-    ##         out1 <- out1$x
-    ##         if (is.ident(out1)) break
-    ##     }
-    ##     out2 <- op$y$ops$x
-    ##     repeat {
-    ##         out2 <- out2$x
-    ##         if (is.ident(out2)) break
-    ##     }
-    ##     return(c(as.character(out1), as.character(out2)))
-    ##     ## FIXME: print more informative msg here. 
-    ## } else if (is(op, "op_distinct")) {
-    else {
+    if (! is(op, "op_double")) {
+           out1 <- op$x
+        repeat {
+            if (is.ident(out1)) break
+            out1 <- out1$x
+        }
+           return(as.character(out1))
+    } else {
         message("## not available for SQLDataFrame with lazy tbl. \n",
                 "## call 'saveSQLDataFrame()' to save the lazy tbl in ",
                 "'@tblData' slot \n", "## and call 'dbtable()' again!")
