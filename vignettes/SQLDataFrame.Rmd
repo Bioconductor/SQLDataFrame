@@ -23,9 +23,9 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 3/29/2018"
+date: "last edit: 4/3/2018"
 
-# Introduction
+# Introduction (to-be-updated)
 
 Theoretically, users could choose to use different database backend
 when doing the `SQLDataFrame` constructor. Five commonly used
@@ -58,8 +58,9 @@ BiocManager::install("Liubuntu/SQLDataFrame")
 library(SQLDataFrame)
 ```
 
-# SQLDataFrame
-## SQLDataFrame constructor
+# `SQLDataFrame` class
+
+## `SQLDataFrame` constructor
 To construct a `SQLDataFrame` object, 3 arguments are needed:
 `dbname`, `dbtable` and `dbkey`. The `dbname` is the file path to the
 database that is on-disk or remote. `dbtable` argument specifies the
@@ -85,84 +86,20 @@ dim(obj)
 colnames(obj)
 ```
 
-## makeSQLDataFrame
-
-We could also construct a `SQLDataFrame` object directly from a file
-name. The `makeSQLDataFrame` function takes input of character value
-of file name for common text files (.csv, .txt, etc.), write into
-database tables, and open as `SQLDataFrame` object. Users could
-provide values for the `dbname` and `dbtable` argument. If NULL,
-default value for `dbname` would be a temporary database file, and
-`dbtable` would be the `basename(filename)` without extension.
-
-**NOTE** that the input file must have one or multiple columns that
-could uniquely identify each observation (row) to be used the
-`dbkey()` for `SQLDataFrame`. Also the file must be rectangular, i.e.,
-rownames are not accepted. But users could save rownames as a separate
-column. 
-
-```{r}
-mtc <- tibble::rownames_to_column(mtcars)[,1:6]
-filename <- file.path(tempdir(), "mtc.csv")
-write.csv(mtc, file= filename, row.names = FALSE)
-aa <- makeSQLDataFrame(filename, dbkey = "rowname", sep = ",",
-                       overwrite = TRUE)
-aa
-dbname(aa)
-dbtable(aa)
-```
-
-## saveSQLDataFrame
-
-With all the methods (`[` subsetting, `rbind`, `*_join`, etc.,)
-provided in the next section, the `SQLDataFrame` always work like a
-lazy representation until users explicitly call the `saveSQLDataFrame`
-function for realization. `saveSQLDataFrame` write the lazy tbl
-carried in `@tblData` into an on-disk database table, and reopen the
-`SQLDataFrame` object from the new path.
-
-It's also recommended that users call `saveSQLDataFrame` frequently to
-avoid too many lazy layers which slows down the data processing. 
-
-```{r}
-dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-ss <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
-## ss1 <- ss[1:10, 2:3]
-## ss1
-dbname(ss)
-dbtable(ss)
-ss1 <- saveSQLDataFrame(ss, dbname = tempfile(fileext = ".db"),
-                        dbtable = "ss_copy")
-dbname(ss1)
-dbtable(ss1)
-```
-
-## SQLDataFrame methods
-### Slot accessors & basic methods
+## Slot & accessors
 
 To make the `SQLDataFrame` object as light and compact as possible,
 there are only 5 slots contained in the object: `tblData`, `dbkey`,
 `dbnrows`, `dbconcatKey`, `indexes`. Metadata information could be
 returned through these 5 slots using slot accessors or other utility
 functions.  
+
 ```{r}
 slotNames(obj)
 dbname(obj)
 dbtable(obj)
 dbkey(obj)
 dbconcatKey(obj)
-```
-
-The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
-table, which is a light-weight representation of the database table in
-_R_. The `dbnrows` slot saves the number of rows corresponding to the
-`obj@tblData`, and `dbconcatKey` saves the realized (concatenated) key
-column values corresponding to the `obj@tblData`.  
-
-```{r}
-obj@tblData
-obj@dbnrows
-obj@dbconcatKey
 ```
 
 Besides, many useful common methods are defined on `SQLDataFrame`
@@ -196,29 +133,83 @@ dbtable(obj)
 aa <- rbind(obj[1:5, ], obj[6:10, ])
 aa
 dbtable(aa)  ## message
-bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
+bb <- saveSQLDataFrame(obj1, dbname = tempfile(fileext=".db"),
                        dbtable = "aa", overwrite = TRUE)
 dbtable(bb)
 dbname(bb)
 ```
 
-### `[[` subsetting
+# makeSQLDataFrame
+
+We could also construct a `SQLDataFrame` object directly from a file
+name. The `makeSQLDataFrame` function takes input of character value
+of file name for common text files (.csv, .txt, etc.), write into
+database tables, and open as `SQLDataFrame` object. Users could
+provide values for the `dbname` and `dbtable` argument. If NULL,
+default value for `dbname` would be a temporary database file, and
+`dbtable` would be the `basename(filename)` without extension.
+
+**NOTE** that the input file must have one or multiple columns that
+could uniquely identify each observation (row) to be used the
+`dbkey()` for `SQLDataFrame`. Also the file must be rectangular, i.e.,
+rownames are not accepted. But users could save rownames as a separate
+column. 
+
+```{r}
+mtc <- tibble::rownames_to_column(mtcars)[,1:6]
+filename <- file.path(tempdir(), "mtc.csv")
+write.csv(mtc, file= filename, row.names = FALSE)
+aa <- makeSQLDataFrame(filename, dbkey = "rowname", sep = ",",
+                       overwrite = TRUE)
+aa
+dbname(aa)
+dbtable(aa)
+```
+
+# saveSQLDataFrame
+
+With all the methods (`[` subsetting, `rbind`, `*_join`, etc.,)
+provided in the next section, the `SQLDataFrame` always work like a
+lazy representation until users explicitly call the `saveSQLDataFrame`
+function for realization. `saveSQLDataFrame` write the lazy tbl
+carried in `@tblData` into an on-disk database table, and reopen the
+`SQLDataFrame` object from the new path.
+
+It's also recommended that users call `saveSQLDataFrame` frequently to
+avoid too many lazy layers which slows down the data processing. 
+
+```{r}
+dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
+## obj1 <- obj[1:10, 2:3]
+## obj1
+dbname(obj)
+dbtable(obj)
+obj1 <- saveSQLDataFrame(obj, dbname = tempfile(fileext = ".db"),
+                        dbtable = "obj_copy")
+dbname(obj1)
+dbtable(obj1)
+```
+
+# SQLDataFrame methods
+
+## `[[` subsetting
 `[[,SQLDataFrame` Behaves similarly to `[[,DataFrame` and returns a
 realized vector of values from a single column. `$,SQLDataFrame` is
 also defined to conveniently extract column values.
 
 ```{r}
-obj[[1]]
-obj[["Ages"]]
-obj$Ages
+head(obj[[1]])
+head(obj[["region"]])
+head(obj$size)
 ```
 
 We can also get the key column values using character extraction. 
 ```{r}
-obj[["sampleID"]]
+head(obj[["state"]])
 ```
 
-### `[` subsetting
+## `[` subsetting
 
 `SQLDataFrame` instances can be subsetted in a similar way of
 `DataFrame` following the usual _R_ conventions, with numeric,
@@ -232,38 +223,24 @@ you want to return a `SQLDataFrame` object, otherwise, the default
 ```{r, subsetting}
 obj[1:3, 1:2]
 obj[c(TRUE, FALSE), c(TRUE, FALSE), drop=FALSE]
-obj[1:3, "Ages", drop=FALSE]
-obj[, "Ages"]  ## realized column value
+obj[1:3, "population", drop=FALSE]
+obj[, "population"]  ## realized column value
 ```
 
-When subsetting `SQLDataFrame` objects using `[`, the slots of
-`@tblData`, `@dbnrows`, and `@dbconcatKey` remain
-unchanged. `@indexes` was updated to reflect the data subsetting, and
-so does the methods of `nrow()`, `ncol()`, `colnames()` and `show()`.  
+Subsetting with character vector works for the `SQLDataFrame`
+objects. With composite keys, users need to concatenate the key values
+by `\b` for row subsetting (See the vignette for internal
+implementation for more details).
 
 ```{r}
-obj1 <- obj[1:3, 1, drop = FALSE]
-identical(obj@tblData, obj1@tblData)
-identical(obj@dbnrows, obj1@dbnrows)
-identical(obj@dbconcatKey, obj1@dbconcatKey)
-obj1@indexes
-colnames(obj1)
-obj1
-```
-
-The `ROWNAMES,SQLDataFrame` method is defined to return the
-(concatenated if multiple) key column name(s), so that the row
-subsetting with character vector works for the `SQLDataFrame` objects.
-
-```{r}
-ROWNAMES(obj)
-obj[c("a", "c", "d", "e"), ]
+rnms <- ROWNAMES(obj)
+obj[c("Alabama", "Colorado"), ]
 ```
 
 ```{r}
 obj1 <- SQLDataFrame(dbname = test.db, dbtable = "state",
                      dbkey = c("region", "population"))
-ROWNAMES(obj1[1:10,])
+rnms <- ROWNAMES(obj1)
 obj1[c("South\b3615.0", "West\b365.0"), ]
 ```
 
@@ -272,19 +249,30 @@ the `SQLDataFrame` object which returns `SQLDataFrame` by default.
 
 ```{r}
 obj[1]
-obj["Ages"]
+obj["region"]
 ```
 
-### filter & mutate
+## filter & mutate
+
+We have also enabled the S3 methods of `filter` and `mutate` from
+`dplyr` package, so that users could have the convenience in filtering
+data observations and adding new columns.
 
 ```{r}
+obj1 %>% filter(division == "South Atlantic" & size == "medium")
+```
 
+```{r}
+obj1 %>% mutate(p1 = population/10, s1 = size)
 ```
 
 
-### union & rbind
+## union & rbind
 
-To be consistent with `DataFrame`, `union` method 
+To be consistent with `DataFrame`, `union` and `rbind` methods were
+implemented for `SQLDataFrame`, where `union` returns the
+`SQLDataFrame` sorted by the `dbkey(obj)`, and `rbind` keeps the
+original orders of input objects.
 
 ```{r}
 dbfile1 <- system.file("extdata/test.db", package = "SQLDataFrame")
@@ -299,13 +287,13 @@ ss21 <- ss2[sample(10, 5), ]
 
 - union
 ```{r}
-obj1 <- union(ss11, ss21)  
+obj1 <- union(ss11, ss21) 
 obj1  ## reordered by the "dbkey()"
 ```
 
 - rbind
 ```{r}
-obj2 <- rbind(ss11, ss21)  
+obj2 <- rbind(ss11, ss21) 
 obj2  ## keeping the original order by updating the row index
 ```
 
@@ -314,10 +302,12 @@ obj2  ## keeping the original order by updating the row index
 identical(as.data.frame(ss11@tblData), as.data.frame(ss21@tblData))
 ```
 
-### *_join methods
+## *_join methods
 
 The `*_join` family methods was implemented for `SQLDataFrame`
-objects. 
+objects, including the `left_join`, `inner_join`, `semi_join` and
+`anti_join`, which provides the capability of merging database files
+from different sources.
 
 ```{r}
 ss12 <- ss1[1:10, 1:2]
@@ -328,13 +318,13 @@ semi_join(ss12, ss22)
 anti_join(ss12, ss22)
 ```
 
-### Numeric calculation / Data manipulation (to-be-updated!)
+# Data manipulation (to-be-updated!)
 
 Numeric calculations could be evaluated on `SQLDataFrame` objects.
 
 ```{r, numeric, eval=FALSE}
-sum(obj$Ages)
-max(obj$Ages)
+sum(obj$population)
+max(obj$population)
 ```
 
 # SessionInfo()
@@ -342,6 +332,3 @@ max(obj$Ages)
 ```{r}
 sessionInfo()
 ```
-
-
-## add filter() methods. 

@@ -1,0 +1,131 @@
+---
+title: "SQLDataFrame Internal Implementation"
+author:
+- name: Qian Liu
+  affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
+- name: Martin Morgan
+  affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
+date: "last compiled: `r Sys.Date()`"
+output:
+    BiocStyle::html_document:
+        toc: true
+        toc_float: true
+package: SQLDataFrame
+vignette: >
+  %\VignetteIndexEntry{SQLDataFrame Internal Implementation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+date: "last edit: 4/3/2018"
+
+[dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
+
+
+# SQLDataFrame slots
+
+```{r constructor}
+dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+obj <- SQLDataFrame(
+    dbname = dbfile, dbtable = "state", dbkey = "state")
+obj
+```
+
+## Slot accessors
+
+To make the `SQLDataFrame` object as light and compact as possible,
+there are only 5 slots contained in the object: `tblData`, `dbkey`,
+`dbnrows`, `dbconcatKey`, `indexes`. Metadata information could be
+returned through these 5 slots using slot accessors or other utility
+functions. 
+```{r}
+slotNames(obj)
+dbname(obj)
+dbtable(obj)
+dbkey(obj)
+dbconcatKey(obj)
+```
+
+## `tblData` slot
+
+The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
+table, which is a light-weight representation of the database table in
+_R_. Of note is that this lazy tbl only contains unique rows. It could
+also be sorted by the `dbkey(obj)` if the `SQLDataFrame` object was
+generated from `union` or `rbind`. So when the `saveSQLDataFrame()`
+function was called, a database table will be written into a physical
+disk space and have the unique records.
+
+```{r}
+obj@tblData
+```
+
+## `dbnrows` and `dbconcatKey` slots
+The `dbnrows` slot saves the number of rows corresponding to the
+`tblData`, and `dbconcatKey` saves the realized (concatenated if
+multiple) key columns corresponding to the `tblData`. 
+
+```{r}
+obj@dbnrows
+obj@dbconcatKey
+```
+
+## `indexes` slot
+The `indexes` slots is an unnamed list saving the row and column
+indexes respectively corresponding to the `tblData` slot, so that the
+`SQLDataFrame` could possibly have duplicate rows or only a subset of
+data records from the `tblData`, while the `tblData` slot doesn't need
+to be changed. To be consistent, the slots of `dbnrows` and
+`dbconcatKey` will also remain unchanged.
+
+```{r}
+obj@indexes
+obj_sub <- obj[sample(5, 3, replace = TRUE), 2:3]
+obj_sub
+obj_sub@indexes
+identical(obj@tblData, obj_sub@tblData)
+```
+
+With a `filter` function (which is similar to `[i, ]` subsetting),
+only the `indexes` slot will be updated for the row index pointing to
+the `tblData`.
+
+```{r}
+obj_filter <- obj %>% filter(division == "South Atlantic" & size == "medium")
+obj_filter@indexes
+identical(obj@tblData, obj_filter@tblData)
+```
+
+# SQLDataFrame methods
+
+## ROWNAMES
+
+The `ROWNAMES,SQLDataFrame` method was defined to return the
+(concatenated if multiple) key column(s) value, so that the row
+subsetting with character vector works for the `SQLDataFrame` objects.
+
+```{r}
+rnms <- ROWNAMES(obj)
+obj[sample(rnms, 3), ]
+```
+
+For `SQLDataFrame` object with composite keys: 
+
+```{r}
+obj1 <- SQLDataFrame(dbname = test.db, dbtable = "state",
+                     dbkey = c("region", "population"))
+ROWNAMES(obj1[1:10,])
+obj1[c("South\b3615.0", "West\b365.0"), ]
+```
+
+# SessionInfo()
+
+```{r}
+sessionInfo()
+```
