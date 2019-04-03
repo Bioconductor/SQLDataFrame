@@ -3,7 +3,6 @@
 ###--------------------------- 
 
 ## mostly copied from "head,DataTable"
-#' @export
 setMethod("head", "SQLDataFrame", function(x, n=6L)
 {
     stopifnot(length(n) == 1L)
@@ -14,7 +13,6 @@ setMethod("head", "SQLDataFrame", function(x, n=6L)
 })
 
 ## mostly copied from "tail,DataTable"
-#' @export
 setMethod("tail", "SQLDataFrame", function(x, n=6L)
 {
     stopifnot(length(n) == 1L)
@@ -171,7 +169,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ## #' b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID") 
 ## #' ROWNAMES(b)
 ## #' ROWNAMES(b[c(TRUE, FALSE), ])
-#' b[letters[10:15], ]
+## #' b[letters[10:15], ]
 ## setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ## {
 ##     ## browser()
@@ -195,6 +193,8 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #' Return SQLDataFrame rows with matching conditions
 #' @description Use ‘filter()’ to choose rows/cases where conditions
 #'     are true.
+#' @rdname SQLDataFrame-methods
+#' @aliases filter filter,SQLDataFrame-methods
 #' @param .data A SQLDataFrame object.
 #' @param ... Logical predicates defined in terms of the variables in
 #'     ‘.data’. Multiple conditions are combined with ‘&’. Only rows
@@ -234,6 +234,8 @@ filter.SQLDataFrame <- function(.data, ...)
 #'     existing ones; It also preserves the number of rows of the
 #'     input. New variables overwrite existing variables of the same
 #'     name.
+#' @rdname SQLDataFrame-methods
+#' @aliases mutate mutate,SQLDataFrame-methods
 #' @param .data A SQLDataFrame object.
 #' @param ... Name-value pairs of expressions, each with length 1 or
 #'     the same length as the number of rows in the group (if using
