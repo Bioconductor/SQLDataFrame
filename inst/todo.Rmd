@@ -1,3 +1,7 @@
+## updae
+1. Add `mutate` method and modified `saveSQLDataFrame` accordingly.
+2. 
+
 ## update (3/29/2019) 
 1. `saveSQLDataFrame` returns SQLDataFrame constructed from new
    database and table.
@@ -8,8 +12,6 @@
    avoid duplicate code.
 4. Rewrote `union()@dbconcatKey` to be more efficient. 
 5. BiocGenerics:::replaceSlots().
-
-
 
 ## update (3/25/2019)
 1. `.join_union_prepare` for attaching database to current connection. 

@@ -166,7 +166,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ## for primary key, so that row subsetting with character vector could
 ## work. Pass to "NSBS,character", then
 ## "normalizeSingleBracketSubscript"
-#' @export
+## #' @export
 ## #' @examples
 ## #' b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID") 
 ## #' ROWNAMES(b)
@@ -192,12 +192,22 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 ## })
 ## setMethod("ROWNAMES", "SQLDataFrame", function(x) concatKey(x))
 
-## #' @param ... Logical predicates defined in terms of the variables in
-## #'     ‘.data’. Multiple conditions are combined with ‘&’. Only rows
-## #'     where the condition evaluates to ‘TRUE’ are kept.
-## #' @export S3mehod??
-## setMethod("filter", signature = "SQLDataFrame", function(.data, ...)
-## {
+#' Return SQLDataFrame rows with matching conditions
+#' @description Use ‘filter()’ to choose rows/cases where conditions
+#'     are true.
+#' @param .data A SQLDataFrame object.
+#' @param ... Logical predicates defined in terms of the variables in
+#'     ‘.data’. Multiple conditions are combined with ‘&’. Only rows
+#'     where the condition evaluates to ‘TRUE’ are kept. See
+#'     \code{?dplyr::filter} for more details.
+#' @return A SQLDataFrame object with subset rows of the input
+#'     SQLDataFrame object matching conditions.
+#' @export
+#' @examples
+#' dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
+#' obj1 <- obj %>% filter(region == "West" & size == "medium")
+#' obj1
 filter.SQLDataFrame <- function(.data, ...)
 {
     ## browser()
@@ -218,18 +228,31 @@ filter.SQLDataFrame <- function(.data, ...)
     }
     return(.data)
 }
-## want something like this to work:
-### `dplyr` functions: 
-## ss1[filter(col1 == "", col2 != "", col3 %in% c(...)), ] pass directly to: 
-## ss1@tblData %>% filter(col1 == "", col2 != "", col3 %in% c(...))
 
-### raw sql commands:
-## ss1[sql("SELECT * FROM table WHERE col1 == "", col2 != "", ...")]
-
+#'Create or transform variables
+#' @description \code{mutate()} adds new columns and preserves
+#'     existing ones; It also preserves the number of rows of the
+#'     input. New variables overwrite existing variables of the same
+#'     name.
+#' @param .data A SQLDataFrame object.
+#' @param ... Name-value pairs of expressions, each with length 1 or
+#'     the same length as the number of rows in the group (if using
+#'     ‘group_by()’) or in the entire input (if not using groups). The
+#'     name of each argument will be the name of a new variable, and
+#'     the value will be its corresponding value. Use a ‘NULL’ value
+#'     in ‘mutate’ to drop a variable.  New variables overwrite
+#'     existing variables of the same name.
+#' @return A SQLDataFrame object.
+#' @export
+#' @examples
+#' dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
+#' obj %>% mutate(p1 = population / 10)
+#' obj %>% mutate(s1 = size)
+#' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    browser()
-    ## FIXME: refer to ".join_union_prepare", check if already a con. "op_mutate" or "op_double", if yes, open that temp connection. Otherwise, open a new connection.
+    ## browser()
     if (is(.data@tblData$ops, "op_double") | is(.data@tblData$ops, "op_mutate")) {
         con <- .con_SQLDataFrame(.data)
         tbl <- .data@tblData
@@ -244,3 +267,4 @@ mutate.SQLDataFrame <- function(.data, ...)
         
     BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
 }
+

@@ -186,18 +186,22 @@ setMethod("dbtable", "SQLDataFrame", function(x)
     ## browser()
     op <- x@tblData$ops
     if (! is(op, "op_double")) {
-           out1 <- op$x
+        out1 <- op$x
         repeat {
-            if (is.ident(out1)) break
+            if (is(out1, "op_double")) {
+                return(message(.msg_dbtable))
+            } else if (is.ident(out1)) break
             out1 <- out1$x
         }
            return(as.character(out1))
     } else {
-        message("## not available for SQLDataFrame with lazy tbl. \n",
-                "## call 'saveSQLDataFrame()' to save the lazy tbl in ",
-                "'@tblData' slot \n", "## and call 'dbtable()' again!")
+        message(.msg_dbtable)
     }
 })
+.msg_dbtable <- paste0("## not available for SQLDataFrame with lazy queries ",
+                       "of 'union', 'join', or 'rbind'. \n",
+                       "## call 'saveSQLDataFrame()' to save the data as ",
+                       "database table and call 'dbtable()' again! \n")
 
 setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))

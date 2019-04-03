@@ -43,7 +43,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                                                         ## evaluated
                                                         ## ridx here.
         sql_cmd <- dbplyr::db_sql_render(con, tblx)
-    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {
+    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {  ## "op_single"?
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
         if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
