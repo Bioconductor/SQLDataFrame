@@ -2,12 +2,12 @@
 ### Basic methods
 ###--------------------------- 
 
-#' @name \code{SQLDataFrame} methods
+#' SQLDataFrame methods
 #' @description \code{head, tail}: Retrieve the first / last n rows of
 #'     the \code{SQLDataFrame} object. See \code{?S4Vectors::head} for
 #'     more details.
 #' @rdname SQLDataFrame-methods
-#' @aliases head head,SQLDataFrame-methods
+#' @aliases head head,SQLDataFrame-method
 #' @return \code{head, tail}: An \code{SQLDataFrame} object with
 #'     certain rows.
 #' @export
@@ -22,7 +22,7 @@ setMethod("head", "SQLDataFrame", function(x, n=6L)
 })
 
 #' @rdname SQLDataFrame-methods
-#' @aliases tail tail,SQLDataFrame-methods
+#' @aliases tail tail,SQLDataFrame-method
 #' @export
 #' 
 ## mostly copied from "tail,DataTable"
@@ -42,13 +42,16 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 #'     dimension, dimension names, number of columns and colnames of
 #'     SQLDataFrame object.
 #' @rdname SQLDataFrame-methods
-#' @aliases dim dim,SQLDataFrame-methods
+#' @aliases dim dim,SQLDataFrame-method
 #' @param x A \code{SQLDataFrame} object
 #' @return \code{dim}: interger vector
 #' @export
 #' @examples
 #' 
+#' ##################
 #' ## basic methods
+#' ##################
+#' 
 #' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
 #' obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
 #' dim(obj)
@@ -64,7 +67,7 @@ setMethod("dim", "SQLDataFrame", function(x)
 })
 
 #' @rdname SQLDataFrame-methods
-#' @aliases dimnames dimnames,SQLDataFrame-methods
+#' @aliases dimnames dimnames,SQLDataFrame-method
 #' @return \code{dimnames}: A list of character vectors.
 #' @export
 
@@ -78,14 +81,14 @@ setMethod("dimnames", "SQLDataFrame", function(x)
 })
 
 #' @rdname SQLDataFrame-methods
-#' @aliases length length,SQLDataFrame-methods
+#' @aliases length length,SQLDataFrame-method
 #' @return \code{length}: An integer
 #' @export
 
 setMethod("length", "SQLDataFrame", function(x) ncol(x) )
 
 #' @rdname SQLDataFrame-methods
-#' @aliases names length,SQLDataFrame-methods
+#' @aliases names length,SQLDataFrame-method
 #' @return \code{names}: A character vector
 #' @export
 
@@ -126,6 +129,54 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
     return(x)
 }
 
+#' @description subsetting
+#' @rdname SQLDataFrame-methods
+#' @return A \code{SQLDataFrame} object or vector with realized column
+#'     values (with single column subsetting and default
+#'     \code{drop=TRUE}. )
+#' @export
+#' @examples
+#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#'                     dbkey = "state")
+#' obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#'                      dbkey = c("region", "population"))
+
+#' ###############
+#' ## subsetting
+#' ###############
+#'
+#' obj[1]
+#' obj["region"]
+#' obj$region
+#' obj[]
+#' obj[,]
+#' obj[NULL, ]
+#' obj[, NULL]
+#'
+#' ## by numeric / logical / character vectors
+#' obj[1:5, 2:3]
+#' obj[c(TRUE, FALSE), c(TRUE, FALSE)]
+#' obj[c("Alabama", "South Dakota"), ]
+#' obj1[c("South\b3615.0", "West\b3559.0"), ]
+#' ### Remeber to add `.0` trailing for numeric values. If not sure,
+#' ### check `ROWNAMES()`.
+#'
+#' ## by SQLDataFrame
+#' obj_sub <- obj[sample(10), ]
+#' obj[obj_sub, ]
+#'
+#' ## by a named list of key column values (or equivalently data.frame /
+#' ## tibble)
+#' obj[data.frame(state = c("Colorado", "Arizona")), ]
+#' obj[tibble(state = c("Colorado", "Arizona")), ]
+#' obj[list(state = c("Colorado", "Arizona")), ]
+#' obj1[list(region = c("South", "West"),
+#'           population = c("3615.0", "365.0")), ]
+#' ### remember to add the '.0' trailing for numeric values. If not sure,
+#' ### check `ROWNAMES()`.
+
+
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
     ## browser()
@@ -161,6 +212,8 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
     x  
 })
 
+#' @rdname SQLDataFrame-methods
+#' @export
 setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
           function(x, i, j, ..., drop = TRUE)
 {
@@ -171,17 +224,8 @@ setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
     callNextMethod()
 })
 
-## setMethod("[", signature = c("SQLDataFrame", "sql", "ANY"),
-##           function(x, i, j, ..., drop = TRUE)
-## {
-##     browser()
-##     tbl <- .extract_tbl_from_SQLDataFrame(x)
-##     tbl %>% sql(i)
-##     ## You can also use pass raw SQL if you want a more sophisticated query
-##     ## src %>% tbl(sql("SELECT * FROM mtcars WHERE cyl = 8"))
-##     tbl$src %>% tbl(sql)
-## })
-
+#' @rdname SQLDataFrame-methods
+#' @export
 setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
           function(x, i, j, ..., drop = TRUE)
 {
@@ -232,7 +276,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #' @description Use \code{filter()} to choose rows/cases where
 #'     conditions are true.
 #' @rdname SQLDataFrame-methods
-#' @aliases filter filter,SQLDataFrame-methods
+#' @aliases filter filter,SQLDataFrame-method
 #' @param .data A \code{SQLDataFrame} object.
 #' @param ... In \code{filter()}: Logical predicates defined in terms
 #'     of the variables in ‘.data’. Multiple conditions are combined
@@ -242,12 +286,14 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #'     rows of the input SQLDataFrame object matching conditions.
 #' @export
 #' @examples
-#'
-#' ## filter & mutate
-#' dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
-#' obj1 <- obj %>% filter(region == "West" & size == "medium")
-#' obj1
+#' 
+#' ###################
+#' ## filter & mutate 
+#' ###################
+#' 
+#' obj %>% filter(region == "West" & size == "medium")
+#' obj1 %>% filter(region == "West" & population > 10000)
+#' 
 #' obj %>% mutate(p1 = population / 10)
 #' obj %>% mutate(s1 = size)
 
@@ -272,7 +318,6 @@ filter.SQLDataFrame <- function(.data, ...)
     return(.data)
 }
 
-#'Create or transform variables
 #' @description \code{mutate()} adds new columns and preserves
 #'     existing ones; It also preserves the number of rows of the
 #'     input. New variables overwrite existing variables of the same
