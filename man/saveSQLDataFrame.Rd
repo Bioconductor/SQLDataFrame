@@ -28,9 +28,9 @@ The function to save \code{SQLDataFrame} object as a
 }
 \examples{
 dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-ss <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
-ss1 <- ss[1:10, 2:3]
-ss1 <- saveSQLDataFrame(ss1, dbtable = "ss_subset")
-dbname(ss1)
-dbtable(ss1)
+obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+obj1 <- obj[1:10, 2:3]
+obj1 <- saveSQLDataFrame(obj1, dbtable = "obj_subset")
+dbname(obj1)
+dbtable(obj1)
 }

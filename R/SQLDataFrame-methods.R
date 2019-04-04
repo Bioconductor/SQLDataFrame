@@ -1,8 +1,17 @@
 ###---------------------------
-### "head/tail,SQLDataFrame"
+### Basic methods
 ###--------------------------- 
 
-## mostly copied from "head,DataTable"
+#' @name \code{SQLDataFrame} methods
+#' @description \code{head, tail}: Retrieve the first / last n rows of
+#'     the \code{SQLDataFrame} object. See \code{?S4Vectors::head} for
+#'     more details.
+#' @rdname SQLDataFrame-methods
+#' @aliases head head,SQLDataFrame-methods
+#' @return \code{head, tail}: An \code{SQLDataFrame} object with
+#'     certain rows.
+#' @export
+#' 
 setMethod("head", "SQLDataFrame", function(x, n=6L)
 {
     stopifnot(length(n) == 1L)
@@ -12,6 +21,10 @@ setMethod("head", "SQLDataFrame", function(x, n=6L)
     x[seq_len(n), , drop = FALSE]
 })
 
+#' @rdname SQLDataFrame-methods
+#' @aliases tail tail,SQLDataFrame-methods
+#' @export
+#' 
 ## mostly copied from "tail,DataTable"
 setMethod("tail", "SQLDataFrame", function(x, n=6L)
 {
@@ -24,6 +37,61 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
     ans <- x[sel, , drop = FALSE]
     ans    
 })
+
+#' @description \code{dim, dimnames, length, names}: Retrieve the
+#'     dimension, dimension names, number of columns and colnames of
+#'     SQLDataFrame object.
+#' @rdname SQLDataFrame-methods
+#' @aliases dim dim,SQLDataFrame-methods
+#' @param x A \code{SQLDataFrame} object
+#' @return \code{dim}: interger vector
+#' @export
+#' @examples
+#' 
+#' ## basic methods
+#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+#' dim(obj)
+#' dimnames(obj)
+#' length(obj)
+#' names(obj)
+
+setMethod("dim", "SQLDataFrame", function(x)
+{
+    nr <- length(normalizeRowIndex(x))
+    nc <- length(colnames(x))
+    return(c(nr, nc))
+})
+
+#' @rdname SQLDataFrame-methods
+#' @aliases dimnames dimnames,SQLDataFrame-methods
+#' @return \code{dimnames}: A list of character vectors.
+#' @export
+
+setMethod("dimnames", "SQLDataFrame", function(x)
+{
+    cns <- colnames(x@tblData)[-.wheredbkey(x)]
+    cidx <- x@indexes[[2]]
+    if (!is.null(cidx))
+        cns <- cns[cidx]
+    return(list(NULL, cns))
+})
+
+#' @rdname SQLDataFrame-methods
+#' @aliases length length,SQLDataFrame-methods
+#' @return \code{length}: An integer
+#' @export
+
+setMethod("length", "SQLDataFrame", function(x) ncol(x) )
+
+#' @rdname SQLDataFrame-methods
+#' @aliases names length,SQLDataFrame-methods
+#' @return \code{names}: A character vector
+#' @export
+
+setMethod("names", "SQLDataFrame", function(x) colnames(x))
+## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
+
 
 ###--------------------
 ### "[,SQLDataFrame"
@@ -157,57 +225,32 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 
 setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 
+#####################
+### filter & mutate
+#####################
 
-###--------------------
-### "ROWNAMES,SQLDataFrame" 
-###--------------------
-## for primary key, so that row subsetting with character vector could
-## work. Pass to "NSBS,character", then
-## "normalizeSingleBracketSubscript"
-## #' @export
-## #' @examples
-## #' b <- SQLDataFrame(dbname = "inst/extdata/test.db", dbtable = "colData", dbkey = "sampleID") 
-## #' ROWNAMES(b)
-## #' ROWNAMES(b[c(TRUE, FALSE), ])
-## #' b[letters[10:15], ]
-## setMethod("ROWNAMES", "SQLDataFrame", function(x)
-## {
-##     ## browser()
-##     ## keys <- x@tblData %>%
-##     ##     transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
-##     ##     pull(concat)
-##     ## FIXME: remember to add ".0" with numeric columns. (dbl, numeric, int, fct, character...)
-##     tbl <- .extract_tbl_from_SQLDataFrame(x)
-##     keys <- tbl %>% select(dbkey(x)) %>% collect() %>% 
-##         transmute(concat = paste(!!!syms(dbkey(x)), sep = "\b")) %>%
-##         pull(concat)
-##     ridx <- ridx(x)
-##     if (!is.null(ridx)) {
-##         i <- match(ridx, sort(unique(ridx)))
-##         keys <- keys[i]
-##     }
-##     return(keys)
-## })
-## setMethod("ROWNAMES", "SQLDataFrame", function(x) concatKey(x))
-
-#' Return SQLDataFrame rows with matching conditions
-#' @description Use ‘filter()’ to choose rows/cases where conditions
-#'     are true.
+#' @description Use \code{filter()} to choose rows/cases where
+#'     conditions are true.
 #' @rdname SQLDataFrame-methods
 #' @aliases filter filter,SQLDataFrame-methods
-#' @param .data A SQLDataFrame object.
-#' @param ... Logical predicates defined in terms of the variables in
-#'     ‘.data’. Multiple conditions are combined with ‘&’. Only rows
-#'     where the condition evaluates to ‘TRUE’ are kept. See
-#'     \code{?dplyr::filter} for more details.
-#' @return A SQLDataFrame object with subset rows of the input
-#'     SQLDataFrame object matching conditions.
+#' @param .data A \code{SQLDataFrame} object.
+#' @param ... In \code{filter()}: Logical predicates defined in terms
+#'     of the variables in ‘.data’. Multiple conditions are combined
+#'     with ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
+#'     kept. See \code{?dplyr::filter} for more details.
+#' @return \code{filter}: A \code{SQLDataFrame} object with subset
+#'     rows of the input SQLDataFrame object matching conditions.
 #' @export
 #' @examples
+#'
+#' ## filter & mutate
 #' dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
 #' obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
 #' obj1 <- obj %>% filter(region == "West" & size == "medium")
 #' obj1
+#' obj %>% mutate(p1 = population / 10)
+#' obj %>% mutate(s1 = size)
+
 filter.SQLDataFrame <- function(.data, ...)
 {
     ## browser()
@@ -236,21 +279,15 @@ filter.SQLDataFrame <- function(.data, ...)
 #'     name.
 #' @rdname SQLDataFrame-methods
 #' @aliases mutate mutate,SQLDataFrame-methods
-#' @param .data A SQLDataFrame object.
-#' @param ... Name-value pairs of expressions, each with length 1 or
-#'     the same length as the number of rows in the group (if using
-#'     ‘group_by()’) or in the entire input (if not using groups). The
-#'     name of each argument will be the name of a new variable, and
-#'     the value will be its corresponding value. Use a ‘NULL’ value
-#'     in ‘mutate’ to drop a variable.  New variables overwrite
-#'     existing variables of the same name.
-#' @return A SQLDataFrame object.
+#' @param ... In \code{mutate()}: Name-value pairs of expressions,
+#'     each with length 1 or the same length as the number of rows in
+#'     the group (if using ‘group_by()’) or in the entire input (if
+#'     not using groups). The name of each argument will be the name
+#'     of a new variable, and the value will be its corresponding
+#'     value. Use a ‘NULL’ value in ‘mutate’ to drop a variable.  New
+#'     variables overwrite existing variables of the same name.
+#' @return \code{mutate}: A SQLDataFrame object.
 #' @export
-#' @examples
-#' dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
-#' obj %>% mutate(p1 = population / 10)
-#' obj %>% mutate(s1 = size)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {

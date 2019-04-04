@@ -139,28 +139,6 @@ setValidity("SQLDataFrame", .validity_SQLDataFrame)
 ## accessor
 ###-------------
 
-#' @exportMethod dim length names dimnames
-setMethod("dim", "SQLDataFrame", function(x)
-{
-    nr <- length(normalizeRowIndex(x))
-    nc <- length(colnames(x))
-    return(c(nr, nc))
-})
-
-setMethod("length", "SQLDataFrame", function(x) ncol(x) )
-setMethod("names", "SQLDataFrame", function(x) colnames(x))
-## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
-
-setMethod("dimnames", "SQLDataFrame", function(x)
-{
-    ## colnames
-    cns <- colnames(x@tblData)[-.wheredbkey(x)]
-    cidx <- x@indexes[[2]]
-    if (!is.null(cidx))
-        cns <- cns[cidx]
-    return(list(NULL, cns))
-})
-
 setGeneric("dbname", signature = "x", function(x)
     standardGeneric("dbname"))
 
