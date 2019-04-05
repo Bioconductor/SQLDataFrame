@@ -1,9 +1,9 @@
 #' SQLDataFrame class
 #' @name SQLDataFrame
+#' @rdname SQLDataFrame-class
+#' @description NULL
 #' @exportClass SQLDataFrame
 #' @importFrom methods setOldClass
-#' @aliases SQLDataFrame-class
-#' @description NULL
 setOldClass("tbl_SQLiteConnection")
 setOldClass("tbl_dbi")
 setClassUnion("tbl_dbi_inherited", c("tbl_SQLiteConnection"))
@@ -16,38 +16,62 @@ setClassUnion("tbl_dbi_inherited", c("tbl_SQLiteConnection"))
         ## dbrownames = "character_OR_NULL",
         tblData = "tbl_dbi_inherited",   ## ?
         indexes = "list",
-        dbconcatKey = "character"  ## consistent with dbtable(SDF), not related to ridx(SDF)
-        ## keyDF = "DataFrame"
-        ## includeKey = "logical"
-        ## elementType = "character",
-        ## elementMetadata = "DataTable_OR_NULL",
-        ## metadata = "list"
+        dbconcatKey = "character" 
     )
 )
-## NOTE: "@dbnrows" and "@dbconcatKey" slots are consistent with
-## dbtable(SDF), not related to ridx(SDF). But for SDF constructed
-## from "*join" or "rbind", the "dbnrows" and "dbconcatKey" will be
-## updated to be consistent with the lazy tbl in that local connection
-## (now are using RSQLite::SQLite() connection with "union" or
-## "*join"). the lazy tbl was a virtual dbtable(SDF) that not actually
-## written. Realization incurred with "saveSQLDataFrame". "ROWNAMES()"
-## realize the "ridx()" on top of "@dbconcatKey".
 
-###
 ### Constructor
-###
+#' @rdname SQLDataFrame-class
+#' @description \code{SQLDataFrame} constructor, slot getters, show
+#'     method and coercion methods to \code{DataFrame} and
+#'     \code{data.frame} objects.
+#' @param dbname A character string for the database file path.
+#' @param dbtable A character string for the table name in that
+#'     database. If not provided and there is only one table
+#'     available, it will be read in by default.
+#' @param dbkey A character vector for the name of key columns that
+#'     could uniquely identify each row of the database table.
+#' @param col.names A character vector specifying the column names you
+#'     want to read into the \code{SQLDataFrame}.
+#' @return A \code{SQLDataFrame} object.
+#' @export
 #' @importFrom tools file_path_as_absolute
 #' @import dbplyr
+#' @examples
 #' 
+#' ## constructor
+#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#'                     dbkey = "state")
+#' obj
+#' obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#'                      dbkey = c("region", "population"))
+#' obj1
+#'
+#' ## slot accessors
+#' dbname(obj)
+#' dbtable(obj)
+#' dbkey(obj)
+#' dbkey(obj1)
+#'
+#' dbconcatKey(obj)
+#' dbconcatKey(obj1)
+#'
+#' ## ROWNAMES
+#' ROWNAMES(obj[sample(10, 5), ])
+#' ROWNAMES(obj1[sample(10, 5), ])
+#'
+#' ## coercion
+#' as.data.frame(obj)
+#' as(obj, "DataFrame") 
+
 SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table
                                                  ## inside the
                                                  ## database.
                          dbkey = character(0),
-                         ## row.names = NULL, ## by default, read in all rows
-                         col.names = NULL ## used to specify certain
-                                          ## columns to read
+                         col.names = NULL
                          ){
     ## browser()
     dbname <- tools::file_path_as_absolute(dbname)
@@ -143,10 +167,8 @@ setGeneric("dbname", signature = "x", function(x)
     standardGeneric("dbname"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases dbname dbname,SQLDataFrame
-#' @description the \code{dbname} slot getter and setter for
-#'     \code{SQLDataFrame} object.
 #' @export
+
 setMethod("dbname", "SQLDataFrame", function(x)
 {
     x@tblData$src$con@dbname
@@ -156,9 +178,8 @@ setGeneric("dbtable", signature = "x", function(x)
     standardGeneric("dbtable"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases dbtable dbtable,SQLDataFrame
 #' @export
-## setMethod("dbtable", "SQLDataFrame", function(x) x@dbtable)
+
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
     ## browser()
@@ -185,7 +206,6 @@ setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases dbkey dbkey,SQLDataFrame
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
 
@@ -193,7 +213,6 @@ setGeneric("dbconcatKey", signature = "x", function(x)
     standardGeneric("dbconcatKey"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases dbconcatKey dbconcatKey,SQLDataFrame
 #' @export
 setMethod("dbconcatKey", "SQLDataFrame", function(x)
 {
@@ -201,11 +220,7 @@ setMethod("dbconcatKey", "SQLDataFrame", function(x)
     ## do.call(paste, c(as.list(x@keyDF), sep="\b"))
 })
 
-## setGeneric("concatKey", signature = "x", function(x)
-##     standardGeneric("concatKey"))
-
 #' @rdname SQLDataFrame-class
-#' @aliases ROWNAMES ROWNAMES,SQLDataFrame
 #' @export
 setMethod("ROWNAMES", "SQLDataFrame", function(x)
 {
@@ -220,9 +235,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ### show method
 ###--------------
 
-## input "tbl_dbi" and output "tbl_dbi". 
-#' @importFrom lazyeval interp
-#' @import S4Vectors
+## input "tbl_dbi" and output "tbl_dbi".
 
 ## filter() makes sure it returns table with unique rows, no duplicate rows allowed...
 .extract_tbl_rows_by_key <- function(x, key, concatKey, i)  ## "concatKey" must correspond to "x"
@@ -287,8 +300,10 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 }
 
 #' @rdname SQLDataFrame-class
-#' @aliases show show,SQLDataFrame-methods
+#' @importFrom lazyeval interp
+#' @import S4Vectors
 #' @export
+
 setMethod("show", "SQLDataFrame", function (object) 
 {
     ## browser()
@@ -337,8 +352,9 @@ setMethod("show", "SQLDataFrame", function (object)
 ###--------------
 
 #' @rdname SQLDataFrame-class
-#' @aliases coerce,SQLDataFrame,data.frame-method
+#' @aliases coerce,SQLDataFrame,data.frame-class
 #' @export
+
 setMethod("as.data.frame", "SQLDataFrame",
           function(x, row.names = NULL, optional = FALSE, ...)
 {
@@ -350,22 +366,12 @@ setMethod("as.data.frame", "SQLDataFrame",
 
 #' @name coerce
 #' @rdname SQLDataFrame-class
-#' @aliases coerce,SQLDataFrame,DataFrame-method
-#' @description the coercion method between \code{SQLDataFrame} and
-#'     \code{DataFrame} objects.
+#' @aliases coerce,SQLDataFrame,DataFrame-class
 #' @param from the \code{SQLDataFrame} object to be coerced.
-#' @export
+#' @exportMethod coerce
 #' 
 setAs("SQLDataFrame", "DataFrame", function(from)
 {
     as(as.data.frame(from), "DataFrame")
 })
 
-## #' @name coerce
-## #' @rdname SQLDataFrame-class
-## #' @aliases coerce,ANY,SQLDataFrame-method
-## #' @export
-## setAs("ANY", "SQLDataFrame", function(from){
-##     df <- as(from, "DataFrame")
-##     as(df, "SQLDataFrame")
-## })
