@@ -1,6 +1,8 @@
-## updae
+## update (4/5/2019)
 1. Add `mutate` method and modified `saveSQLDataFrame` accordingly.
-2. 
+2. modified `.join_union_prepare()` function to have "mutate + rbind/join" work!
+3. vignettes (general + internal)
+4. documentations with easy examples.
 
 ## update (3/29/2019) 
 1. `saveSQLDataFrame` returns SQLDataFrame constructed from new
@@ -24,19 +26,22 @@
    database on disk. Doesn't work for lazy tbl. 
 
 ## Questions: 
-3. Try real database with different SQL format. (MySQL, BigQuery, ...)
-5. `apply()`?? (e.g., print...) 
-6. coerce into matrix for `row/colSums`, etc. 
-7. tryCatch: Error in result_create(conn@ptr, statement) : parser stack overflow. -- show, `.join_union_prepare`.
-8. as.data.frame(), show(), extra layer of query? 
-10. *_join no S4 generics. -- Keep S3 method. 
-11. show() of rbind(ss11, ss21, ss31, ss22) slow. But after
+1. Try real database with different SQL format. (MySQL, BigQuery, ...)
+2. `apply()`?? (e.g., print...) 
+3. coerce into matrix for `row/colSums`, etc. 
+4. tryCatch: Error in result_create(conn@ptr, statement) : parser stack overflow. -- show, `.join_union_prepare`.
+5. as.data.frame(), show(), extra layer of query? 
+6. *_join no S4 generics. -- Keep S3 method. 
+7. show() of rbind(ss11, ss21, ss31, ss22) slow. But after
     saveSQLDataFrame, show is fast. So the many layers of queries
     slowed down the total performance, including showing of @tblData.
 	Message for users: when you notice slow down, do "saveSQLDataFrame"!
-12. Should `overwrite = FALSE` check `dbname` or `dbtable`? (in `makeSQLDataFrame()` and
+8. Should `overwrite = FALSE` check `dbname` or `dbtable`? (in `makeSQLDataFrame()` and
  `saveSQLDataFrame()`). Use 2 arguments. add "index = TRUE" for saveSQLDF. 
-13. try big database.  
+9. try big database. 
+12. add unit tests.
+13. [,]<- assignment, calls `mutate()`. 
+14. update DESCRIPTION (description) and vignette intro. 
 	
 ## misc:
 - write ridx(SDF) setter?
