@@ -23,10 +23,16 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 4/3/2018"
+date: "last edit: 4/5/2018"
 
 [dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
 
+
+Load packages into R session.
+```{r Load, message=FALSE, eval = TRUE}
+library(SQLDataFrame)
+library(dplyr)
+```
 
 # SQLDataFrame slots
 
@@ -118,7 +124,7 @@ obj[sample(rnms, 3), ]
 For `SQLDataFrame` object with composite keys: 
 
 ```{r}
-obj1 <- SQLDataFrame(dbname = test.db, dbtable = "state",
+obj1 <- SQLDataFrame(dbname = dbfile, dbtable = "state",
                      dbkey = c("region", "population"))
 ROWNAMES(obj1[1:10,])
 obj1[c("South\b3615.0", "West\b365.0"), ]

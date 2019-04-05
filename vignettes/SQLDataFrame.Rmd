@@ -23,22 +23,38 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 4/3/2018"
+date: "last edit: 4/5/2018"
 
-# Introduction (to-be-updated)
+# Introduction
 
-Theoretically, users could choose to use different database backend
-when doing the `SQLDataFrame` constructor. Five commonly used
-backends are:
+As the genomic data are getting increasingly large. With the memory
+limit of _R_, it's getting more and more difficult to manipuate large
+data. the `matrix`-like high-throughput genomic data are now being able to easily loaded and
+manipulated within R by extending[DelayedArray][] to represent on-disk
+data structures with different back-end in R-user-friendly array data
+structure (e.g.,[HDF5Array][], [GDSArray][]). However, the annotation
+file usually have`data.frame`-like structure, and include meta info with different data type. Here we
+ have developed an _Bioconductor_ package `SQLDataFrame` to have the `DataFrame` metaphor with database table backend.
 
+Currently we are only supporting the DBI backend of `RSQLite`. But
+theoretically, we would implement this package so that users could
+choose to use different database backend when doing the `SQLDataFrame`
+constructor and `saveSQLDataFrame`. 
+
+Support of other backends will be added for next version. Five
+commonly used backends are:
+
+- **RSQLite**: embeds a SQLite database. (now used as default)
 - _RMySQL_: connects to MySQL and MariaDB
 - _RPostgreSQL_: connects to Postgres and Redshift.
-- **RSQLite**: embeds a SQLite database. (now used as default)
 - _odbc_ connects to many commercial databases via the open database
   connectivity protocol.
 - _bigrquery_ connects to Google’s BigQuery.
 
 [dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
+[DelayedArray]: https://bioconductor.org/packages/DelayedArray
+[GDSArray]: https://bioconductor.org/packages/GDSArray
+[HDF5Array]: https://bioconductor.org/packages/HDF5Array
 
 # Installation
 
@@ -99,7 +115,6 @@ slotNames(obj)
 dbname(obj)
 dbtable(obj)
 dbkey(obj)
-dbconcatKey(obj)
 ```
 
 Besides, many useful common methods are defined on `SQLDataFrame`
@@ -181,8 +196,6 @@ avoid too many lazy layers which slows down the data processing.
 ```{r}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
 obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
-## obj1 <- obj[1:10, 2:3]
-## obj1
 dbname(obj)
 dbtable(obj)
 obj1 <- saveSQLDataFrame(obj, dbname = tempfile(fileext = ".db"),
@@ -238,7 +251,7 @@ obj[c("Alabama", "Colorado"), ]
 ```
 
 ```{r}
-obj1 <- SQLDataFrame(dbname = test.db, dbtable = "state",
+obj1 <- SQLDataFrame(dbname = dbfile, dbtable = "state",
                      dbkey = c("region", "population"))
 rnms <- ROWNAMES(obj1)
 obj1[c("South\b3615.0", "West\b365.0"), ]
@@ -286,7 +299,7 @@ ss21 <- ss2[sample(10, 5), ]
 ```
 
 - union
-```{r}
+```{r, eval=FALSE}
 obj1 <- union(ss11, ss21) 
 obj1  ## reordered by the "dbkey()"
 ```
@@ -298,7 +311,7 @@ obj2  ## keeping the original order by updating the row index
 ```
 
 **maybe remove this part for vignette.** 
-```{r}
+```{r, eval=FALSE}
 identical(as.data.frame(ss11@tblData), as.data.frame(ss21@tblData))
 ```
 
@@ -316,15 +329,6 @@ left_join(ss12, ss22)
 inner_join(ss12, ss22)
 semi_join(ss12, ss22)
 anti_join(ss12, ss22)
-```
-
-# Data manipulation (to-be-updated!)
-
-Numeric calculations could be evaluated on `SQLDataFrame` objects.
-
-```{r, numeric, eval=FALSE}
-sum(obj$population)
-max(obj$population)
 ```
 
 # SessionInfo()

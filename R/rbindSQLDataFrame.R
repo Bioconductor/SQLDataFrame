@@ -50,6 +50,7 @@
 #'
 #' ## rbind
 #' res_rbind <- rbind(obj1_sub, obj2_sub)
+#' res_rbind
 #' dim(res_rbind)
 
 setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)

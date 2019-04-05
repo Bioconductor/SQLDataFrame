@@ -4,17 +4,14 @@
 #' @description NULL
 #' @exportClass SQLDataFrame
 #' @importFrom methods setOldClass
-setOldClass("tbl_SQLiteConnection")
-setOldClass("tbl_dbi")
-setClassUnion("tbl_dbi_inherited", c("tbl_SQLiteConnection"))
+## add other connections. 
+setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
     slots = c(
-        ## dbtable = "character",
         dbkey = "character",
         dbnrows = "integer",  
-        ## dbrownames = "character_OR_NULL",
-        tblData = "tbl_dbi_inherited",   ## ?
+        tblData = "tbl_dbi",
         indexes = "list",
         dbconcatKey = "character" 
     )

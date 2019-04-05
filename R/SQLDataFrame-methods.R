@@ -3,6 +3,7 @@
 ###--------------------------- 
 
 #' SQLDataFrame methods
+#' @name SQLDataFrame-methods
 #' @description \code{head, tail}: Retrieve the first / last n rows of
 #'     the \code{SQLDataFrame} object. See \code{?S4Vectors::head} for
 #'     more details.
@@ -129,16 +130,15 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
     return(x)
 }
 
-#' @description subsetting
+#' @description \code{[i, j]} supports subsetting by \code{i} (for
+#'     row) and \code{j} (for column) and respects ‘drop=FALSE’.
 #' @rdname SQLDataFrame-methods
 #' @return A \code{SQLDataFrame} object or vector with realized column
 #'     values (with single column subsetting and default
 #'     \code{drop=TRUE}. )
 #' @export
 #' @examples
-#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state",
-#'                     dbkey = "state")
+#'
 #' obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
 #'                      dbkey = c("region", "population"))
 

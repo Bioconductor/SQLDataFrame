@@ -33,5 +33,6 @@ obj2_sub <- obj2[8:15,2:3]
 
 ## rbind
 res_rbind <- rbind(obj1_sub, obj2_sub)
+res_rbind
 dim(res_rbind)
 }

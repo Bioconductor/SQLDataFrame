@@ -16,7 +16,7 @@
 }
 
 #' Union of \code{SQLDataFrame} objects
-#' @name rbind
+#' @name union
 #' @rdname unionSQLDataFrame
 #' @aliases union union,SQLDataFrame-method
 #' @description Performs union operations on \code{SQLDataFrame}
