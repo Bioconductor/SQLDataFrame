@@ -1,8 +1,11 @@
 Package: SQLDataFrame
 Title: Representation of database tables in DataFrame metaphor.
-Version: 0.99.0
+Version: 0.99.1
 Authors@R: person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: This package will represent the database tables using
+DataFrame metaphor. It could also convert an in-memory dataset or a
+plain text file (.txt, .csv, etc.) into a SQLDataFrame by generating a
+new database. 
 Depends: R (>= 3.6), dbplyr (>= 1.2.2), S4Vectors
 Imports:
     DBI,
