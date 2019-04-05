@@ -1,7 +1,8 @@
 Package: SQLDataFrame
 Title: Representation of database tables in DataFrame metaphor.
-Version: 0.99.1
+Version: 0.99.2
 Authors@R: person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"))
+    person("Martin", "Morgan", email = "martin.morgan@roswellpark.org", role = "aut")
 Description: This package will represent the database tables using
 DataFrame metaphor. It could also convert an in-memory dataset or a
 plain text file (.txt, .csv, etc.) into a SQLDataFrame by generating a
@@ -15,7 +16,6 @@ Imports:
     tools
 License: GPL-3
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 6.1.1
 Suggests: 
     testthat,
