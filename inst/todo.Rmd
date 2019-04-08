@@ -44,6 +44,8 @@
 14. update DESCRIPTION (description) and vignette intro. 
 15. clean "extdata/test.db", to keep "sampleID" and "state". Keep
     "extdata/test1.db" and "test2.db".
+16. clean "inst/" folder. 
+
 
 ## misc:
 - write ridx(SDF) setter?

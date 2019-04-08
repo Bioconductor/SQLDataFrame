@@ -281,7 +281,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ## .printROWS realize all ridx(x), so be careful here to only use small x.
 .printROWS <- function(x, index){
     ## browser()
-    tbl <- .extract_tbl_from_SQLDataFrame(x, collect = T)  ## already ordered by
+    tbl <- .extract_tbl_from_SQLDataFrame(x, collect = TRUE)  ## already ordered by
                                               ## "key + otherCols".
     ## i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bound subscripts.
     ## tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
