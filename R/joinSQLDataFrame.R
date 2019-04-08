@@ -103,12 +103,16 @@
 #'     to be added if there are non-joined duplicate variables in ‘x’
 #'     and ‘y’. Default values are ".x" and ".y".See
 #'     \code{?dplyr::join} for details.
+#' @param ... additional arguments to be passed.
 #' @return A \code{SQLDataFrame} object.
+#' @export
 #' @examples
-#' obj1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
+#' db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
+#' obj1 <- SQLDataFrame(dbname = db1,
 #'                      dbtable = "state",
 #'                      dbkey = c("region", "population"))
-#' obj2 <- SQLDataFrame(dbname = "inst/extdata/test1.db",
+#' obj2 <- SQLDataFrame(dbname = db2,
 #'                      dbtable = "state1",
 #'                      dbkey = c("region", "population"))
 #'
@@ -119,7 +123,6 @@
 #' inner_join(obj1_sub, obj2_sub)
 #' semi_join(obj1_sub, obj2_sub)
 #' anti_join(obj1_sub, obj2_sub)
-
 
 left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    suffix = c(".x", ".y"), ...) 

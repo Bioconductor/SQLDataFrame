@@ -20,6 +20,8 @@
 #'     exists. Default is FALSE.
 #' @param sep a character string to separate the terms.  Not
 #'     ‘NA_character_’. Default is \code{,}.
+#' @param index Whether to create an index table. Default is TRUE.
+#' @param ... additional arguments to be passed.
 #' @importFrom tools file_path_as_absolute file_path_sans_ext
 #' @import DBI
 #' @details The provided file must has one or more columns to unique

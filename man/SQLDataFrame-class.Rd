@@ -46,6 +46,24 @@ could uniquely identify each row of the database table.}
 \item{col.names}{A character vector specifying the column names you
 want to read into the \code{SQLDataFrame}.}
 
+\item{x}{An \code{SQLDataFrame} object}
+
+\item{object}{An \code{SQLDataFrame} object.}
+
+\item{row.names}{\code{NULL} or a character vector giving the row
+names for the data frame. Only including this argument for the
+\code{as.data.frame} generic. Does not apply to
+\code{SQLDataFrame}. See \code{base::as.data.frame} for
+details.}
+
+\item{optional}{logical. If \code{TRUE}, setting row names and
+converting column names is optional. Only including this
+argument for the \code{as.data.frame} generic. Does not apply
+to \code{SQLDataFrame}. See \code{base::as.data.frame} for
+details.}
+
+\item{...}{additional arguments to be passed.}
+
 \item{from}{the \code{SQLDataFrame} object to be coerced.}
 }
 \value{

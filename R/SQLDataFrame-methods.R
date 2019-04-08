@@ -7,6 +7,8 @@
 #' @description \code{head, tail}: Retrieve the first / last n rows of
 #'     the \code{SQLDataFrame} object. See \code{?S4Vectors::head} for
 #'     more details.
+#' @param x An \code{SQLDataFrame} object.
+#' @param n Number of rows.
 #' @rdname SQLDataFrame-methods
 #' @aliases head head,SQLDataFrame-method
 #' @return \code{head, tail}: An \code{SQLDataFrame} object with
@@ -44,7 +46,6 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 #'     SQLDataFrame object.
 #' @rdname SQLDataFrame-methods
 #' @aliases dim dim,SQLDataFrame-method
-#' @param x A \code{SQLDataFrame} object
 #' @return \code{dim}: interger vector
 #' @export
 #' @examples
@@ -115,6 +116,7 @@ setMethod("names", "SQLDataFrame", function(x) colnames(x))
 }
 setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
+#' @importFrom stats setNames
 .extractCOLS_SQLDataFrame <- function(x, j)
 {
     ## browser()
@@ -133,6 +135,12 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' @description \code{[i, j]} supports subsetting by \code{i} (for
 #'     row) and \code{j} (for column) and respects ‘drop=FALSE’.
 #' @rdname SQLDataFrame-methods
+#' @param i Row subscript. Could be numeric / character / logical
+#'     values, a named list of key values, and \code{SQLDataFrame},
+#'     \code{data.frame}, \code{tibble} objects.
+#' @param j Column subscript.
+#' @param drop Whether to drop with reduced dimension. Default is
+#'     TRUE.
 #' @return A \code{SQLDataFrame} object or vector with realized column
 #'     values (with single column subsetting and default
 #'     \code{drop=TRUE}. )
@@ -169,7 +177,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' ## by a named list of key column values (or equivalently data.frame /
 #' ## tibble)
 #' obj[data.frame(state = c("Colorado", "Arizona")), ]
-#' obj[tibble(state = c("Colorado", "Arizona")), ]
+#' obj[tibble::tibble(state = c("Colorado", "Arizona")), ]
 #' obj[list(state = c("Colorado", "Arizona")), ]
 #' obj1[list(region = c("South", "West"),
 #'           population = c("3615.0", "365.0")), ]
@@ -213,6 +221,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 })
 
 #' @rdname SQLDataFrame-methods
+#' @importFrom methods is as callNextMethod
 #' @export
 setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
           function(x, i, j, ..., drop = TRUE)
@@ -240,6 +249,9 @@ setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
 ###--------------------
 ### "[[,SQLDataFrame" (do realization for single column only)
 ###--------------------
+
+#' @rdname SQLDataFrame-methods
+#' @export
 setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 {
     ## browser()
@@ -267,6 +279,9 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     return(res)
 })
 
+#' @rdname SQLDataFrame-methods
+#' @param name column name to be extracted by \code{$}.
+#' @export
 setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 
 #####################
@@ -278,10 +293,20 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #' @rdname SQLDataFrame-methods
 #' @aliases filter filter,SQLDataFrame-method
 #' @param .data A \code{SQLDataFrame} object.
-#' @param ... In \code{filter()}: Logical predicates defined in terms
-#'     of the variables in ‘.data’. Multiple conditions are combined
-#'     with ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
-#'     kept. See \code{?dplyr::filter} for more details.
+#' @param ... additional arguments to be passed.
+#' \itemize{
+#' \item{\code{filter()}: }{Logical predicates defined in terms of the
+#'     variables in ‘.data’. Multiple conditions are combined with
+#'     ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
+#'     kept. See \code{?dplyr::filter} for more details.}
+#' \item{\code{mutate()}: }{Name-value pairs of expressions, each with
+#'     length 1 or the same length as the number of rows in the group
+#'     (if using ‘group_by()’) or in the entire input (if not using
+#'     groups). The name of each argument will be the name of a new
+#'     variable, and the value will be its corresponding value. Use a
+#'     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
+#'     overwrite existing variables of the same name.}}
+ 
 #' @return \code{filter}: A \code{SQLDataFrame} object with subset
 #'     rows of the input SQLDataFrame object matching conditions.
 #' @export
@@ -290,7 +315,8 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #' ###################
 #' ## filter & mutate 
 #' ###################
-#' 
+#'
+#' library(dplyr)
 #' obj %>% filter(region == "West" & size == "medium")
 #' obj1 %>% filter(region == "West" & population > 10000)
 #' 
@@ -324,13 +350,6 @@ filter.SQLDataFrame <- function(.data, ...)
 #'     name.
 #' @rdname SQLDataFrame-methods
 #' @aliases mutate mutate,SQLDataFrame-methods
-#' @param ... In \code{mutate()}: Name-value pairs of expressions,
-#'     each with length 1 or the same length as the number of rows in
-#'     the group (if using ‘group_by()’) or in the entire input (if
-#'     not using groups). The name of each argument will be the name
-#'     of a new variable, and the value will be its corresponding
-#'     value. Use a ‘NULL’ value in ‘mutate’ to drop a variable.  New
-#'     variables overwrite existing variables of the same name.
 #' @return \code{mutate}: A SQLDataFrame object.
 #' @export
 #' 

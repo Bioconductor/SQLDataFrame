@@ -3,7 +3,6 @@
 \docType{methods}
 \name{union}
 \alias{union}
-\alias{union,SQLDataFrame-method}
 \title{Union of \code{SQLDataFrame} objects}
 \usage{
 \S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, copy = FALSE)
@@ -12,6 +11,8 @@
 \item{x}{A \code{SQLDataFrame} object.}
 
 \item{y}{A \code{SQLDataFrame} object.}
+
+\item{copy}{Whether to}
 }
 \value{
 A \code{SQLDataFrame} object.
@@ -21,10 +22,12 @@ Performs union operations on \code{SQLDataFrame}
     objects.
 }
 \examples{
-obj1 <- SQLDataFrame(dbname = "inst/extdata/test.db",
+db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
+db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
+obj1 <- SQLDataFrame(dbname = db1,
                      dbtable = "state",
                      dbkey = c("region", "population"))
-obj2 <- SQLDataFrame(dbname = "inst/extdata/test1.db",
+obj2 <- SQLDataFrame(dbname = db2,
                      dbtable = "state1",
                      dbkey = c("region", "population"))
 obj1_sub <- obj1[1:10, 2:3]

@@ -1,8 +1,8 @@
 context("SQLDataFrame-methods")
 
-test.db <- system.file("inst/extdata/test.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(
-    dbname = test.db, dbtable = "colData", dbkey = "sampleID")
+dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+obj <- SQLDataFrame(dbname = dbname, dbtable = "colData",
+                    dbkey = "sampleID")
 
 ## methods
 test_that("[[,SQLDataFrame works",

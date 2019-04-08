@@ -3,7 +3,7 @@
 #' @rdname SQLDataFrame-class
 #' @description NULL
 #' @exportClass SQLDataFrame
-#' @importFrom methods setOldClass
+#' @importFrom methods setOldClass new
 ## add other connections. 
 setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 .SQLDataFrame <- setClass(
@@ -297,6 +297,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 }
 
 #' @rdname SQLDataFrame-class
+#' @param object An \code{SQLDataFrame} object.
 #' @importFrom lazyeval interp
 #' @import S4Vectors
 #' @export
@@ -350,6 +351,18 @@ setMethod("show", "SQLDataFrame", function (object)
 
 #' @rdname SQLDataFrame-class
 #' @aliases coerce,SQLDataFrame,data.frame-class
+#' @param x An \code{SQLDataFrame} object
+#' @param row.names \code{NULL} or a character vector giving the row
+#'     names for the data frame. Only including this argument for the
+#'     \code{as.data.frame} generic. Does not apply to
+#'     \code{SQLDataFrame}. See \code{base::as.data.frame} for
+#'     details.
+#' @param optional logical. If \code{TRUE}, setting row names and
+#'     converting column names is optional. Only including this
+#'     argument for the \code{as.data.frame} generic. Does not apply
+#'     to \code{SQLDataFrame}. See \code{base::as.data.frame} for
+#'     details.
+#' @param ... additional arguments to be passed.
 #' @export
 
 setMethod("as.data.frame", "SQLDataFrame",
@@ -358,7 +371,7 @@ setMethod("as.data.frame", "SQLDataFrame",
     tbl <- .extract_tbl_from_SQLDataFrame(x)
     ridx <- normalizeRowIndex(x)
     i <- match(ridx, sort(unique(ridx))) 
-    as.data.frame(tbl)[i, ]
+    as.data.frame(tbl, row.names = row.names, optional = optional)[i, ]
 })
 
 #' @name coerce

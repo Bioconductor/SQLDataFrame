@@ -1,6 +1,8 @@
 context("SQLDataFrame-class")
 
-test.db <- system.file("inst/extdata/test.db", package = "SQLDataFrame")
+test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+obj <- SQLDataFrame(dbname = test.db, dbtable = "colData",
+                    dbkey = "sampleID")
 
 test_that("SQLDataFrame constructor argument checking",
 {
@@ -26,14 +28,11 @@ test_that("SQLDataFrame constructor argument checking",
 })
 
 
-obj <- SQLDataFrame(
-    dbname = test.db, dbtable = "colData", dbkey = "sampleID")
-
 test_that("SQLDataFrame constructor works",
 {
     ## check slot values / accessors
     expect_true(validObject(obj))
-    exp <- c("dbtable", "dbkey", "dbnrows", "tblData", "indexes")
+    exp <- c("dbkey", "dbnrows", "tblData", "indexes", "dbconcatKey")
     expect_identical(exp, slotNames(obj))
     expect_identical(test.db, dbname(obj))
     expect_identical("colData", dbtable(obj))
@@ -71,7 +70,7 @@ test_that("'.extract_tbl_rows_by_key' works",
 {
     obj1 <- obj[, 2, drop=FALSE]
     tbl <- .extract_tbl_from_SQLDataFrame(obj1)
-    res <- .extract_tbl_rows_by_key(tbl, dbkey(obj), 1:5)
+    res <- .extract_tbl_rows_by_key(tbl, dbkey(obj), dbconcatKey(obj), 1:5)
     nrow <- res %>% summarize(n=n()) %>% pull(n)
     expect_identical(nrow, 5L)
     expect_identical(colnames(res), c(dbkey(obj), colnames(obj)[2]))

@@ -34,7 +34,7 @@ manipulated within R by extending[DelayedArray][] to represent on-disk
 data structures with different back-end in R-user-friendly array data
 structure (e.g.,[HDF5Array][], [GDSArray][]). However, the annotation
 file usually have`data.frame`-like structure, and include meta info with different data type. Here we
- have developed an _Bioconductor_ package `SQLDataFrame` to have the `DataFrame` metaphor with database table backend.
+ have developed an _Bioconductor_ package`SQLDataFrame` to have the `DataFrame` metaphor with database table backend.
 
 Currently we are only supporting the DBI backend of `RSQLite`. But
 theoretically, we would implement this package so that users could

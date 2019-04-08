@@ -18,6 +18,8 @@
 \alias{[,SQLDataFrame,ANY-method}
 \alias{[,SQLDataFrame,SQLDataFrame-method}
 \alias{[,SQLDataFrame,list-method}
+\alias{[[,SQLDataFrame-method}
+\alias{$,SQLDataFrame-method}
 \alias{filter.SQLDataFrame}
 \alias{filter}
 \alias{filter,SQLDataFrame-method}
@@ -44,27 +46,45 @@
 
 \S4method{[}{SQLDataFrame,list}(x, i, j, ..., drop = TRUE)
 
+\S4method{[[}{SQLDataFrame}(x, i, j, ...)
+
+\S4method{$}{SQLDataFrame}(x, name)
+
 \method{filter}{SQLDataFrame}(.data, ...)
 
 \method{mutate}{SQLDataFrame}(.data, ...)
 }
 \arguments{
-\item{x}{A \code{SQLDataFrame} object}
+\item{x}{An \code{SQLDataFrame} object.}
 
-\item{...}{In \code{filter()}: Logical predicates defined in terms
-of the variables in ‘.data’. Multiple conditions are combined
-with ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
-kept. See \code{?dplyr::filter} for more details.}
+\item{n}{Number of rows.}
+
+\item{i}{Row subscript. Could be numeric / character / logical
+values, a named list of key values, and \code{SQLDataFrame},
+\code{data.frame}, \code{tibble} objects.}
+
+\item{j}{Column subscript.}
+
+\item{...}{additional arguments to be passed.
+\itemize{
+\item{\code{filter()}: }{Logical predicates defined in terms of the
+    variables in ‘.data’. Multiple conditions are combined with
+    ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
+    kept. See \code{?dplyr::filter} for more details.}
+\item{\code{mutate()}: }{Name-value pairs of expressions, each with
+    length 1 or the same length as the number of rows in the group
+    (if using ‘group_by()’) or in the entire input (if not using
+    groups). The name of each argument will be the name of a new
+    variable, and the value will be its corresponding value. Use a
+    ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
+    overwrite existing variables of the same name.}}}
+
+\item{drop}{Whether to drop with reduced dimension. Default is
+TRUE.}
+
+\item{name}{column name to be extracted by \code{$}.}
 
 \item{.data}{A \code{SQLDataFrame} object.}
-
-\item{...}{In \code{mutate()}: Name-value pairs of expressions,
-each with length 1 or the same length as the number of rows in
-the group (if using ‘group_by()’) or in the entire input (if
-not using groups). The name of each argument will be the name
-of a new variable, and the value will be its corresponding
-value. Use a ‘NULL’ value in ‘mutate’ to drop a variable.  New
-variables overwrite existing variables of the same name.}
 }
 \value{
 \code{head, tail}: An \code{SQLDataFrame} object with
@@ -149,7 +169,7 @@ obj[obj_sub, ]
 ## by a named list of key column values (or equivalently data.frame /
 ## tibble)
 obj[data.frame(state = c("Colorado", "Arizona")), ]
-obj[tibble(state = c("Colorado", "Arizona")), ]
+obj[tibble::tibble(state = c("Colorado", "Arizona")), ]
 obj[list(state = c("Colorado", "Arizona")), ]
 obj1[list(region = c("South", "West"),
           population = c("3615.0", "365.0")), ]
@@ -160,6 +180,7 @@ obj1[list(region = c("South", "West"),
 ## filter & mutate 
 ###################
 
+library(dplyr)
 obj \%>\% filter(region == "West" & size == "medium")
 obj1 \%>\% filter(region == "West" & population > 10000)
 

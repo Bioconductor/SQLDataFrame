@@ -31,6 +31,10 @@ exists. Default is FALSE.}
 
 \item{sep}{a character string to separate the terms.  Not
 ‘NA_character_’. Default is \code{,}.}
+
+\item{index}{Whether to create an index table. Default is TRUE.}
+
+\item{...}{additional arguments to be passed.}
 }
 \description{
 Given a file name, \code{makeSQLDataFrame} will write
