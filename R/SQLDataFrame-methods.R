@@ -201,8 +201,17 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                 return(x)
             j <- i
         }
-        if (!is(j, "IntegerRanges"))  ## FEATURE: keyword "select(col1, col2, ...)"
-            x <- .extractCOLS_SQLDataFrame(x, j)
+        if (!is(j, "IntegerRanges")) {  ## FEATURE: keyword "select(col1, col2, ...)"
+            ## extracting key col value 
+            if (is.character(j) && length(j) == 1 && j %in% dbkey(x)) {
+                res <- .extract_tbl_from_SQLDataFrame(x) %>% select(j) %>% pull()
+                if (!drop)
+                    warning("'drop' argument ignored by subsetting only key columns")
+                return(res)
+            } else {
+                x <- .extractCOLS_SQLDataFrame(x, j)
+            }
+        }
         if (list_style_subsetting) 
             return(x)
     }
@@ -210,7 +219,9 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
         x <- extractROWS(x, i)
     }
     if (missing(drop)) 
-        drop <- ncol(x) == 1L
+        drop <- nrow(x) & ncol(x) == 1L ## if nrow(x)==0, return the
+                                        ## SQLDataFrame with 0 rows
+                                        ## and 1 column(s)
     if (drop) {
         if (ncol(x) == 1L) 
             return(x[[1L]])
@@ -306,7 +317,6 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #'     variable, and the value will be its corresponding value. Use a
 #'     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
 #'     overwrite existing variables of the same name.}}
- 
 #' @return \code{filter}: A \code{SQLDataFrame} object with subset
 #'     rows of the input SQLDataFrame object matching conditions.
 #' @export
