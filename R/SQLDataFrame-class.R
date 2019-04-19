@@ -60,7 +60,11 @@ setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 #'
 #' ## coercion
 #' as.data.frame(obj)
-#' as(obj, "DataFrame") 
+#' as(obj, "DataFrame")
+#'
+#' ## dbkey replacement
+#' dbkey(obj) <- c("region", "population")
+#' obj
 
 SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                          dbtable = character(0), ## could be NULL if
@@ -149,9 +153,14 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
     ## if (! dbtable(object) %in% tbls)
     ##     stop('"dbtable" must be one of :', tbls)    
     ## @indexes length
+    ## browser()
     idx <- object@indexes
-    if (length(idx) != 2)
+    if (length(idx) != 2) {
         stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
+    }
+    if (any(duplicated(dbconcatKey(object)))) {
+        stop("The 'dbkey(x)' must be unique!")
+    }
 }
 
 setValidity("SQLDataFrame", .validity_SQLDataFrame)
@@ -164,6 +173,7 @@ setGeneric("dbname", signature = "x", function(x)
     standardGeneric("dbname"))
 
 #' @rdname SQLDataFrame-class
+#' @aliases dbname dbname,SQLDataFrame-method
 #' @export
 
 setMethod("dbname", "SQLDataFrame", function(x)
@@ -175,6 +185,7 @@ setGeneric("dbtable", signature = "x", function(x)
     standardGeneric("dbtable"))
 
 #' @rdname SQLDataFrame-class
+#' @aliases dbtable dbtable,SQLDataFrame-method
 #' @export
 
 setMethod("dbtable", "SQLDataFrame", function(x)
@@ -203,13 +214,34 @@ setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))
 
 #' @rdname SQLDataFrame-class
+#' @aliases dbkey dbkey,SQLDataFrame-method
 #' @export
 setMethod("dbkey", "SQLDataFrame", function(x) x@dbkey )
+
+setGeneric(
+    "dbkey<-",
+    function(x, value) standardGeneric("dbkey<-"),
+    signature="x")
+
+## FIXME: is it expensive? works like constructing a new SQLDF and
+## calculate the dbconcatKey again!
+#' @rdname SQLDataFrame-class
+#' @param value The column name to be used as \code{dbkey(x)}
+#' @export
+setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
+    concatKey <- x@tblData %>%
+        mutate(concatKey = paste(!!!syms(value), sep="\b")) %>%
+        pull(concatKey)
+    BiocGenerics:::replaceSlots(x, dbkey = value,
+                                dbconcatKey = concatKey,
+                                check=FALSE)
+})
 
 setGeneric("dbconcatKey", signature = "x", function(x)
     standardGeneric("dbconcatKey"))
 
 #' @rdname SQLDataFrame-class
+#' @aliases dbconcatKey dbconcatKey,SQLDataFrame-method
 #' @export
 setMethod("dbconcatKey", "SQLDataFrame", function(x)
 {
@@ -218,6 +250,7 @@ setMethod("dbconcatKey", "SQLDataFrame", function(x)
 })
 
 #' @rdname SQLDataFrame-class
+#' @aliases ROWNAMES ROWNAMES,SQLDataFrame-method
 #' @export
 setMethod("ROWNAMES", "SQLDataFrame", function(x)
 {

@@ -4,10 +4,16 @@
 \name{SQLDataFrame}
 \alias{SQLDataFrame}
 \alias{dbname,SQLDataFrame-method}
+\alias{dbname}
 \alias{dbtable,SQLDataFrame-method}
+\alias{dbtable}
 \alias{dbkey,SQLDataFrame-method}
+\alias{dbkey}
+\alias{dbkey<-,SQLDataFrame-method}
 \alias{dbconcatKey,SQLDataFrame-method}
+\alias{dbconcatKey}
 \alias{ROWNAMES,SQLDataFrame-method}
+\alias{ROWNAMES}
 \alias{show,SQLDataFrame-method}
 \alias{as.data.frame,SQLDataFrame-method}
 \alias{coerce,SQLDataFrame,data.frame-class}
@@ -23,6 +29,8 @@ SQLDataFrame(dbname = character(0), dbtable = character(0),
 \S4method{dbtable}{SQLDataFrame}(x)
 
 \S4method{dbkey}{SQLDataFrame}(x)
+
+\S4method{dbkey}{SQLDataFrame}(x) <- value
 
 \S4method{dbconcatKey}{SQLDataFrame}(x)
 
@@ -47,6 +55,8 @@ could uniquely identify each row of the database table.}
 want to read into the \code{SQLDataFrame}.}
 
 \item{x}{An \code{SQLDataFrame} object}
+
+\item{value}{The column name to be used as \code{dbkey(x)}}
 
 \item{object}{An \code{SQLDataFrame} object.}
 
@@ -100,5 +110,9 @@ ROWNAMES(obj1[sample(10, 5), ])
 
 ## coercion
 as.data.frame(obj)
-as(obj, "DataFrame") 
+as(obj, "DataFrame")
+
+## dbkey replacement
+dbkey(obj) <- c("region", "population")
+obj
 }
