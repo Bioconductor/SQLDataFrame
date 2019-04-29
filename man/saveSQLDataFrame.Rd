@@ -5,7 +5,8 @@
 \title{Save SQLDataFrame object as a new database table.}
 \usage{
 saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"),
-  dbtable = deparse(substitute(x)), overwrite = FALSE, ...)
+  dbtable = deparse(substitute(x)), overwrite = FALSE, index = TRUE,
+  ...)
 }
 \arguments{
 \item{x}{The \code{SQLDataFrame} object to be saved.}
@@ -19,6 +20,8 @@ table name. Default is the name of the input
 
 \item{overwrite}{Whether to overwrite the \code{dbtable} if already
 exists. Default is FALSE.}
+
+\item{index}{Whether to create the database index. Default is TRUE.}
 
 \item{...}{other parameters passed to methods.}
 }

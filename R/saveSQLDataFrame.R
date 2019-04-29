@@ -10,6 +10,7 @@
 #'     \code{SQLDataFrame}.
 #' @param overwrite Whether to overwrite the \code{dbtable} if already
 #'     exists. Default is FALSE.
+#' @param index Whether to create the database index. Default is TRUE. 
 #' @param ... other parameters passed to methods.
 #' @import DBI
 #' @import dbplyr
@@ -26,7 +27,8 @@
 
 saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
                              dbtable = deparse(substitute(x)),
-                             overwrite = FALSE, ...)
+                             overwrite = FALSE,
+                             index = TRUE, ...)
 {
     ## browser()
     if (file.exists(dbname)) {
@@ -50,14 +52,15 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
             dbWriteTable(con, paste0(dbtable, "_ridx"), value = data.frame(ridx = ridx(x)))
         }
     }
-    dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd))
+    dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd, con = con))
     ## error if "dbtable" already exist. "Error: table aa already
     ## exists". Not likely happen here, because SQLDataFrame generated
     ## from "join" or "union" has connection to a new temporary .db
     ## file with empty contents.
 
     ## add unique index file with dbkey(x)
-    dbplyr:::db_create_indexes.DBIConnection(con, dbtable, indexes = list(dbkey(x)), unique = TRUE)
+    if (index)
+        dbplyr:::db_create_indexes.DBIConnection(con, dbtable, indexes = list(dbkey(x)), unique = TRUE)
     ## FIXME: implement "overwrite" argument here for the index file. if (found & overwrite)
     ## https://www.w3schools.com/sql/sql_create_index.asp
     ## DROP INDEX table_name.index_name;
