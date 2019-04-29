@@ -46,6 +46,8 @@ test_that("SQLDataFrame constructor works",
 test_that("validity,SQLDataFrame works",
 {
     expect_error(initialize(obj, indexes = vector("list", 3)))
+    obj1 <- obj
+    expect_error(dbkey(obj1) <- "Ages")
 })
 
 ## utility functions

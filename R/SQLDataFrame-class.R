@@ -159,10 +159,10 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
     }
     if (any(duplicated(dbconcatKey(object)))) {
-        stop("The 'dbkey(x)' must be unique!")
+        stop("The 'dbkey' column of SQLDataFrame '", dbkey(obj),
+             "' must have unique values!")
     }
 }
-
 setValidity("SQLDataFrame", .validity_SQLDataFrame)
 
 ###-------------
@@ -234,7 +234,7 @@ setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
         pull(concatKey)
     BiocGenerics:::replaceSlots(x, dbkey = value,
                                 dbconcatKey = concatKey,
-                                check=FALSE)
+                                check=TRUE)
 })
 
 setGeneric("dbconcatKey", signature = "x", function(x)
