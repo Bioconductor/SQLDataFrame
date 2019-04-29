@@ -3,9 +3,17 @@
 \name{join}
 \alias{join}
 \alias{left_join.SQLDataFrame}
+\alias{left_join}
+\alias{left_join,SQLDataFrame-method}
 \alias{inner_join.SQLDataFrame}
+\alias{inner_join}
+\alias{inner_join,SQLDataFrame-method}
 \alias{semi_join.SQLDataFrame}
+\alias{semi_join}
+\alias{semi_join,SQLDataFrame-method}
 \alias{anti_join.SQLDataFrame}
+\alias{anti_join}
+\alias{anti_join,SQLDataFrame-method}
 \title{join \code{SQLDataFrame} together}
 \usage{
 \method{left_join}{SQLDataFrame}(x, y, by = NULL, suffix = c(".x",
@@ -41,7 +49,8 @@ and ‘y’. Default values are ".x" and ".y".See
 A \code{SQLDataFrame} object.
 }
 \description{
-*_join functions for \code{SQLDataFrame} objects.
+*_join functions for \code{SQLDataFrame} objects. Will
+    preserve the duplicate rows for the input argument `x`.
 }
 \examples{
 db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
@@ -56,8 +65,4 @@ obj2 <- SQLDataFrame(dbname = db2,
 obj1_sub <- obj1[1:10, 1:2]
 obj2_sub <- obj2[8:15, 2:3]
 
-left_join(obj1_sub, obj2_sub)
-inner_join(obj1_sub, obj2_sub)
-semi_join(obj1_sub, obj2_sub)
-anti_join(obj1_sub, obj2_sub)
 }

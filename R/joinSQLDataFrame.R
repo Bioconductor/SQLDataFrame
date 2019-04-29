@@ -58,7 +58,7 @@
 }
 .attach_database <- function(con, dbname, aux = NULL) {
     if (is.null(aux))
-        aux <- dbplyr:::random_table_name()
+        aux <- dplyr:::random_table_name()
     dbExecute(con, paste0("ATTACH '", dbname, "' AS ", aux))
     return(aux)
 }
@@ -92,7 +92,9 @@
 #' join \code{SQLDataFrame} together
 #' @name join
 #' @rdname joinSQLDataFrame
-#' @description *_join functions for \code{SQLDataFrame} objects.
+#' @description *_join functions for \code{SQLDataFrame} objects. Will
+#'     preserve the duplicate rows for the input argument `x`.
+#' @aliases left_join left_join,SQLDataFrame-method
 #' @param x \code{SQLDataFrame} objects to join.
 #' @param y \code{SQLDataFrame} objects to join.
 #' @param by A character vector of variables to join by.  If ‘NULL’,
@@ -119,33 +121,58 @@
 #' obj1_sub <- obj1[1:10, 1:2]
 #' obj2_sub <- obj2[8:15, 2:3]
 #'
-#' left_join(obj1_sub, obj2_sub)
-#' inner_join(obj1_sub, obj2_sub)
-#' semi_join(obj1_sub, obj2_sub)
-#' anti_join(obj1_sub, obj2_sub)
+## #' left_join(obj1_sub, obj2_sub)
+## #' inner_join(obj1_sub, obj2_sub)
+## #' semi_join(obj1_sub, obj2_sub)
+## #' anti_join(obj1_sub, obj2_sub)
 
 left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    suffix = c(".x", ".y"), ...) 
 {
+    ## browser()
     out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::left_join.tbl_lazy)
-    dbrnms <- ROWNAMES(x)
-    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
+    if (!identical(dbkey(x), dbkey(y))) {
+        dbkey(out) <- c(dbkey(x), dbkey(y))
+    } else {
+        dbrnms <- unique(ROWNAMES(x))
+        ind <- match(ROWNAMES(x), dbrnms)
+        ind <- ind[!is.na(ind)]
+        BiocGenerics:::replaceSlots(
+                           out, dbconcatKey = dbrnms,
+                           indexes = list(ind, NULL))
+    }
 }
 
 #' @rdname joinSQLDataFrame
+#' @aliases inner_join inner_join,SQLDataFrame-method
 #' @export
 inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     suffix = c(".x", ".y"), ...) 
 {
+    ## browser()
     out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::inner_join.tbl_lazy)
-    dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
-    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
+
+    if (!identical(dbkey(x), dbkey(y))) {
+        dbkey(out) <- c(dbkey(x), dbkey(y))
+    } else {
+        ## FIXME: for duplicate ROWNAMES(x/y), intersect() doesn't work... 
+        dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
+        ind <- match(ROWNAMES(x), dbrnms)
+        ind <- ind[!is.na(ind)]
+        out <- BiocGenerics:::replaceSlots(
+                                  out, dbconcatKey = dbrnms,
+                                  indexes = list(ind, NULL))
+    }
+    ## FIXME: nor the dbconcatKey by default only works when x and y has same dbkey(). 
+    ## BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
+    ## e.g., df1 has duplicate rows, df2 has also duplicate rows, how to "inner_join"?
+    out
 }
 
 #########################
@@ -154,25 +181,37 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 
 ## for "semi_join", the new @tblData$ops is "op_semi_join".
 ## see show_query(@tblData), "...WHERE EXISTS..."
+## semi_join is similar to `inner_join`, but doesn't add new columns.
 
 #' @rdname joinSQLDataFrame
+#' @aliases semi_join semi_join,SQLDataFrame-method
 #' @export
 semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    suffix = c(".x", ".y"), ...) 
 {
+    ## browser()
     out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::semi_join.tbl_lazy)
-    dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
-    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
+    if (!identical(dbkey(x), dbkey(y))) {
+        dbkey(out) <- c(dbkey(x), dbkey(y))
+    } else {        
+        dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
+        ind <- match(ROWNAMES(x), dbrnms)
+        ind <- ind[!is.na(ind)]
+        out <- BiocGenerics:::replaceSlots(
+                                  out, dbconcatKey = dbrnms,
+                                  indexes = list(ind, NULL))
+    }
+    out
 }
-
 
 ## for "anti_join", the new @tblData$ops is still "op_semi_join"
 ## see show_query(@tblData), "...WHERE NOT EXISTS..."
 
 #' @rdname joinSQLDataFrame
+#' @aliases anti_join anti_join,SQLDataFrame-method
 #' @export
 anti_join.SQLDataFrame <- function(x, y, by = NULL,
                                    suffix = c(".x", ".y"), ...) 
@@ -181,7 +220,15 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::anti_join.tbl_lazy)
-    dbrnms <- setdiff(ROWNAMES(x), ROWNAMES(y))
-    BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
+    if (!identical(dbkey(x), dbkey(y))) {
+        dbkey(out) <- c(dbkey(x), dbkey(y))
+    } else {
+        dbrnms <- setdiff(ROWNAMES(x), ROWNAMES(y))
+        ind <- match(ROWNAMES(x), dbrnms)
+        ind <- ind[!is.na(ind)]
+        BiocGenerics:::replaceSlots(
+                           out, dbconcatKey = dbrnms,
+                           indexes = list(ind, NULL))
+    }
 }
 
