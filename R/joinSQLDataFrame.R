@@ -140,9 +140,13 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
         dbrnms <- unique(ROWNAMES(x))
         ind <- match(ROWNAMES(x), dbrnms)
         ind <- ind[!is.na(ind)]
+        ridx <- NULL
+        if (!identical(ind, seq_len(nrow(x)))) {
+            ridx <- ind
+        }
         BiocGenerics:::replaceSlots(
                            out, dbconcatKey = dbrnms,
-                           indexes = list(ind, NULL))
+                           indexes = list(ridx, NULL))
     }
 }
 
@@ -165,9 +169,13 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
         dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
         ind <- match(ROWNAMES(x), dbrnms)
         ind <- ind[!is.na(ind)]
+        ridx <- NULL
+        if (!identical(ind, normalizeRowIndex(out))) {
+            ridx <- ind
+        }
         out <- BiocGenerics:::replaceSlots(
                                   out, dbconcatKey = dbrnms,
-                                  indexes = list(ind, NULL))
+                                  indexes = list(ridx, NULL))
     }
     ## FIXME: nor the dbconcatKey by default only works when x and y has same dbkey(). 
     ## BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
@@ -200,9 +208,13 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
         dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
         ind <- match(ROWNAMES(x), dbrnms)
         ind <- ind[!is.na(ind)]
+        ridx <- NULL
+        if (!identical(ind, normalizeRowIndex(out))) {
+            ridx <- ind
+        }
         out <- BiocGenerics:::replaceSlots(
                                   out, dbconcatKey = dbrnms,
-                                  indexes = list(ind, NULL))
+                                  indexes = list(ridx, NULL))
     }
     out
 }
@@ -226,9 +238,13 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL,
         dbrnms <- setdiff(ROWNAMES(x), ROWNAMES(y))
         ind <- match(ROWNAMES(x), dbrnms)
         ind <- ind[!is.na(ind)]
+        ridx <- NULL
+        if (!identical(ind, normalizeRowIndex(out))) {
+            ridx <- ind
+        }
         BiocGenerics:::replaceSlots(
                            out, dbconcatKey = dbrnms,
-                           indexes = list(ind, NULL))
+                           indexes = list(ridx, NULL))
     }
 }
 
