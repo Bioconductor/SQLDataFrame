@@ -276,7 +276,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     if (length(key) == 1) {
         ### keys <- pull(x, grep(key, colnames(x)))
         ## expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i])
-        out <- x %>% filter(!!as.name(key) %in% concatKey[i])
+        out <- x %>% filter(!!sym(key) %in% !!(concatKey[i]))
         ## out <- x %>% filter_(paste(key, "%in%", "c(", paste(shQuote(keys[i]), collapse=","), ")"))
         ## works, keep for now. 
     } else {
