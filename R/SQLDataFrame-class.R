@@ -228,6 +228,7 @@ setGeneric(
 
 ## FIXME: A little expensive... works like constructing a new SQLDF
 ## and calculate the dbconcatKey again!
+#' @name "dbkey<-"
 #' @rdname SQLDataFrame-class
 #' @aliases "dbkey<-" "dbkey<-,SQLDataFrame-method"
 #' @param value The column name to be used as \code{dbkey(x)}
@@ -388,6 +389,7 @@ setMethod("show", "SQLDataFrame", function (object)
 ###--------------
 
 #' @rdname SQLDataFrame-class
+#' @name coerce
 #' @aliases coerce,SQLDataFrame,data.frame-class
 #' @param x An \code{SQLDataFrame} object
 #' @param row.names \code{NULL} or a character vector giving the row
@@ -416,7 +418,7 @@ setMethod("as.data.frame", "SQLDataFrame",
 #' @rdname SQLDataFrame-class
 #' @aliases coerce,SQLDataFrame,DataFrame-class
 #' @param from the \code{SQLDataFrame} object to be coerced.
-#' @exportMethod coerce
+#' @export
 #' 
 setAs("SQLDataFrame", "DataFrame", function(from)
 {

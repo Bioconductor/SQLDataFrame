@@ -9,7 +9,6 @@
 \alias{dbtable}
 \alias{dbkey,SQLDataFrame-method}
 \alias{dbkey}
-\alias{dbkey<-,SQLDataFrame-method}
 \alias{"dbkey<-"}
 \alias{"dbkey<-,SQLDataFrame-method"}
 \alias{dbconcatKey,SQLDataFrame-method}
@@ -17,9 +16,8 @@
 \alias{ROWNAMES,SQLDataFrame-method}
 \alias{ROWNAMES}
 \alias{show,SQLDataFrame-method}
-\alias{as.data.frame,SQLDataFrame-method}
-\alias{coerce,SQLDataFrame,data.frame-class}
 \alias{coerce}
+\alias{coerce,SQLDataFrame,data.frame-class}
 \alias{coerce,SQLDataFrame,DataFrame-class}
 \title{SQLDataFrame class}
 \usage{
