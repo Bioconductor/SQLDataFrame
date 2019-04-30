@@ -10,6 +10,8 @@
 \alias{dbkey,SQLDataFrame-method}
 \alias{dbkey}
 \alias{dbkey<-,SQLDataFrame-method}
+\alias{"dbkey<-"}
+\alias{"dbkey<-,SQLDataFrame-method"}
 \alias{dbconcatKey,SQLDataFrame-method}
 \alias{dbconcatKey}
 \alias{ROWNAMES,SQLDataFrame-method}

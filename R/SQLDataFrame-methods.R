@@ -144,6 +144,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' @return A \code{SQLDataFrame} object or vector with realized column
 #'     values (with single column subsetting and default
 #'     \code{drop=TRUE}. )
+#' @importFrom tibble tibble 
 #' @export
 #' @examples
 #'

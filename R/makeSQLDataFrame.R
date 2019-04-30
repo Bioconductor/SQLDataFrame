@@ -23,6 +23,7 @@
 #' @param index Whether to create an index table. Default is TRUE.
 #' @param ... additional arguments to be passed.
 #' @importFrom tools file_path_as_absolute file_path_sans_ext
+#' @importFrom tibble rownames_to_column
 #' @import DBI
 #' @details The provided file must has one or more columns to unique
 #'     identify each row (no duplicate rows allowed). The file must be

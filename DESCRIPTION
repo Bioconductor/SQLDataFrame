@@ -1,6 +1,6 @@
 Package: SQLDataFrame
 Title: Representation of database tables in DataFrame metaphor
-Version: 0.99.4
+Version: 0.99.5
 Authors@R: c(
     person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"),
     comment = c(ORCID = "0000-0003-1456-5099")),
@@ -22,7 +22,10 @@ Imports:
     lazyeval,
     methods,
     tools,
-    stats
+    stats,
+    BiocGenerics,
+    RSQLite,
+    tibble
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 6.1.1

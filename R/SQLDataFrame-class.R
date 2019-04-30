@@ -33,6 +33,7 @@ setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @importFrom tools file_path_as_absolute
+#' @importFrom RSQLite SQLite
 #' @import dbplyr
 #' @examples
 #' 
@@ -225,10 +226,12 @@ setGeneric(
     function(x, value) standardGeneric("dbkey<-"),
     signature="x")
 
-## FIXME: is it expensive? works like constructing a new SQLDF and
-## calculate the dbconcatKey again!
+## FIXME: A little expensive... works like constructing a new SQLDF
+## and calculate the dbconcatKey again!
 #' @rdname SQLDataFrame-class
+#' @aliases "dbkey<-" "dbkey<-,SQLDataFrame-method"
 #' @param value The column name to be used as \code{dbkey(x)}
+#' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
     concatKey <- x@tblData %>%
