@@ -1,7 +1,7 @@
 context("SQLDataFrame-join")
 
-db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
-db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
+db1 <- system.file("extdata", "test.db", package = "SQLDataFrame")
+db2 <- system.file("extdata", "test1.db", package = "SQLDataFrame")
 obj1 <- SQLDataFrame(dbname = db1,
                      dbtable = "state",
                      dbkey = c("region", "population"))

@@ -1,6 +1,6 @@
 context("SQLDataFrame-methods")
 
-dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
+dbname <- system.file("extdata", "test.db", package = "SQLDataFrame")
 obj <- SQLDataFrame(dbname = dbname, dbtable = "colData",
                     dbkey = "sampleID")
 
