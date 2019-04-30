@@ -36,6 +36,9 @@ exists. Default is FALSE.}
 
 \item{...}{additional arguments to be passed.}
 }
+\value{
+A \code{SQLDataFrame} object.
+}
 \description{
 Given a file name, \code{makeSQLDataFrame} will write
     the file contents into SQLite database, and open the database

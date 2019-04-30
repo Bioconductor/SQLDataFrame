@@ -25,9 +25,14 @@ exists. Default is FALSE.}
 
 \item{...}{other parameters passed to methods.}
 }
+\value{
+A \code{SQLDataFrame} object.
+}
 \description{
 The function to save \code{SQLDataFrame} object as a
-    database table with a supplied path to database.
+    database table with a supplied path to database. It also
+    returns a \code{SQLDataFrame} object constructed from the
+    user-supplied \code{dbname}, \code{dbtable}, and \code{dbkey}.
 }
 \examples{
 dbname <- system.file("extdata/test.db", package = "SQLDataFrame")

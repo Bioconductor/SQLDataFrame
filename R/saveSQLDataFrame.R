@@ -1,7 +1,9 @@
 #' Save SQLDataFrame object as a new database table.
 #' @rdname saveSQLDataFrame
 #' @description The function to save \code{SQLDataFrame} object as a
-#'     database table with a supplied path to database.
+#'     database table with a supplied path to database. It also
+#'     returns a \code{SQLDataFrame} object constructed from the
+#'     user-supplied \code{dbname}, \code{dbtable}, and \code{dbkey}.
 #' @param x The \code{SQLDataFrame} object to be saved.
 #' @param dbname A character string of the file path of to be saved
 #'     database file.
@@ -10,8 +12,9 @@
 #'     \code{SQLDataFrame}.
 #' @param overwrite Whether to overwrite the \code{dbtable} if already
 #'     exists. Default is FALSE.
-#' @param index Whether to create the database index. Default is TRUE. 
+#' @param index Whether to create the database index. Default is TRUE.
 #' @param ... other parameters passed to methods.
+#' @return A \code{SQLDataFrame} object.
 #' @import DBI
 #' @import dbplyr
 #' @rawNamespace import(dplyr, except = c("first", "rename",
