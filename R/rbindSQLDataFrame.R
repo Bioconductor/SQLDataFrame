@@ -15,7 +15,7 @@
 
     ## pairwise "union" with multiple input. 
     out <- union(objects[[1]], objects[[2]])
-    objects <- objects[-c(1:2)]
+    objects <- objects[-seq_len(2)]
     repeat{
         if(length(objects) == 0) break
         out <- union(out, objects[[1]])

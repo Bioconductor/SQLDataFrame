@@ -32,7 +32,10 @@ normalizeRowIndex <- function(x)
 {
     ridx <- ridx(sdf)
     if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf), dbconcatKey(sdf), ridx)
-    tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))  ## order by "key + otherCols"
+        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf),
+                                        dbconcatKey(sdf), ridx)
+    tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))  ## ordered by
+                                                      ## "key +
+                                                      ## otherCols"
     return(tbl)
 }

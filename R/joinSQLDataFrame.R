@@ -26,7 +26,8 @@
         } else {
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         }
-    } else if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_mutate")) {  
+    } else if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_mutate"))
+    {  
         con <- .con_SQLDataFrame(y)
         tbly <- .open_tbl_from_connection(con, "main", y)
         tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
@@ -165,7 +166,6 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
-        ## FIXME: for duplicate ROWNAMES(x/y), intersect() doesn't work... 
         dbrnms <- intersect(ROWNAMES(x), ROWNAMES(y))
         ind <- match(ROWNAMES(x), dbrnms)
         ind <- ind[!is.na(ind)]
@@ -177,9 +177,6 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                   out, dbconcatKey = dbrnms,
                                   indexes = list(ridx, NULL))
     }
-    ## FIXME: nor the dbconcatKey by default only works when x and y has same dbkey(). 
-    ## BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
-    ## e.g., df1 has duplicate rows, df2 has also duplicate rows, how to "inner_join"?
     out
 }
 
