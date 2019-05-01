@@ -3,6 +3,8 @@
 \docType{methods}
 \name{SQLDataFrame}
 \alias{SQLDataFrame}
+\alias{class:SQLDataFrame}
+\alias{SQLDataFrame-class}
 \alias{dbname,SQLDataFrame-method}
 \alias{dbname}
 \alias{dbtable,SQLDataFrame-method}
@@ -10,15 +12,21 @@
 \alias{dbkey,SQLDataFrame-method}
 \alias{dbkey}
 \alias{"dbkey<-"}
-\alias{"dbkey<-,SQLDataFrame-method"}
+\alias{dbkey<-}
+\alias{dbkey<-,SQLDataFrame-method}
 \alias{dbconcatKey,SQLDataFrame-method}
 \alias{dbconcatKey}
 \alias{ROWNAMES,SQLDataFrame-method}
 \alias{ROWNAMES}
 \alias{show,SQLDataFrame-method}
 \alias{coerce}
-\alias{coerce,SQLDataFrame,data.frame-class}
-\alias{coerce,SQLDataFrame,DataFrame-class}
+\alias{coerce,SQLDataFrame,data.frame-method}
+\alias{\code{SQLDataFrame}}
+\alias{object}
+\alias{for}
+\alias{coercion.}
+\alias{as.data.frame,SQLDataFrame-method}
+\alias{coerce,SQLDataFrame,DataFrame-method}
 \title{SQLDataFrame class}
 \usage{
 SQLDataFrame(dbname = character(0), dbtable = character(0),
@@ -39,7 +47,7 @@ SQLDataFrame(dbname = character(0), dbtable = character(0),
 \S4method{show}{SQLDataFrame}(object)
 
 \S4method{as.data.frame}{SQLDataFrame}(x, row.names = NULL,
-  optional = FALSE, ...)
+  optional = NULL, ...)
 }
 \arguments{
 \item{dbname}{A character string for the database file path.}
@@ -73,8 +81,6 @@ to \code{SQLDataFrame}. See \code{base::as.data.frame} for
 details.}
 
 \item{...}{additional arguments to be passed.}
-
-\item{from}{the \code{SQLDataFrame} object to be coerced.}
 }
 \value{
 A \code{SQLDataFrame} object.

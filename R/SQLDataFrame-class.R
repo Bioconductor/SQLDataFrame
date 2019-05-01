@@ -1,5 +1,6 @@
 #' SQLDataFrame class
 #' @name SQLDataFrame
+#' @aliases class:SQLDataFrame SQLDataFrame-class
 #' @rdname SQLDataFrame-class
 #' @description NULL
 #' @exportClass SQLDataFrame
@@ -230,7 +231,7 @@ setGeneric(
 ## and calculate the dbconcatKey again!
 #' @name "dbkey<-"
 #' @rdname SQLDataFrame-class
-#' @aliases "dbkey<-" "dbkey<-,SQLDataFrame-method"
+#' @aliases dbkey<- dbkey<-,SQLDataFrame-method
 #' @param value The column name to be used as \code{dbkey(x)}
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
@@ -390,7 +391,29 @@ setMethod("show", "SQLDataFrame", function (object)
 
 #' @rdname SQLDataFrame-class
 #' @name coerce
-#' @aliases coerce,SQLDataFrame,data.frame-class
+#' @aliases coerce,SQLDataFrame,data.frame-method
+## #' @param from the \code{data.frame}, \code{DataFrame}, or
+#'     \code{SQLDataFrame} object for coercion.
+#' @export
+
+setAs("SQLDataFrame", "data.frame", function(from)
+{
+    as.data.frame(from, optional = TRUE)
+})
+
+## refer to: getAnywhere(as.data.frame.tbl_sql) defined in dbplyr
+.as.data.frame.SQLDataFrame <- function(x, row.names = NULL,
+                                        optional = NULL, ...)
+{
+    tbl <- .extract_tbl_from_SQLDataFrame(x)
+    ridx <- normalizeRowIndex(x)
+    i <- match(ridx, sort(unique(ridx))) 
+    as.data.frame(tbl, row.names = row.names, optional = optional)[i, ]
+}
+
+#' @name coerce
+#' @rdname SQLDataFrame-class
+#' @aliases as.data.frame,SQLDataFrame-method
 #' @param x An \code{SQLDataFrame} object
 #' @param row.names \code{NULL} or a character vector giving the row
 #'     names for the data frame. Only including this argument for the
@@ -404,20 +427,11 @@ setMethod("show", "SQLDataFrame", function (object)
 #'     details.
 #' @param ... additional arguments to be passed.
 #' @export
-
-setMethod("as.data.frame", "SQLDataFrame",
-          function(x, row.names = NULL, optional = FALSE, ...)
-{
-    tbl <- .extract_tbl_from_SQLDataFrame(x)
-    ridx <- normalizeRowIndex(x)
-    i <- match(ridx, sort(unique(ridx))) 
-    as.data.frame(tbl, row.names = row.names, optional = optional)[i, ]
-})
+setMethod("as.data.frame", signature = "SQLDataFrame", .as.data.frame.SQLDataFrame)
 
 #' @name coerce
 #' @rdname SQLDataFrame-class
-#' @aliases coerce,SQLDataFrame,DataFrame-class
-#' @param from the \code{SQLDataFrame} object to be coerced.
+#' @aliases coerce,SQLDataFrame,DataFrame-method
 #' @export
 #' 
 setAs("SQLDataFrame", "DataFrame", function(from)
