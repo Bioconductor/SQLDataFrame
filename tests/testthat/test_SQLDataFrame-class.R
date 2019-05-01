@@ -34,7 +34,7 @@ test_that("SQLDataFrame constructor works",
     expect_true(validObject(obj))
     exp <- c("dbkey", "dbnrows", "tblData", "indexes", "dbconcatKey")
     expect_identical(exp, slotNames(obj))
-    expect_identical(test.db, normalizePath(dbname(obj)))
+    expect_identical(normalizePath(test.db), normalizePath(dbname(obj)))
     expect_identical("colData", dbtable(obj))
     expect_identical("sampleID", dbkey(obj))
     expect_identical(c(26L, 2L), dim(obj))
