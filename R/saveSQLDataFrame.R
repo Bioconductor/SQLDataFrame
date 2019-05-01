@@ -33,7 +33,6 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                              overwrite = FALSE,
                              index = TRUE, ...)
 {
-    ## browser()
     if (file.exists(dbname)) {
         dbname <- file_path_as_absolute(dbname)
         if (overwrite == FALSE)
@@ -41,18 +40,20 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                  "OR change 'overwrite = TRUE'. ")
     }
 
-    if (is(x@tblData$ops, "op_base") ) {  ## FIXME: mutate? / filter
+    if (is(x@tblData$ops, "op_base") ) {  
         con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
         aux <- .attach_database(con, dbname(x))
         tblx <- .open_tbl_from_connection(con, aux, x)  ## already
                                                         ## evaluated
                                                         ## ridx here.
         sql_cmd <- dbplyr::db_sql_render(con, tblx)
-    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {  ## "op_single"?
+    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) { 
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
         if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
-            dbWriteTable(con, paste0(dbtable, "_ridx"), value = data.frame(ridx = ridx(x)))
+            dbWriteTable(con, paste0(dbtable, "_ridx"), value =
+
+    data.frame(ridx = ridx(x)))
         }
     }
     dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd, con = con))
@@ -63,11 +64,13 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
 
     ## add unique index file with dbkey(x)
     if (index)
-        dbplyr:::db_create_indexes.DBIConnection(con, dbtable, indexes = list(dbkey(x)), unique = TRUE)
-    ## FIXME: implement "overwrite" argument here for the index file. if (found & overwrite)
-    ## https://www.w3schools.com/sql/sql_create_index.asp
-    ## DROP INDEX table_name.index_name;
-    ## see also: dbRemoveTable()
+        dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
+                                                 indexes = list(dbkey(x)),
+                                                 unique = TRUE)
+    ## FIXME: implement "overwrite" argument here for the index
+    ## file. if (found & overwrite)
+    ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
+    ## table_name.index_name; see also: dbRemoveTable()
     
     if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {
         file.copy(dbname(x), dbname, overwrite = overwrite)
@@ -81,7 +84,6 @@ msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
     msg <- paste0("## A new database table is saved! \n",
                   "## Source: table<", dbtable, "> [",
                   paste(dim(x), collapse = " X "), "] \n",
-                  ## "## Database: ", db_desc(con), "\n", 
                   "## Database: ",
                   paste("sqlite ", dbplyr:::sqlite_version(), " [", dbname, "] \n"),
                   "## Use the following command to reload into R: \n",
@@ -93,40 +95,3 @@ msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
                   ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
     message(msg)
 }
-
-## ## open a new connection to the new "dbname". 
-##     copy_to(con, res[[length(res)]], name = dbtable,
-##             temporary = FALSE, overwrite = TRUE,  ## overwrite? 
-##             unique_indexes = NULL, indexes = list(dbkey(x)),
-##             analyze = TRUE, ...)
-
-##     for (i in rev(seq_len(length(res)-1))){
-##         sql_tbl_append <- dbplyr::db_sql_render(con, res[[i]])
-##         ## check ROWNAMES, only append unique rows
-##         dbExecute(con, build_sql("INSERT INTO ", sql(dbtable), " ", sql_tbl_append))
-        
-        
-##     }
-##     ## dbGetQuery(con, paste0("SELECT * FROM ", in_schema()))
-##     ## open a new connection to write database table.
-##     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-##     ## attach the dbname of the to-be-copied "lazy tbl" to the new connection.
-##     ## FIXME: possible to attach an online database?
-##     auxName <- "aux"
-##     DBI::dbExecute(con, paste0("ATTACH '", dbname(x), "' AS ", auxName))
-    
-##     ## open the to-be-copied "lazy tbl" from new connection.
-##     tbl1 <- tbl(con, in_schema("aux", ident(dbtable(sdf1))))
-##     ## apply all @indexes to "tbl_dbi" object (that opened from destination connection).
-##     tbl1 <- .extract_tbl_from_SQLDataFrame_indexes(tbl1, sdf1) ## reorder by "key + otherCols"
-
-##     copy_to(con, tbl1, name = dbtable,
-##             temporary = FALSE, overwrite = TRUE,  ## overwrite? 
-##             unique_indexes = NULL, indexes = list(dbkey(sdf1)),
-##             analyze = TRUE, ...)
-##     ## by default "temporary = FALSE", to physically write the table,
-##     ## not only in the current connection. "indexes = dbkey(x)", to
-##     ## accelerate the query lookup
-##     ## (https://www.sqlite.org/queryplanner.html).
-    
-

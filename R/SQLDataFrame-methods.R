@@ -103,7 +103,6 @@ setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ###-------------------- 
 .extractROWS_SQLDataFrame <- function(x, i)
 {
-    ## browser()
     i <- normalizeSingleBracketSubscript(i, x)
     ridx <- x@indexes[[1]]
     if (is.null(ridx)) {
@@ -119,7 +118,6 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' @importFrom stats setNames
 .extractCOLS_SQLDataFrame <- function(x, j)
 {
-    ## browser()
     xstub <- setNames(seq_along(x), names(x))
     j <- normalizeSingleBracketSubscript(j, xstub)
     cidx <- x@indexes[[2]]
@@ -188,7 +186,6 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
-    ## browser()
     if (!isTRUEorFALSE(drop)) 
         stop("'drop' must be TRUE or FALSE")
     if (length(list(...)) > 0L) 
@@ -202,8 +199,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                 return(x)
             j <- i
         }
-        if (!is(j, "IntegerRanges")) {  ## FEATURE: keyword "select(col1, col2, ...)"
-            ## extracting key col value 
+        if (!is(j, "IntegerRanges")) {
             if (is.character(j) && length(j) == 1 && j %in% dbkey(x)) {
                 res <- .extract_tbl_from_SQLDataFrame(x) %>% select(j) %>% pull()
                 if (!drop)
@@ -250,7 +246,6 @@ setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
 setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
           function(x, i, j, ..., drop = TRUE)
 {
-    ## browser()
     if (!identical(dbkey(x), union(dbkey(x), names(i))))
         stop("Please use: \"", paste(dbkey(x), collapse=", "),
              "\" as the query list name(s).")
@@ -266,7 +261,6 @@ setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
 #' @export
 setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 {
-    ## browser()
     dotArgs <- list(...)
     if (length(dotArgs) > 0L) 
         dotArgs <- dotArgs[names(dotArgs) != "exact"]
@@ -336,7 +330,6 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 
 filter.SQLDataFrame <- function(.data, ...)
 {
-    ## browser()
     tbl <- .extract_tbl_from_SQLDataFrame(.data)
     temp <- dplyr::filter(tbl, ...)
 
@@ -366,7 +359,6 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    ## browser()
     if (is(.data@tblData$ops, "op_double") | is(.data@tblData$ops, "op_mutate")) {
         con <- .con_SQLDataFrame(.data)
         tbl <- .data@tblData

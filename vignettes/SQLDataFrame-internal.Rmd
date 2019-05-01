@@ -28,11 +28,10 @@ date: "last edit: 4/5/2018"
 [dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
 
 
-Load packages into R session.
+Load packages into R session. It will automatically load the package
+of `dplyr` and `dbplyr`.
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
-library(dplyr)
-library(dbplyr)
 ```
 
 # SQLDataFrame slots

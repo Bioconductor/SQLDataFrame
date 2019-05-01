@@ -77,9 +77,12 @@ makeSQLDataFrame <- function(filename,
     }
 
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-    dbWriteTable(con, dbtable, value = filename, overwrite = overwrite, sep = sep, ...)
+    dbWriteTable(con, dbtable, value = filename,
+                 overwrite = overwrite, sep = sep, ...)
     if (index)
-        dbplyr:::db_create_indexes.DBIConnection(con, dbtable, indexes = list(dbkey), unique = TRUE)
+        dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
+                                                 indexes = list(dbkey),
+                                                 unique = TRUE)
     ## FIXME: take "overwrite" as input? NO...
     
     out <- SQLDataFrame(dbname = dbname, dbtable = dbtable,

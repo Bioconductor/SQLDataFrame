@@ -1,9 +1,9 @@
 .union_SQLDataFrame <- function(x, y, copy = FALSE)
 {
-    ## browser()
     out <- .doCompatibleFunction(x, y, copy = copy,
-                                 FUN = dbplyr:::union.tbl_lazy)  ## dbplyr:::union.tbl_lazy
-    ## @dbconcatKey
+                                 FUN = dbplyr:::union.tbl_lazy)
+    ## dbplyr:::union.tbl_lazy
+    ## solving new @dbconcatKey
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))
     tt <- as.data.frame(do.call(rbind, strsplit(rnms, split = "\b")),
                         stringsAsFactors = FALSE)

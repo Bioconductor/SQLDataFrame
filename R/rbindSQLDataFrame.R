@@ -1,8 +1,7 @@
 .rbind_SQLDataFrame <- function(..., deparse.level = 1)
 {
-    ## browser()
     objects <- list(...)
-    ## check consistent dbkey(), colnames(),
+    ## check consistency of dbkey(), colnames()
     keys <- lapply(objects, dbkey)
     if (length(unique(keys)) != 1)
         stop("Input SQLDataFrame objects must have identical dbkey()!")

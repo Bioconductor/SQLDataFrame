@@ -75,7 +75,6 @@
 }
 
 .doCompatibleFunction <- function(x, y, ..., FUN) {
-    ## browser()
     tbls <- .join_union_prepare(x, y)
     tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
     dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
@@ -132,7 +131,6 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    ## browser()
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
@@ -161,7 +159,6 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     copy = FALSE,
                                     suffix = c(".x", ".y"), ...) 
 {
-    ## browser()
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
@@ -200,7 +197,6 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    ## browser()
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,

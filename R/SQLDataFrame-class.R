@@ -227,8 +227,8 @@ setGeneric(
     function(x, value) standardGeneric("dbkey<-"),
     signature="x")
 
-## FIXME: A little expensive... works like constructing a new SQLDF
-## and calculate the dbconcatKey again!
+## Works like constructing a new SQLDF and calculate the dbconcatKey
+## which is must.
 #' @name "dbkey<-"
 #' @rdname SQLDataFrame-class
 #' @aliases dbkey<- dbkey<-,SQLDataFrame-method
@@ -277,29 +277,17 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ## filter() makes sure it returns table with unique rows, no duplicate rows allowed...
 .extract_tbl_rows_by_key <- function(x, key, concatKey, i)  ## "concatKey" must correspond to "x"
 {
-    ## browser()
     ## always require a dbkey(), and accommodate with multiple key columns. 
     i <- sort(unique(i))
     if (length(key) == 1) {
-        ### keys <- pull(x, grep(key, colnames(x)))
-        ## expr <- lazyeval::interp(quote(x %in% y), x = as.name(key), y = keys[i])
         out <- x %>% filter(!!sym(key) %in% !!(concatKey[i]))
-        ## out <- x %>% filter_(paste(key, "%in%", "c(", paste(shQuote(keys[i]), collapse=","), ")"))
-        ## works, keep for now. 
     } else {
         x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep="\b"))
         ## FIXME: possible to remove the ".0" trailing after numeric values?
-        ## FIXME: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
+        ## see: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
         ### keys <- x %>% pull(concatKeys)
         out <- x %>% filter(concatKeys %in% !!(concatKey[i])) %>% select(-concatKeys)
         ## returns "tbl_dbi" object, no realization. 
-
-        ## keys <- x %>% transmute(concatKey = paste(!!!syms(key), sep="\b")) %>% pull(concatKey)
-        ## qry <- paste("SELECT * FROM ", x$ops$x,
-        ##              " WHERE (", paste(key, collapse = " || '\b' || ") ,
-        ##              ") IN ($1)")
-        ## out <- DBI::dbGetQuery(x$src$con, qry, param = list(keys[i]))
-        ## works, but "dbGetQuery" returns the result of a query as a data frame.
     }
     return(out)
 }
@@ -307,7 +295,6 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 ## Nothing special, just queried the ridx, and ordered tbl by "key+otherCols"
 .extract_tbl_from_SQLDataFrame <- function(x, collect = FALSE)
 {
-    ## browser()
     ridx <- ridx(x)
     tbl <- x@tblData
     if (!is.null(ridx))
@@ -320,11 +307,8 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 
 ## .printROWS realize all ridx(x), so be careful here to only use small x.
 .printROWS <- function(x, index){
-    ## browser()
-    tbl <- .extract_tbl_from_SQLDataFrame(x, collect = TRUE)  ## already ordered by
-                                              ## "key + otherCols".
-    ## i <- normalizeSingleBracketSubscript(index, x)  ## checks out-of-bound subscripts.
-    ## tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), i)
+    tbl <- .extract_tbl_from_SQLDataFrame(x, collect = TRUE)
+    ## already ordered by "key + otherCols".
     out.tbl <- collect(tbl)
     ridx <- normalizeRowIndex(x)
     i <- match(index, sort(unique(ridx))) 
@@ -344,7 +328,6 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 
 setMethod("show", "SQLDataFrame", function (object) 
 {
-    ## browser()
     nhead <- get_showHeadLines()
     ntail <- get_showTailLines()
     nr <- nrow(object)
@@ -353,11 +336,8 @@ setMethod("show", "SQLDataFrame", function (object)
         " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
         sep = "")
     if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column?
-        ## nms <- rownames(object)  ## currently, sdf does not support rownames().
         if (nr <= (nhead + ntail + 1L)) {
             out <- .printROWS(object, normalizeRowIndex(object))
-            ## if (!is.null(nms)) 
-            ##     rownames(out) <- nms
         }
         else {
             sdf.head <- object[seq_len(nhead), , drop=FALSE]
@@ -366,7 +346,6 @@ setMethod("show", "SQLDataFrame", function (object)
                 .printROWS(sdf.head, ridx(sdf.head)),
                 c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
                 .printROWS(sdf.tail, ridx(sdf.tail)))
-            ## rownames(out) <- S4Vectors:::.rownames(nms, nr, nhead, ntail)
         }
         classinfoFun <- function(tbl, colnames) {
             matrix(unlist(lapply(
@@ -392,8 +371,6 @@ setMethod("show", "SQLDataFrame", function (object)
 #' @rdname SQLDataFrame-class
 #' @name coerce
 #' @aliases coerce,SQLDataFrame,data.frame-method
-## #' @param from the \code{data.frame}, \code{DataFrame}, or
-#'     \code{SQLDataFrame} object for coercion.
 #' @export
 
 setAs("SQLDataFrame", "data.frame", function(from)
