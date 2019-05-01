@@ -3,6 +3,7 @@
 \docType{methods}
 \name{union}
 \alias{union}
+\alias{union,SQLDataFrame,SQLDataFrame-method}
 \title{Union of \code{SQLDataFrame} objects}
 \usage{
 \S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, copy = FALSE)

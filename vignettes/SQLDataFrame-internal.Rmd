@@ -32,6 +32,7 @@ Load packages into R session.
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
 library(dplyr)
+library(dbplyr)
 ```
 
 # SQLDataFrame slots

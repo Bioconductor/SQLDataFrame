@@ -70,7 +70,7 @@ The development version is also available to download from Github.
 BiocManager::install("Liubuntu/SQLDataFrame")
 ```
 2. Load the package into R session.
-```{r Load, message=FALSE, eval = FALSE}
+```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
 ```
 
@@ -148,7 +148,7 @@ dbtable(obj)
 aa <- rbind(obj[1:5, ], obj[6:10, ])
 aa
 dbtable(aa)  ## message
-bb <- saveSQLDataFrame(obj1, dbname = tempfile(fileext=".db"),
+bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
                        dbtable = "aa", overwrite = TRUE)
 dbtable(bb)
 dbname(bb)

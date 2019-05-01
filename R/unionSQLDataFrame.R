@@ -17,6 +17,7 @@
 
 #' Union of \code{SQLDataFrame} objects
 #' @name union
+#' @aliases union union,SQLDataFrame,SQLDataFrame-method
 #' @rdname unionSQLDataFrame
 #' @description Performs union operations on \code{SQLDataFrame}
 #'     objects.

@@ -91,7 +91,7 @@
 #########################
 
 #' join \code{SQLDataFrame} together
-#' @name join
+#' @name left_join
 #' @rdname joinSQLDataFrame
 #' @description *_join functions for \code{SQLDataFrame} objects. Will
 #'     preserve the duplicate rows for the input argument `x`.
@@ -102,6 +102,7 @@
 #'     the default, ‘*_join()’ will do a natural join, using all
 #'     variables with common names across the two tables. See
 #'     \code{?dplyr::join} for details.
+#' @param copy see \code{?dplyr::join} for details. 
 #' @param suffix A character vector of length 2 specify the suffixes
 #'     to be added if there are non-joined duplicate variables in ‘x’
 #'     and ‘y’. Default values are ".x" and ".y".See
@@ -122,16 +123,17 @@
 #' obj1_sub <- obj1[1:10, 1:2]
 #' obj2_sub <- obj2[8:15, 2:3]
 #'
-## #' left_join(obj1_sub, obj2_sub)
-## #' inner_join(obj1_sub, obj2_sub)
-## #' semi_join(obj1_sub, obj2_sub)
-## #' anti_join(obj1_sub, obj2_sub)
+#' left_join(obj1_sub, obj2_sub)
+#' inner_join(obj1_sub, obj2_sub)
+#' semi_join(obj1_sub, obj2_sub)
+#' anti_join(obj1_sub, obj2_sub)
 
 left_join.SQLDataFrame <- function(x, y, by = NULL,
+                                   copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
     ## browser()
-    out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::left_join.tbl_lazy)
@@ -151,14 +153,16 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
     }
 }
 
+#' @name inner_join
 #' @rdname joinSQLDataFrame
 #' @aliases inner_join inner_join,SQLDataFrame-method
 #' @export
 inner_join.SQLDataFrame <- function(x, y, by = NULL,
+                                    copy = FALSE,
                                     suffix = c(".x", ".y"), ...) 
 {
     ## browser()
-    out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::inner_join.tbl_lazy)
@@ -188,14 +192,16 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 ## see show_query(@tblData), "...WHERE EXISTS..."
 ## semi_join is similar to `inner_join`, but doesn't add new columns.
 
+#' @name semi_join
 #' @rdname joinSQLDataFrame
 #' @aliases semi_join semi_join,SQLDataFrame-method
 #' @export
 semi_join.SQLDataFrame <- function(x, y, by = NULL,
+                                   copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
     ## browser()
-    out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::semi_join.tbl_lazy)
@@ -219,13 +225,15 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
 ## for "anti_join", the new @tblData$ops is still "op_semi_join"
 ## see show_query(@tblData), "...WHERE NOT EXISTS..."
 
+#' @name anti_join
 #' @rdname joinSQLDataFrame
 #' @aliases anti_join anti_join,SQLDataFrame-method
 #' @export
 anti_join.SQLDataFrame <- function(x, y, by = NULL,
+                                   copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::anti_join.tbl_lazy)
