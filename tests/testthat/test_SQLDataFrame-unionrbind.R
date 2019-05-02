@@ -31,7 +31,8 @@ test_that("union SQLDataFrame with same source works!", {
     expect_true(validObject(u1))
     expect_identical(dim(u1), c(15L, 2L))
     expect_null(ridx(u1))
-    expect_identical(dirname(dbname(u1)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(u1))),
+                     normalizePath(tempdir()))
     expect_warning(dbtable(u1))
 })
 
@@ -41,7 +42,8 @@ test_that("union SQLDataFrame with difference source works!", {
     expect_true(validObject(u2))
     expect_identical(dim(u2), c(15L, 2L))
     expect_null(ridx(u2))
-    expect_identical(dirname(dbname(u2)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(u2))),
+                     normalizePath(tempdir()))
     expect_warning(dbtable(u2))
 
     u3 <- union(u2, obj21)
@@ -65,7 +67,8 @@ test_that("rbind SQLDataFrame works!", {
     expect_true(validObject(r1))
     expect_identical(dim(r1), c(18L, 2L))
     expect_identical(ridx(r1), match(ROWNAMES(r1), dbconcatKey(r1)))
-    expect_identical(dirname(dbname(r1)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(r1))),
+                     normalizepath(tempdir()))
     expect_warning(dbtable(r1))
 
     r2 <- rbind(r1, obj21)

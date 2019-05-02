@@ -8,7 +8,8 @@ test_that("makeSQLDataFrame works!", {
     expect_true(validObject(obj))
     expect_s4_class(obj, "SQLDataFrame")
     expect_identical(dim(obj), c(32L, 11L))
-    expect_identical(dirname(dbname(obj)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(obj))),
+                     normalizePath(tempdir()))
     expect_identical(dbtable(obj), "mtc")
     expect_identical(as.data.frame(obj), as.data.frame(mtc))
     
@@ -19,7 +20,8 @@ test_that("makeSQLDataFrame works!", {
     expect_true(validObject(obj))
     expect_s4_class(obj, "SQLDataFrame")
     expect_identical(dim(obj), c(32L, 11L))
-    expect_identical(dirname(dbname(obj)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(obj))),
+                     normalizePath(tempdir()))
     expect_identical(dbtable(obj), "mtc")
     expect_equal(as.data.frame(obj), as.data.frame(mtc))
 })

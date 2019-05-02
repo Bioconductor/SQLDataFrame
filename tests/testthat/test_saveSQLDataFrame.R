@@ -11,7 +11,8 @@ test_that("saveSQLDataFrame works!", {
     expect_true(validObject(aa))
     expect_s4_class(aa, "SQLDataFrame")
     expect_identical(dim(aa), c(50L, 3L))
-    expect_identical(dirname(dbname(aa)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(aa))),
+                     normalizePath(tempdir()))
     expect_identical(dbtable(aa), "obj")
     expect_identical(as.data.frame(aa), as.data.frame(obj))
     
@@ -21,7 +22,8 @@ test_that("saveSQLDataFrame works!", {
     expect_true(validObject(aa))
     expect_s4_class(aa, "SQLDataFrame")
     expect_identical(dim(aa), c(18L, 3L))
-    expect_identical(dirname(dbname(aa)), tempdir())
+    expect_identical(normalizepath(dirname(dbname(aa))),
+                     normalizePath(tempdir()))
     expect_identical(dbtable(aa), "obj1")
     expect_identical(as.data.frame(aa), as.data.frame(obj1))
     
@@ -29,7 +31,8 @@ test_that("saveSQLDataFrame works!", {
     obj1 <- obj %>% mutate(p1 = population/10)
     expect_message(aa <- saveSQLDataFrame(obj1))
     expect_identical(dim(aa), c(50L, 4L))
-    expect_identical(dirname(dbname(aa)), tempdir())
+    expect_identical(normalizePath(dirname(dbname(aa))),
+                     normalizepath(tempdir()))
     expect_identical(dbtable(aa), "obj1")
     expect_identical(as.data.frame(aa), as.data.frame(obj1))
 })
