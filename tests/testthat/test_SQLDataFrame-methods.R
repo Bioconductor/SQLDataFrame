@@ -77,3 +77,18 @@ test_that("'.extractCOLS_SQLDataFrame' works",
     expect_identical(NULL, obj1@indexes[[2]])
     expect_identical(dim(obj1), c(26L, 2L))
 })
+
+test_that("filter.SQLDataFrame works",
+{
+    obj1 <- obj %>% filter(Treatment == "ChIP")
+    expect_identical(dim(obj1), c(13L, 2L))
+    expect_equal(ridx(obj1), seq(1, 26, by=2))
+    expect_identical(obj@tblData, obj1@tblData)
+})
+
+test_that("mutate.SQLDataFrame works",
+{
+    obj1 <- obj %>% mutate(Age1 = ifelse(Ages <= 30, "30th", "40th"))
+    expect_identical(dim(obj1), c(26L, 3L))
+    expect_null(ridx(obj1))
+})

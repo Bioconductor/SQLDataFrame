@@ -4,7 +4,8 @@
 #'     table as SQLDataFrame.
 #' @param filename A \code{data.frame} or \code{DataFrame} object, or
 #'     a character string of the filepath to the text file that to be
-#'     saved as SQL database table.
+#'     saved as SQL database table. For filepath, the data columns
+#'     should not be quoted on disk.
 #' @param dbkey A character vector of column name(s) that could
 #'     uniquely identify each row of the filename. Must be provided in
 #'     order to construct a SQLDataFrame.
@@ -22,7 +23,7 @@
 #'     ‘NA_character_’. Default is \code{,}.
 #' @param index Whether to create an index table. Default is TRUE.
 #' @param ... additional arguments to be passed.
-#' @return A \code{SQLDataFrame} object. 
+#' @return A \code{SQLDataFrame} object.
 #' @importFrom tools file_path_as_absolute file_path_sans_ext
 #' @importFrom tibble rownames_to_column
 #' @import DBI
@@ -39,7 +40,7 @@
 #'
 #' ## character input
 #' filename <- file.path(tempdir(), "mtc.csv")
-#' write.csv(mtc, file= filename, row.names = FALSE)
+#' write.csv(mtc, file= filename, row.names = FALSE, quote = FALSE)
 #' obj <- makeSQLDataFrame(filename, dbkey = "rowname")
 #' obj
 #' 
@@ -53,8 +54,6 @@ makeSQLDataFrame <- function(filename,
                              index = TRUE,
                              ...)
 {
-    ## browser()
-
     stopifnot(is.data.frame(filename) | is(filename, "DataFrame") | isSingleString(filename))
     stopifnot(isSingleString(dbkey))
 
@@ -79,16 +78,18 @@ makeSQLDataFrame <- function(filename,
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
     dbWriteTable(con, dbtable, value = filename,
                  overwrite = overwrite, sep = sep, ...)
-    if (index)
+
+    ## FIXME: check if (overwrite & exists(index...)), do "DROP INDEX
+    ## IF EXISTS ..." first!
+    if (index) {
         dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
                                                  indexes = list(dbkey),
                                                  unique = TRUE)
-    ## FIXME: take "overwrite" as input? NO...
-    
+    }
+ 
     out <- SQLDataFrame(dbname = dbname, dbtable = dbtable,
                         dbkey = dbkey)
     msg <- msg_saveSQLDataFrame(out, dbname, dbtable)
     message(msg)
     return(out)
 }
-

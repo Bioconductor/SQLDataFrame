@@ -21,10 +21,6 @@
 \alias{show,SQLDataFrame-method}
 \alias{coerce}
 \alias{coerce,SQLDataFrame,data.frame-method}
-\alias{\code{SQLDataFrame}}
-\alias{object}
-\alias{for}
-\alias{coercion.}
 \alias{as.data.frame,SQLDataFrame-method}
 \alias{coerce,SQLDataFrame,DataFrame-method}
 \title{SQLDataFrame class}

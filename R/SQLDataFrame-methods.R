@@ -359,7 +359,7 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(.data@tblData$ops, "op_double") | is(.data@tblData$ops, "op_mutate")) {
+    if (is(.data@tblData$ops, "op_double") | is(.data@tblData$ops, "op_single")) {
         con <- .con_SQLDataFrame(.data)
         tbl <- .data@tblData
     } else {

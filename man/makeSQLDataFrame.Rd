@@ -10,7 +10,8 @@ makeSQLDataFrame(filename, dbkey = character(), dbname = NULL,
 \arguments{
 \item{filename}{A \code{data.frame} or \code{DataFrame} object, or
 a character string of the filepath to the text file that to be
-saved as SQL database table.}
+saved as SQL database table. For filepath, the data columns
+should not be quoted on disk.}
 
 \item{dbkey}{A character vector of column name(s) that could
 uniquely identify each row of the filename. Must be provided in
@@ -59,7 +60,7 @@ obj
 
 ## character input
 filename <- file.path(tempdir(), "mtc.csv")
-write.csv(mtc, file= filename, row.names = FALSE)
+write.csv(mtc, file= filename, row.names = FALSE, quote = FALSE)
 obj <- makeSQLDataFrame(filename, dbkey = "rowname")
 obj
 

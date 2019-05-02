@@ -47,7 +47,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                                                         ## evaluated
                                                         ## ridx here.
         sql_cmd <- dbplyr::db_sql_render(con, tblx)
-    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) { 
+    } else if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_single")) { 
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, x@tblData)
         if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
@@ -72,7 +72,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
     ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
     ## table_name.index_name; see also: dbRemoveTable()
     
-    if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {
+    if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_single")) {
         file.copy(dbname(x), dbname, overwrite = overwrite)
     }
     msg_saveSQLDataFrame(x, dbname, dbtable)

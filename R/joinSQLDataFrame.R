@@ -1,11 +1,11 @@
 .join_union_prepare <- function(x, y)
 {
     ## browser()  
-    if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_mutate")) {
+    if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_single")) {
         con <- .con_SQLDataFrame(x)
         tblx <- .open_tbl_from_connection(con, "main", x)
         
-        if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_mutate")) {
+        if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_single")) {
             ## attach all databases from y except "main", which is
             ## temporary connection from "union" or "join"
             dbs <- .dblist(con)
@@ -26,7 +26,7 @@
         } else {
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         }
-    } else if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_mutate"))
+    } else if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_single"))
     {  
         con <- .con_SQLDataFrame(y)
         tbly <- .open_tbl_from_connection(con, "main", y)
