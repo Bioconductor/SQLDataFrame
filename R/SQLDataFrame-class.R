@@ -76,7 +76,6 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
                          dbkey = character(0),
                          col.names = NULL
                          ){
-    ## browser()
     dbname <- tools::file_path_as_absolute(dbname)
     ## error if file does not exist!
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
@@ -95,6 +94,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
     }
     tbl <- con %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n)
+
     ## col.names
     cns <- colnames(tbl)
     if (is.null(col.names)) {
@@ -152,12 +152,6 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
 
 .validity_SQLDataFrame <- function(object)
 {
-    ## dbtable match ## dbExistsTable(con, "tablename")
-    ## tbls <- .available_tbls(dbname(object))
-    ## if (! dbtable(object) %in% tbls)
-    ##     stop('"dbtable" must be one of :', tbls)    
-    ## @indexes length
-    ## browser()
     idx <- object@indexes
     if (length(idx) != 2) {
         stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
@@ -194,7 +188,6 @@ setGeneric("dbtable", signature = "x", function(x)
 
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
-    ## browser()
     op <- x@tblData$ops
     if (! is(op, "op_double")) {
         out1 <- op$x
@@ -206,7 +199,7 @@ setMethod("dbtable", "SQLDataFrame", function(x)
         }
            return(as.character(out1))
     } else {
-        message(.msg_dbtable)
+        warning(.msg_dbtable)
     }
 })
 .msg_dbtable <- paste0("## not available for SQLDataFrame with lazy queries ",
