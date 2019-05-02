@@ -68,7 +68,7 @@ test_that("rbind SQLDataFrame works!", {
     expect_identical(dim(r1), c(18L, 2L))
     expect_identical(ridx(r1), match(ROWNAMES(r1), dbconcatKey(r1)))
     expect_identical(normalizePath(dirname(dbname(r1))),
-                     normalizepath(tempdir()))
+                     normalizePath(tempdir()))
     expect_warning(dbtable(r1))
 
     r2 <- rbind(r1, obj21)
