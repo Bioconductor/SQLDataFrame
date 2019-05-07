@@ -230,6 +230,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 
 #' @rdname SQLDataFrame-methods
 #' @importFrom methods is as callNextMethod
+#' @aliases 
 #' @export
 setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
           function(x, i, j, ..., drop = TRUE)

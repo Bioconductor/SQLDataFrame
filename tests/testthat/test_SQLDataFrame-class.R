@@ -102,7 +102,7 @@ test_that("coercion to SQLDataFrame works",
     aa <- list(letters, LETTERS)
     expect_error(as(aa, "SQLDataFrame"))
 
-    da <- DelayedArray(array(1:26, c(13,2)))
+    da <- DelayedArray::DelayedArray(array(1:26, c(13,2)))
     expect_message(obj <- as(da, "SQLDataFrame"))
     expect_s4_class(obj, "SQLDataFrame")
     expect_identical(dim(obj), c(13L, 1L))

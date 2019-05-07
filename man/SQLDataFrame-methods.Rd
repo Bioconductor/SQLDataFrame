@@ -15,9 +15,9 @@
 \alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
-\alias{[,SQLDataFrame,ANY-method}
-\alias{[,SQLDataFrame,SQLDataFrame-method}
-\alias{[,SQLDataFrame,list-method}
+\alias{[,SQLDataFrame,ANY,ANY,ANY-method}
+\alias{[,SQLDataFrame,SQLDataFrame,ANY,ANY-method}
+\alias{[,SQLDataFrame,list,ANY,ANY-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
 \alias{filter.SQLDataFrame}
@@ -40,11 +40,12 @@
 
 \S4method{names}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
-\S4method{[}{SQLDataFrame,SQLDataFrame}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,SQLDataFrame,ANY,ANY}(x, i, j, ...,
+  drop = TRUE)
 
-\S4method{[}{SQLDataFrame,list}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,list,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 
