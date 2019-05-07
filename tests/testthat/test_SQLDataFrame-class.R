@@ -86,3 +86,26 @@ test_that("'as.data.frame' works",
                       stringsAsFactors = FALSE)
     expect_identical(exp, as.data.frame(obj1))
 })
+
+test_that("coercion to SQLDataFrame works",
+{
+    expect_error(as(letters, "SQLDataFrame"))
+
+    aa <- list(a=letters, b=LETTERS)
+    expect_message(obj <- as(aa, "SQLDataFrame"))
+    expect_true(validObject(obj))
+    expect_s4_class(obj, "SQLDataFrame")
+    expect_identical(dim(obj), c(26L, 1L))
+    expect_identical(dbtable(obj), "from") ## FIXME: use "aa"? 
+    expect_identical(dbkey(obj), "a")
+    
+    aa <- list(letters, LETTERS)
+    expect_error(as(aa, "SQLDataFrame"))
+
+    da <- DelayedArray(array(1:26, c(13,2)))
+    expect_message(obj <- as(da, "SQLDataFrame"))
+    expect_s4_class(obj, "SQLDataFrame")
+    expect_identical(dim(obj), c(13L, 1L))
+    expect_identical(dbtable(obj), "from") ## FIXME: use "da"? 
+    expect_identical(dbkey(obj), "V1")
+})

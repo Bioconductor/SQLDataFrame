@@ -23,6 +23,9 @@
 \alias{coerce,SQLDataFrame,data.frame-method}
 \alias{as.data.frame,SQLDataFrame-method}
 \alias{coerce,SQLDataFrame,DataFrame-method}
+\alias{coerce,data.frame,SQLDataFrame-method}
+\alias{coerce,DataFrame,SQLDataFrame-method}
+\alias{coerce,ANY,SQLDataFrame-method}
 \title{SQLDataFrame class}
 \usage{
 SQLDataFrame(dbname = character(0), dbtable = character(0),
@@ -113,6 +116,7 @@ ROWNAMES(obj1[sample(10, 5), ])
 ## coercion
 as.data.frame(obj)
 as(obj, "DataFrame")
+
 
 ## dbkey replacement
 dbkey(obj) <- c("region", "population")

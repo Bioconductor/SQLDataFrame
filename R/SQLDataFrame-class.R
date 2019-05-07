@@ -63,7 +63,8 @@ setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 #' ## coercion
 #' as.data.frame(obj)
 #' as(obj, "DataFrame")
-#'
+#' 
+#' 
 #' ## dbkey replacement
 #' dbkey(obj) <- c("region", "population")
 #' obj
@@ -157,7 +158,7 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
         stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
     }
     if (any(duplicated(dbconcatKey(object)))) {
-        stop("The 'dbkey' column of SQLDataFrame '", dbkey(obj),
+        stop("The 'dbkey' column of SQLDataFrame '", dbkey(object),
              "' must have unique values!")
     }
 }
@@ -407,5 +408,52 @@ setMethod("as.data.frame", signature = "SQLDataFrame", .as.data.frame.SQLDataFra
 setAs("SQLDataFrame", "DataFrame", function(from)
 {
     as(as.data.frame(from), "DataFrame")
+})
+
+#' @name coerce
+#' @rdname SQLDataFrame-class
+#' @aliases coerce,data.frame,SQLDataFrame-method
+#' @export
+#' 
+setAs("data.frame", "SQLDataFrame", function(from)
+{
+    ## check if unique for columns (from left to right)
+    ## browser()
+    for (i in seq_len(ncol(from))) {
+        ifunique <- !any(duplicated(from[,i]))
+        if (ifunique) break
+    }
+    dbkey <- colnames(from)[i]
+    msg <- paste0("## Using the '", dbkey, "' as 'dbkey' column. \n",
+                  "## Otherwise, construct a \"SQLDataFrame\" by: \n",
+                  "## \"makeSQLDataFrame(filename, dbkey = \"\")\" \n")
+    message(msg)
+    makeSQLDataFrame(from, dbkey = colnames(from)[i])
+})
+
+#' @name coerce
+#' @rdname SQLDataFrame-class
+#' @aliases coerce,DataFrame,SQLDataFrame-method
+#' @export
+#' 
+setAs("DataFrame", "SQLDataFrame", function(from)
+{
+    as(as.data.frame(from), "SQLDataFrame")
+})
+
+#' @name coerce
+#' @rdname SQLDataFrame-class
+#' @aliases coerce,ANY,SQLDataFrame-method
+#' @export
+#' 
+setAs("ANY", "SQLDataFrame", function(from)
+{
+    from <- as.data.frame(from)
+    if (ncol(from) == 1)
+        stop("There should be more than 1 columns available ",
+             "to construct a \"SQLDataFrame\" object")
+    if (anyDuplicated(tolower(colnames(from))))
+        stop("Please use distinct colnames (case-unsensitive)!")
+    as(as.data.frame(from), "SQLDataFrame")
 })
 

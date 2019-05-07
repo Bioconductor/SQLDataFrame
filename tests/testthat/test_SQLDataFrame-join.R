@@ -36,7 +36,7 @@ test_that("inner_join works", {
     expect_equal(colnames(aa), colnames(obj))
     expect_equal(ridx(aa), NULL)
 
-    ## join with duplicate rows
+    ## join with duplicate rows  ## intersect? more
     aa <- suppressMessages(inner_join(obj_sub1, obj1_sub1))
     expect_equal(dim(aa), c(6L, 3L))
     expect_equal(ridx(aa), c(1L, 2L, rep(c(3L, 4L), 2)))
