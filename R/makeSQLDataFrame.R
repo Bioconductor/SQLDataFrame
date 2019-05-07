@@ -55,7 +55,6 @@ makeSQLDataFrame <- function(filename,
                              ...)
 {
     stopifnot(is.data.frame(filename) | is(filename, "DataFrame") | isSingleString(filename))
-    stopifnot(isSingleString(dbkey))
 
     if (isSingleString(filename)) {
         stopifnot(file.exists(filename))

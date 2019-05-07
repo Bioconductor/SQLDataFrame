@@ -16,8 +16,11 @@
 \alias{names,SQLDataFrame-method}
 \alias{names}
 \alias{[,SQLDataFrame,ANY,ANY,ANY-method}
+\alias{[,SQLDataFrame,ANY-method}
 \alias{[,SQLDataFrame,SQLDataFrame,ANY,ANY-method}
+\alias{[,SQLDataFrame,SQLDataFrame-method}
 \alias{[,SQLDataFrame,list,ANY,ANY-method}
+\alias{[,SQLDataFrame,list-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
 \alias{filter.SQLDataFrame}

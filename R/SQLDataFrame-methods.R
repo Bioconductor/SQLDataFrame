@@ -142,6 +142,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' @return A \code{SQLDataFrame} object or vector with realized column
 #'     values (with single column subsetting and default
 #'     \code{drop=TRUE}. )
+#' @aliases [,SQLDataFrame,ANY-method 
 #' @importFrom tibble tibble 
 #' @export
 #' @examples
@@ -230,7 +231,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 
 #' @rdname SQLDataFrame-methods
 #' @importFrom methods is as callNextMethod
-#' @aliases 
+#' @aliases [,SQLDataFrame,SQLDataFrame-method 
 #' @export
 setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
           function(x, i, j, ..., drop = TRUE)
@@ -243,6 +244,7 @@ setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
 })
 
 #' @rdname SQLDataFrame-methods
+#' @aliases [,SQLDataFrame,list-method 
 #' @export
 setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
           function(x, i, j, ..., drop = TRUE)
