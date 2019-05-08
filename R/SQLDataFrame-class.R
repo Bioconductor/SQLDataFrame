@@ -329,7 +329,7 @@ setMethod("show", "SQLDataFrame", function (object)
     cat(class(object), " with ", nr, ifelse(nr == 1, " row and ", 
         " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
         sep = "")
-    if (nr > 0 && nc > 0) {  ## FIXME, if nc==0, still print key column?
+    if (nr > 0 && nc >= 0) {
         if (nr <= (nhead + ntail + 1L)) {
             out <- .printROWS(object, normalizeRowIndex(object))
         }
@@ -349,11 +349,13 @@ setMethod("show", "SQLDataFrame", function (object)
             use.names = FALSE), nrow = 1,
             dimnames = list("", colnames))}
         classinfo_key <- classinfoFun(object@tblData, dbkey(object))
-        classinfo_key <- matrix(
-            c(classinfo_key, "|"), nrow = 1,
-            dimnames = list("", c(dbkey(object), "|")))
-        classinfo_other <- classinfoFun(object@tblData, colnames(object))
-        out <- rbind(cbind(classinfo_key, classinfo_other), out)
+        classinfo <- matrix(c(classinfo_key, "|"), nrow = 1,
+                            dimnames = list("", c(dbkey(object), "|")))
+        if (nc > 0) {
+            classinfo_other <- classinfoFun(object@tblData, colnames(object))
+            classinfo <- cbind(classinfo, classinfo_other)
+        }
+        out <- rbind(classinfo, out)
         print(out, quote = FALSE, right = TRUE)
     }
 })
