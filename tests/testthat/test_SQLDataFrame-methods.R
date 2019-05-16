@@ -15,7 +15,7 @@ test_that("[[,SQLDataFrame works",
     exp <- rep(c("ChIP", "Input"), 13)
     expect_identical(exp, obj[[1]])
 
-    exp <- obj@tblData %>% pull(Ages)
+    exp <- tblData(obj) %>% pull(Ages)
     expect_identical(exp, obj[[2]])
     expect_identical(obj[[2]], obj[["Ages"]])
 
@@ -63,7 +63,7 @@ test_that("'extractROWS,SQLDataFrame' works",
     obj1 <- extractROWS(obj, 1:5)
     expect_s4_class(obj1, "SQLDataFrame")
 
-    expect_identical(obj@tblData, obj1@tblData)
+    expect_identical(tblData(obj), tblData(obj1))
     expect_identical(1:5, obj1@indexes[[1]])
     expect_identical(dim(obj1), c(5L, 2L))
 })
@@ -73,7 +73,7 @@ test_that("'.extractCOLS_SQLDataFrame' works",
     obj1 <- .extractCOLS_SQLDataFrame(obj, 1:2)
     expect_s4_class(obj1, "SQLDataFrame")
 
-    expect_identical(obj@tblData, obj1@tblData)
+    expect_identical(tblData(obj), tblData(obj1))
     expect_identical(NULL, obj1@indexes[[2]])
     expect_identical(dim(obj1), c(26L, 2L))
 })
@@ -83,7 +83,7 @@ test_that("filter.SQLDataFrame works",
     obj1 <- obj %>% filter(Treatment == "ChIP")
     expect_identical(dim(obj1), c(13L, 2L))
     expect_equal(ridx(obj1), seq(1, 26, by=2))
-    expect_identical(obj@tblData, obj1@tblData)
+    expect_identical(tblData(obj), tblData(obj1))
 })
 
 test_that("mutate.SQLDataFrame works",

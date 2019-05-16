@@ -75,7 +75,7 @@ setMethod("dim", "SQLDataFrame", function(x)
 
 setMethod("dimnames", "SQLDataFrame", function(x)
 {
-    cns <- colnames(x@tblData)[-.wheredbkey(x)]
+    cns <- colnames(tblData(x))[-.wheredbkey(x)]
     cidx <- x@indexes[[2]]
     if (!is.null(cidx))
         cns <- cns[cidx]
@@ -362,9 +362,9 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(.data@tblData$ops, "op_double") | is(.data@tblData$ops, "op_single")) {
+    if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
         con <- .con_SQLDataFrame(.data)
-        tbl <- .data@tblData
+        tbl <- tblData(.data)
     } else {
         dbname <- tempfile(fileext = ".db")
         con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)

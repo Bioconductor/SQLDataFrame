@@ -56,6 +56,10 @@ setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 #' dbconcatKey(obj)
 #' dbconcatKey(obj1)
 #'
+#' ## slot accessors (for internal use only)
+#' tblData(obj)
+#' dbnrows(obj)
+#' 
 #' ## ROWNAMES
 #' ROWNAMES(obj[sample(10, 5), ])
 #' ROWNAMES(obj1[sample(10, 5), ])
@@ -130,7 +134,6 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
     }
     
     ## concatKey
-    ## keyDF <- DataFrame(select(tbl, dbkey))  ## attemp for DF format
     concatKey <- tbl %>%
         mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
         pull(concatKey)
@@ -145,11 +148,6 @@ SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
 }
 
 ## FIXME: use of "dbConnect" has limits??
-
-## now the "[,DataFrame" methods depends on `extractROWS,DataFrame`,
-## should define first. which calls `extractROWS,listData(DF)`. How
-## to save listData? save the whole tbl.db? or in columns?
-## "show,DataFrame" calls `lapply()`.
 
 .validity_SQLDataFrame <- function(object)
 {
@@ -168,6 +166,18 @@ setValidity("SQLDataFrame", .validity_SQLDataFrame)
 ## accessor
 ###-------------
 
+setGeneric("tblData", signature = "x", function(x)
+    standardGeneric("tblData"))
+
+#' @rdname SQLDataFrame-class
+#' @aliases tblData tblData,SQLDataFrame-method
+#' @export
+
+setMethod("tblData", "SQLDataFrame", function(x)
+{
+    x@tblData
+})
+
 setGeneric("dbname", signature = "x", function(x)
     standardGeneric("dbname"))
 
@@ -177,7 +187,7 @@ setGeneric("dbname", signature = "x", function(x)
 
 setMethod("dbname", "SQLDataFrame", function(x)
 {
-    x@tblData$src$con@dbname
+    tblData(x)$src$con@dbname
 })
 
 setGeneric("dbtable", signature = "x", function(x)
@@ -189,7 +199,7 @@ setGeneric("dbtable", signature = "x", function(x)
 
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
-    op <- x@tblData$ops
+    op <- tblData(x)$ops
     if (! is(op, "op_double")) {
         out1 <- op$x
         repeat {
@@ -230,7 +240,7 @@ setGeneric(
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
-    concatKey <- x@tblData %>%
+    concatKey <- tblData(x) %>%
         mutate(concatKey = paste(!!!syms(value), sep="\b")) %>%
         pull(concatKey)
     BiocGenerics:::replaceSlots(x, dbkey = value,
@@ -247,7 +257,17 @@ setGeneric("dbconcatKey", signature = "x", function(x)
 setMethod("dbconcatKey", "SQLDataFrame", function(x)
 {
     x@dbconcatKey
-    ## do.call(paste, c(as.list(x@keyDF), sep="\b"))
+})
+
+setGeneric("dbnrows", signature = "x", function(x)
+    standardGeneric("dbnrows"))
+
+#' @rdname SQLDataFrame-class
+#' @aliases dbnrows dbnrows,SQLDataFrame-method
+#' @export
+setMethod("dbnrows", "SQLDataFrame", function(x)
+{
+    x@dbnrows
 })
 
 #' @rdname SQLDataFrame-class
@@ -290,7 +310,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 .extract_tbl_from_SQLDataFrame <- function(x, collect = FALSE)
 {
     ridx <- ridx(x)
-    tbl <- x@tblData
+    tbl <- tblData(x)
     if (!is.null(ridx))
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), dbconcatKey(x), ridx)
     if (collect)
@@ -348,11 +368,11 @@ setMethod("show", "SQLDataFrame", function (object)
             { paste0("<", classNameForDisplay(x)[1], ">") }),
             use.names = FALSE), nrow = 1,
             dimnames = list("", colnames))}
-        classinfo_key <- classinfoFun(object@tblData, dbkey(object))
+        classinfo_key <- classinfoFun(tblData(object), dbkey(object))
         classinfo <- matrix(c(classinfo_key, "|"), nrow = 1,
                             dimnames = list("", c(dbkey(object), "|")))
         if (nc > 0) {
-            classinfo_other <- classinfoFun(object@tblData, colnames(object))
+            classinfo_other <- classinfoFun(tblData(object), colnames(object))
             classinfo <- cbind(classinfo, classinfo_other)
         }
         out <- rbind(classinfo, out)
@@ -420,7 +440,6 @@ setAs("SQLDataFrame", "DataFrame", function(from)
 setAs("data.frame", "SQLDataFrame", function(from)
 {
     ## check if unique for columns (from left to right)
-    ## browser()
     for (i in seq_len(ncol(from))) {
         ifunique <- !any(duplicated(from[,i]))
         if (ifunique) break

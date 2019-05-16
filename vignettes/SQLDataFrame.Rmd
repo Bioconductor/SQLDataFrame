@@ -138,7 +138,7 @@ ROWNAMES(obj)
 ```
 
 **NOTE** that the `dbtable()` accessor only works for a `SQLDataFrame`
-object that the lazy tbl carried in `@tblData` slot corresponds to a
+object that the lazy tbl carried in `tblData` slot corresponds to a
 single database. If the `SQLDataFrame` was generated from `rbind`,
 `union` or `*_join`, call `saveSQLDataFrame()` to save the lazy tbl to
 disk so that `dbtable()` will be activated.
@@ -187,8 +187,8 @@ With all the methods (`[` subsetting, `rbind`, `*_join`, etc.,)
 provided in the next section, the `SQLDataFrame` always work like a
 lazy representation until users explicitly call the `saveSQLDataFrame`
 function for realization. `saveSQLDataFrame` write the lazy tbl
-carried in `@tblData` into an on-disk database table, and reopen the
-`SQLDataFrame` object from the new path.
+carried in `tblData` slot into an on-disk database table, and re-open
+the `SQLDataFrame` object from the new path.
 
 It's also recommended that users call `saveSQLDataFrame` frequently to
 avoid too many lazy layers which slows down the data processing. 
@@ -312,7 +312,7 @@ obj2  ## keeping the original order by updating the row index
 
 **maybe remove this part for vignette.** 
 ```{r, eval=FALSE}
-identical(as.data.frame(ss11@tblData), as.data.frame(ss21@tblData))
+identical(as.data.frame(tblData(ss11)), as.data.frame(tblData(ss21)))
 ```
 
 ## *_join methods

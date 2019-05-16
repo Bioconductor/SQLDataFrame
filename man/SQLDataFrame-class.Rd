@@ -5,6 +5,8 @@
 \alias{SQLDataFrame}
 \alias{class:SQLDataFrame}
 \alias{SQLDataFrame-class}
+\alias{tblData,SQLDataFrame-method}
+\alias{tblData}
 \alias{dbname,SQLDataFrame-method}
 \alias{dbname}
 \alias{dbtable,SQLDataFrame-method}
@@ -16,6 +18,8 @@
 \alias{dbkey<-,SQLDataFrame-method}
 \alias{dbconcatKey,SQLDataFrame-method}
 \alias{dbconcatKey}
+\alias{dbnrows,SQLDataFrame-method}
+\alias{dbnrows}
 \alias{ROWNAMES,SQLDataFrame-method}
 \alias{ROWNAMES}
 \alias{show,SQLDataFrame-method}
@@ -31,6 +35,8 @@
 SQLDataFrame(dbname = character(0), dbtable = character(0),
   dbkey = character(0), col.names = NULL)
 
+\S4method{tblData}{SQLDataFrame}(x)
+
 \S4method{dbname}{SQLDataFrame}(x)
 
 \S4method{dbtable}{SQLDataFrame}(x)
@@ -40,6 +46,8 @@ SQLDataFrame(dbname = character(0), dbtable = character(0),
 \S4method{dbkey}{SQLDataFrame}(x) <- value
 
 \S4method{dbconcatKey}{SQLDataFrame}(x)
+
+\S4method{dbnrows}{SQLDataFrame}(x)
 
 \S4method{ROWNAMES}{SQLDataFrame}(x)
 
@@ -108,6 +116,10 @@ dbkey(obj1)
 
 dbconcatKey(obj)
 dbconcatKey(obj1)
+
+## slot accessors (for internal use only)
+tblData(obj)
+dbnrows(obj)
 
 ## ROWNAMES
 ROWNAMES(obj[sample(10, 5), ])

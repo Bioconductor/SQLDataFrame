@@ -55,7 +55,6 @@ slotNames(obj)
 dbname(obj)
 dbtable(obj)
 dbkey(obj)
-dbconcatKey(obj)
 ```
 
 ## `tblData` slot
@@ -68,18 +67,20 @@ generated from `union` or `rbind`. So when the `saveSQLDataFrame()`
 function was called, a database table will be written into a physical
 disk space and have the unique records.
 
+Accessor function is made avaible for this slot: 
 ```{r}
-obj@tblData
+tblData(obj)
 ```
 
 ## `dbnrows` and `dbconcatKey`
 The `dbnrows` slot saves the number of rows corresponding to the
 `tblData`, and `dbconcatKey` saves the realized (concatenated if
-multiple) key columns corresponding to the `tblData`. 
+multiple) key columns corresponding to the `tblData`. Accessor
+functions are also available for these 2 slots: 
 
 ```{r}
-obj@dbnrows
-obj@dbconcatKey
+dbnrows(obj)
+dbconcatKey(obj)
 ```
 
 ## `indexes` slot
@@ -95,7 +96,7 @@ obj@indexes
 obj_sub <- obj[sample(5, 3, replace = TRUE), 2:3]
 obj_sub
 obj_sub@indexes
-identical(obj@tblData, obj_sub@tblData)
+identical(tblData(obj), tblData(obj_sub))
 ```
 
 With a `filter` function (which is similar to `[i, ]` subsetting),
@@ -105,7 +106,7 @@ the `tblData`.
 ```{r}
 obj_filter <- obj %>% filter(division == "South Atlantic" & size == "medium")
 obj_filter@indexes
-identical(obj@tblData, obj_filter@tblData)
+identical(tblData(obj), tblData(obj_filter))
 ```
 
 # SQLDataFrame methods

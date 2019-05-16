@@ -7,12 +7,12 @@
 
 .wheredbkey <- function(x) {
     stopifnot(is(x, "SQLDataFrame"))
-    match(dbkey(x), colnames(x@tblData))
+    match(dbkey(x), colnames(tblData(x)))
 }
 
 .con_SQLDataFrame <- function(x)
 {
-    x@tblData$src$con
+    tblData(x)$src$con
 }
 
 ridx <- function(x)

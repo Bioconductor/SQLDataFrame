@@ -1,11 +1,10 @@
 .join_union_prepare <- function(x, y)
 {
-    ## browser()  
-    if (is(x@tblData$ops, "op_double") | is(x@tblData$ops, "op_single")) {
+    if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
         con <- .con_SQLDataFrame(x)
         tblx <- .open_tbl_from_connection(con, "main", x)
         
-        if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_single")) {
+        if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {
             ## attach all databases from y except "main", which is
             ## temporary connection from "union" or "join"
             dbs <- .dblist(con)
@@ -26,7 +25,7 @@
         } else {
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         }
-    } else if (is(y@tblData$ops, "op_double") | is(y@tblData$ops, "op_single"))
+    } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single"))
     {  
         con <- .con_SQLDataFrame(y)
         tbly <- .open_tbl_from_connection(con, "main", y)
@@ -41,7 +40,6 @@
 }
 
 .attachMaybe_and_open_tbl_in_new_connection <- function(con, sdf) {
-    ## browser()
     dbs <- .dblist(con)
     aux <- dbs[match(dbname(sdf), dbs$file), "name"]
     if (is.na(aux))
@@ -185,8 +183,8 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 ## semi_join, anti_join (filtering joins)
 #########################
 
-## for "semi_join", the new @tblData$ops is "op_semi_join".
-## see show_query(@tblData), "...WHERE EXISTS..."
+## for "semi_join", the new tblData()$ops is "op_semi_join".
+## see show_query(tblData()), "...WHERE EXISTS..."
 ## semi_join is similar to `inner_join`, but doesn't add new columns.
 
 #' @name semi_join
@@ -218,8 +216,8 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
     out
 }
 
-## for "anti_join", the new @tblData$ops is still "op_semi_join"
-## see show_query(@tblData), "...WHERE NOT EXISTS..."
+## for "anti_join", the new tblData()$ops is still "op_semi_join"
+## see show_query(tblData()), "...WHERE NOT EXISTS..."
 
 #' @name anti_join
 #' @rdname joinSQLDataFrame
