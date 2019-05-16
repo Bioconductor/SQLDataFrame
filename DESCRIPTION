@@ -1,14 +1,18 @@
 Package: SQLDataFrame
 Title: Representation of database tables in DataFrame metaphor
-Version: 0.99.24
+Version: 0.99.25
 Authors@R: c(
     person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"),
     comment = c(ORCID = "0000-0003-1456-5099")),
     person("Martin", "Morgan", email = "martin.morgan@roswellpark.org", role = "aut"))
-Description: This package will represent the database tables using
-    DataFrame metaphor. It could also convert an in-memory dataset or a
-    plain text file (.txt, .csv, etc.) into a SQLDataFrame by generating a
-    new database.
+Description: SQLDataFrame is developed to lazily represent and
+    efficiently analyze SQL-based tables in _R_. SQLDataFrame supports
+    common and familiar 'DataFrame' operations such as '[' subsetting,
+    rbind, cbind, etc.. The internal implementation is based on the
+    widely adopted dplyr grammar and SQL commands. In-memory datasets
+    or plain text files (.txt, .csv, etc.) could also be easily
+    converted into SQLDataFrames objects (which generates a new
+    database on-disk).
 biocViews: Infrastructure, DataRepresentation
 URL: https://github.com/Bioconductor/SQLDataFrame
 BugReports: https://github.com/Bioconductor/SQLDataFrame/issues  
