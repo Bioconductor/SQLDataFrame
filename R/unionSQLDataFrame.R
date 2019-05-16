@@ -7,7 +7,8 @@
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))
     tt <- as.data.frame(do.call(rbind, strsplit(rnms, split = "\b")),
                         stringsAsFactors = FALSE)
-    cls <- tblData(out) %>% head %>% select(dbkey(x)) %>% as.data.frame() %>% sapply(class)
+    cls <- tblData(out) %>% head %>% select(dbkey(x)) %>%
+        as.data.frame() %>% vapply(class, character(1))
     for (i in seq_len(length(tt))) class(tt[,i]) <- unname(cls)[i]
     od <- do.call(order, tt)
     dbrnms <- rnms[od]
