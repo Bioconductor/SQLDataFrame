@@ -143,10 +143,11 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
         if (!identical(ind, seq_len(nrow(x)))) {
             ridx <- ind
         }
-        BiocGenerics:::replaceSlots(
+        out <- BiocGenerics:::replaceSlots(
                            out, dbconcatKey = dbrnms,
                            indexes = list(ridx, NULL))
     }
+    out
 }
 
 #' @name inner_join
@@ -241,9 +242,10 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL,
         if (!identical(ind, normalizeRowIndex(out))) {
             ridx <- ind
         }
-        BiocGenerics:::replaceSlots(
+        out <- BiocGenerics:::replaceSlots(
                            out, dbconcatKey = dbrnms,
                            indexes = list(ridx, NULL))
     }
+    out
 }
 
