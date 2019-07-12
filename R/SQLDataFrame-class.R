@@ -6,7 +6,8 @@
 #' @exportClass SQLDataFrame
 #' @importFrom methods setOldClass new
 ## add other connections. 
-setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
+setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
+              "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
     slots = c(
@@ -73,32 +74,41 @@ setOldClass(c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 #' dbkey(obj) <- c("region", "population")
 #' obj
 
-SQLDataFrame <- function(dbname = character(0),  ## cannot be ":memory:"
+SQLDataFrame <- function(conn,
                          dbtable = character(0), ## could be NULL if
-                                                 ## only 1 table
-                                                 ## inside the
-                                                 ## database.
+                                                 ## only 1 table exists!
                          dbkey = character(0),
                          col.names = NULL
                          ){
-    dbname <- tools::file_path_as_absolute(dbname)
-    ## error if file does not exist!
-    con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+    ## check dbname, and backend connection
+    ## browser()
     ## src <- src_dbi(con, auto_disconnect = TRUE)
     ## on.exit(DBI::dbDisconnect(con))
+
+    ## check dbtable
     tbls <- DBI::dbListTables(con)
-    
-    if (missing(dbtable)) {
+    if (missing(dbtable) || !dbExistsTable(con, dbtable)) {
         if (length(tbls) == 1) {
             dbtable <- tbls
+            message(paste0("Using the only table: \"", tbls,
+                           "\" that is available in the connection"))
         } else {
             stop("Please specify the \"dbtable\" argument, ",
                  "which must be one of: \"",
                  paste(tbls, collapse = ", "), "\"")
         }
     }
+    ## check dbkey
+    flds <- dbListFields(con, dbtable)
+    if (!all(dbkey %in% flds)){
+        stop("Please specify the \"dbkey\" argument, ",
+             "which must be one of: \"",
+             paste(flds, collapse = ", "), "\"")
+    }
+
+    ## construction
     tbl <- con %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
-    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n)
+    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer()
 
     ## col.names
     cns <- colnames(tbl)
