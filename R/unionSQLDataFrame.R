@@ -1,7 +1,12 @@
 .union_SQLDataFrame <- function(x, y, copy = FALSE)
 {
-    out <- .doCompatibleFunction(x, y, copy = copy,
-                                 FUN = dbplyr:::union.tbl_lazy)
+    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
+                                           FUN = dbplyr:::union.tbl_lazy)
+    } else {
+        out <- .doCompatibleFunction(x, y, copy = copy,
+                                     FUN = dbplyr:::union.tbl_lazy)
+    }
     ## dbplyr:::union.tbl_lazy
     ## solving new @dbconcatKey
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))

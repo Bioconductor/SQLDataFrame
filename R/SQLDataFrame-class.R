@@ -108,7 +108,7 @@ SQLDataFrame <- function(conn,
 
     ## construction
     tbl <- con %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
-    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer()
+    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer
 
     ## col.names
     cns <- colnames(tbl)

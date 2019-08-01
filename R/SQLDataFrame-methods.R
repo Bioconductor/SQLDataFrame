@@ -362,18 +362,23 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
+    if (is(.con_SQLDataFrame(geneinfo), "MySQLConnection")) {
         con <- .con_SQLDataFrame(.data)
         tbl <- tblData(.data)
-    } else {
-        dbname <- tempfile(fileext = ".db")
-        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        aux <- .attach_database(con, dbname(.data))
-        auxSchema <- in_schema(aux, ident(dbtable(.data)))
+    } ## FIXME: generalize and remove duplicate code, check for SQLite
+      ## cases, any chance to avoid creating new local connections?
+    else {
+        if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
+            con <- .con_SQLDataFrame(.data)
+            tbl <- tblData(.data)
+        } else {
+            dbname <- tempfile(fileext = ".db")
+            con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+            aux <- .attach_database(con, dbname(.data))
+            auxSchema <- in_schema(aux, ident(dbtable(.data)))
         tbl <- tbl(con, auxSchema)
+        }
     }
     tbl_out <- dplyr::mutate(tbl, ...)
-        
     BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
 }
-

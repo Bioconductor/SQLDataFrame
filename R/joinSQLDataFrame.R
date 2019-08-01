@@ -83,6 +83,18 @@
     return(out)
 }
 
+.doCompatibleFunction_mysql <- function(x, y, ..., FUN) {
+    ## tbls <- .join_union_prepare(x, y)
+    tbl.out <- FUN(.extract_tbl_from_SQLDataFrame(x),
+                   .extract_tbl_from_SQLDataFrame(y), ...)
+    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
+
+    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
+                                       dbnrows = dbnrows,
+                                       indexes = vector("list", 2))
+    return(out)
+}
+
 #########################
 ## left_join, inner_join
 #########################
