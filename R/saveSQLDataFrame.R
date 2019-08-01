@@ -29,10 +29,16 @@
 #' @export
 
 saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
+                             outfile,
                              dbtable = deparse(substitute(x)),
                              overwrite = FALSE,
                              index = TRUE, ...)
 {
+    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+        con <- .con_SQLDataFrame(x)
+        sql_cmd <- db_sql_render(con, .extract_tbl_from_SQLDataFrame(x))
+        dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
+    } else { 
     if (file.exists(dbname)) {
         dbname <- file_path_as_absolute(dbname)
         if (overwrite == FALSE)
@@ -51,9 +57,8 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
         con <- .con_SQLDataFrame(x)
         sql_cmd <- dbplyr::db_sql_render(con, tblData(x))
         if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
-            dbWriteTable(con, paste0(dbtable, "_ridx"), value =
-
-    data.frame(ridx = ridx(x)))
+            dbWriteTable(con, paste0(dbtable, "_ridx"),
+                         value = data.frame(ridx = ridx(x)))
         }
     }
     dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd, con = con))
@@ -78,6 +83,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
     msg_saveSQLDataFrame(x, dbname, dbtable)
     res <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(x))
     invisible(res)
+    }
 }
 
 msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
