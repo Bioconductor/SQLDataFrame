@@ -362,7 +362,7 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(.con_SQLDataFrame(geneinfo), "MySQLConnection")) {
+    if (is(.con_SQLDataFrame(.data), "MySQLConnection")) {
         con <- .con_SQLDataFrame(.data)
         tbl <- tblData(.data)
     } ## FIXME: generalize and remove duplicate code, check for SQLite

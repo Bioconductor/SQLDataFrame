@@ -141,10 +141,15 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
-                                 suffix = suffix,
-                                 auto_index = FALSE,
-                                 FUN = dbplyr:::left_join.tbl_lazy)
+    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
+                                           FUN = dbplyr:::left_join.tbl_lazy)
+    } else {
+        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                     suffix = suffix,
+                                     auto_index = FALSE,
+                                     FUN = dbplyr:::left_join.tbl_lazy)
+    }
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -170,11 +175,15 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     copy = FALSE,
                                     suffix = c(".x", ".y"), ...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
-                                 suffix = suffix,
-                                 auto_index = FALSE,
-                                 FUN = dbplyr:::inner_join.tbl_lazy)
-
+    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
+                                           FUN = dbplyr:::inner_join.tbl_lazy)
+    } else {
+        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                     suffix = suffix,
+                                     auto_index = FALSE,
+                                     FUN = dbplyr:::inner_join.tbl_lazy)
+    }
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -208,10 +217,15 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
-                                 suffix = suffix,
-                                 auto_index = FALSE,
-                                 FUN = dbplyr:::semi_join.tbl_lazy)
+    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
+                                           FUN = dbplyr:::semi_join.tbl_lazy)
+    } else {
+        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                     suffix = suffix,
+                                     auto_index = FALSE,
+                                     FUN = dbplyr:::semi_join.tbl_lazy)
+    }
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {        
@@ -240,10 +254,15 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
-                                 suffix = suffix,
-                                 auto_index = FALSE,
-                                 FUN = dbplyr:::anti_join.tbl_lazy)
+    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
+                                           FUN = dbplyr:::anti_join.tbl_lazy)
+    } else {
+        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                     suffix = suffix,
+                                     auto_index = FALSE,
+                                     FUN = dbplyr:::anti_join.tbl_lazy)
+    }
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
