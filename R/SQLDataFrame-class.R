@@ -24,7 +24,8 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' @description \code{SQLDataFrame} constructor, slot getters, show
 #'     method and coercion methods to \code{DataFrame} and
 #'     \code{data.frame} objects.
-#' @param dbname A character string for the database file path.
+#' @param conn a valid \code{DBIConnection} from \code{SQLite} or
+#'     \code{MySQL}.
 #' @param dbtable A character string for the table name in that
 #'     database. If not provided and there is only one table
 #'     available, it will be read in by default.
@@ -41,15 +42,16 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' 
 #' ## constructor
 #' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#' conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
+#' obj <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                     dbkey = "state")
 #' obj
-#' obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#' obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                      dbkey = c("region", "population"))
 #' obj1
 #'
 #' ## slot accessors
-#' dbname(obj)
+#' ## dbname(obj)
 #' dbtable(obj)
 #' dbkey(obj)
 #' dbkey(obj1)
@@ -86,8 +88,8 @@ SQLDataFrame <- function(conn,
     ## on.exit(DBI::dbDisconnect(con))
 
     ## check dbtable
-    tbls <- DBI::dbListTables(con)
-    if (missing(dbtable) || !dbExistsTable(con, dbtable)) {
+    tbls <- DBI::dbListTables(conn)
+    if (missing(dbtable) || !dbExistsTable(conn, dbtable)) {
         if (length(tbls) == 1) {
             dbtable <- tbls
             message(paste0("Using the only table: \"", tbls,
@@ -99,7 +101,7 @@ SQLDataFrame <- function(conn,
         }
     }
     ## check dbkey
-    flds <- dbListFields(con, dbtable)
+    flds <- dbListFields(conn, dbtable)
     if (!all(dbkey %in% flds)){
         stop("Please specify the \"dbkey\" argument, ",
              "which must be one of: \"",
@@ -107,7 +109,7 @@ SQLDataFrame <- function(conn,
     }
 
     ## construction
-    tbl <- con %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
+    tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer
 
     ## col.names
@@ -140,7 +142,7 @@ SQLDataFrame <- function(conn,
     ridx <- NULL
     ridxTableName <- paste0(dbtable, "_ridx")
     if (ridxTableName %in% tbls) {
-        ridx <- dbReadTable(con, ridxTableName)$ridx
+        ridx <- dbReadTable(conn, ridxTableName)$ridx
     }
     
     ## concatKey
@@ -188,17 +190,17 @@ setMethod("tblData", "SQLDataFrame", function(x)
     x@tblData
 })
 
-setGeneric("dbname", signature = "x", function(x)
-    standardGeneric("dbname"))
+## setGeneric("dbname", signature = "x", function(x)
+##     standardGeneric("dbname"))
 
-#' @rdname SQLDataFrame-class
-#' @aliases dbname dbname,SQLDataFrame-method
-#' @export
+## #' @rdname SQLDataFrame-class
+## #' @aliases dbname dbname,SQLDataFrame-method
+## #' @export
 
-setMethod("dbname", "SQLDataFrame", function(x)
-{
-    tblData(x)$src$con@dbname
-})
+## setMethod("dbname", "SQLDataFrame", function(x)
+## {
+##     tblData(x)$src$con@dbname
+## })
 
 setGeneric("dbtable", signature = "x", function(x)
     standardGeneric("dbtable"))

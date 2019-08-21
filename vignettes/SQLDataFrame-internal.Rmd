@@ -32,14 +32,16 @@ Load packages into R session. It will automatically load the package
 of `dplyr` and `dbplyr`.
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
+library(DBI)
 ```
 
 # SQLDataFrame slots
 
 ```{r constructor}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile)
 obj <- SQLDataFrame(
-    dbname = dbfile, dbtable = "state", dbkey = "state")
+    conn = conn, dbtable = "state", dbkey = "state")
 obj
 ```
 
@@ -52,7 +54,7 @@ returned through these 5 slots using slot accessors or other utility
 functions. 
 ```{r}
 slotNames(obj)
-dbname(obj)
+## dbname(obj)
 dbtable(obj)
 dbkey(obj)
 ```
@@ -125,7 +127,7 @@ obj[sample(rnms, 3), ]
 For `SQLDataFrame` object with composite keys: 
 
 ```{r}
-obj1 <- SQLDataFrame(dbname = dbfile, dbtable = "state",
+obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 ROWNAMES(obj1[1:10,])
 obj1[c("South\b3615.0", "West\b365.0"), ]

@@ -4,7 +4,7 @@
 \alias{saveSQLDataFrame}
 \title{Save SQLDataFrame object as a new database table.}
 \usage{
-saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"),
+saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"), outfile,
   dbtable = deparse(substitute(x)), overwrite = FALSE, index = TRUE,
   ...)
 }

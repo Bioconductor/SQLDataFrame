@@ -69,9 +69,10 @@ The development version is also available to download from Github.
 ```{r getDevel, eval=FALSE}
 BiocManager::install("Liubuntu/SQLDataFrame")
 ```
-2. Load the package into R session.
+2. Load the package(s) into R session.
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
+library(DBI)
 ```
 
 # `SQLDataFrame` class
@@ -95,8 +96,9 @@ apply to the non-key-columns.
 
 ```{r constructor}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile)
 obj <- SQLDataFrame(
-    dbname = dbfile, dbtable = "colData", dbkey = "sampleID")
+    conn = conn, dbtable = "colData", dbkey = "sampleID")
 obj
 dim(obj)
 colnames(obj)
@@ -112,7 +114,7 @@ functions.
 
 ```{r}
 slotNames(obj)
-dbname(obj)
+## dbname(obj)
 dbtable(obj)
 dbkey(obj)
 ```
@@ -151,7 +153,7 @@ dbtable(aa)  ## message
 bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
                        dbtable = "aa", overwrite = TRUE)
 dbtable(bb)
-dbname(bb)
+## dbname(bb)
 ```
 
 # makeSQLDataFrame
@@ -195,12 +197,13 @@ avoid too many lazy layers which slows down the data processing.
 
 ```{r}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = dbfile, dbtable = "state", dbkey = "state")
-dbname(obj)
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
+obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
+## dbname(obj)
 dbtable(obj)
 obj1 <- saveSQLDataFrame(obj, dbname = tempfile(fileext = ".db"),
                         dbtable = "obj_copy")
-dbname(obj1)
+## dbname(obj1)
 dbtable(obj1)
 ```
 
@@ -251,7 +254,7 @@ obj[c("Alabama", "Colorado"), ]
 ```
 
 ```{r}
-obj1 <- SQLDataFrame(dbname = dbfile, dbtable = "state",
+obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 rnms <- ROWNAMES(obj1)
 obj1[c("South\b3615.0", "West\b365.0"), ]
@@ -289,10 +292,12 @@ original orders of input objects.
 
 ```{r}
 dbfile1 <- system.file("extdata/test.db", package = "SQLDataFrame")
+con1 <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile1)
 dbfile2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
-ss1 <- SQLDataFrame(dbname = dbfile1, dbtable = "state",
+con2 <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile2)
+ss1 <- SQLDataFrame(conn = con1, dbtable = "state",
                     dbkey = c("state"))
-ss2 <- SQLDataFrame(dbname = dbfile2, dbtable = "state1",
+ss2 <- SQLDataFrame(conn = con2, dbtable = "state1",
                     dbkey = c("state"))
 ss11 <- ss1[sample(5), ]
 ss21 <- ss2[sample(10, 5), ]

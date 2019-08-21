@@ -39,39 +39,30 @@ normalizeRowIndex <- function(x)
     return(tbl)
 }
 
-## create federated table from connection (for 1 SQLDataFrame)
-.create_federated_table <- function(mysqlConn, username, host, database, dbtableName,
-                                    localConn, localDbtable)
+.create_federated_table <- function(remoteConn, dbtableName,
+                                    localConn, ldbtableName)
 {
-    return(NULL)
+    browser()
     ## open docker, require credentials here:
     
-    stopifnot(is(mysqlConn, "MySQLConnection"))
-    ## show create table in mysqlConn for column options
-    createinfo <- dbGetQuery(mysqlConn,
-                             build_sql("SHOW CREATE TABLE ", sql(dbtableName), con = mysqlConn))
+    stopifnot(is(remoteConn, "MySQLConnection"))
+    ## show create table in remoteConn for column options
+    createinfo <- dbGetQuery(remoteConn,
+                             build_sql("SHOW CREATE TABLE ", sql(dbtableName), con = remoteConn))
     columninfo <- createinfo[createinfo$Table == dbtableName, "Create Table"]
+    if (!missing(ldbtableName))
+        ## columninfo <- gsub("CREATE TABLE .+ (",
+        columninfo <- gsub(paste0("CREATE TABLE `", dbtableName, "`"),
+                           paste0("CREATE TABLE `", ldbtableName, "`"),
+                           columninfo)
     columninfo <- gsub("ENGINE=.+ ", "ENGINE=FEDERATED ", columninfo)
-    ## create table (temporary?) in localConn, with same column options, using federated engine. 
-    dbExecute(localConn, build_sql(sql(columninfo),
-                                   sql(paste0(" connection='mysql://",
-                                              username, "@", host,
-                                              "/", database, "/",
-                                              dbtableName, "'")),
-                                   con = localConn))
-    ## dbCreateTable(localConn, name = local_dbtable,
-    ##               fields = dbColumnInfo(mysqlConn, dbtable),
-    ##               temporary = TRUE)
+    ## create table (temporary?) in localConn, with same column options, using federated engine.
+    remoteInfo <- dbGetInfo(remoteConn)
+    sql_conn <-build_sql(sql(columninfo),
+                         sql(paste0(" connection='mysql://",
+                                    remoteInfo$user, "@", remoteInfo$host,
+                                    "/", remoteInfo$dbname, "/",
+                                    dbtableName, "'")),
+                         con = localConn)
+    dbExecute(localConn, sql_conn)
 }
-
-    
-
-## issues:
-## 1. open a local mysql connetion under User="liuqian". (JessyMysql)
-## 2. create a table using "ENGINE=FEDERATED" in R using DBI.
-## 3. 
-
-
-## check if same connection
-
-## saveSQLDataFrame, realize a lazy SQLDataFrame using federated table. create table. 

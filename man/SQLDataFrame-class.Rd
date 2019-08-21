@@ -7,8 +7,6 @@
 \alias{SQLDataFrame-class}
 \alias{tblData,SQLDataFrame-method}
 \alias{tblData}
-\alias{dbname,SQLDataFrame-method}
-\alias{dbname}
 \alias{dbtable,SQLDataFrame-method}
 \alias{dbtable}
 \alias{dbkey,SQLDataFrame-method}
@@ -32,12 +30,10 @@
 \alias{coerce,ANY,SQLDataFrame-method}
 \title{SQLDataFrame class}
 \usage{
-SQLDataFrame(dbname = character(0), dbtable = character(0),
-  dbkey = character(0), col.names = NULL)
+SQLDataFrame(conn, dbtable = character(0), dbkey = character(0),
+  col.names = NULL)
 
 \S4method{tblData}{SQLDataFrame}(x)
-
-\S4method{dbname}{SQLDataFrame}(x)
 
 \S4method{dbtable}{SQLDataFrame}(x)
 
@@ -57,7 +53,8 @@ SQLDataFrame(dbname = character(0), dbtable = character(0),
   optional = NULL, ...)
 }
 \arguments{
-\item{dbname}{A character string for the database file path.}
+\item{conn}{a valid \code{DBIConnection} from \code{SQLite} or
+\code{MySQL}.}
 
 \item{dbtable}{A character string for the table name in that
 database. If not provided and there is only one table
@@ -101,15 +98,16 @@ A \code{SQLDataFrame} object.
 
 ## constructor
 dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = dbname, dbtable = "state",
+conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
+obj <- SQLDataFrame(conn = conn, dbtable = "state",
                     dbkey = "state")
 obj
-obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
+obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 obj1
 
 ## slot accessors
-dbname(obj)
+## dbname(obj)
 dbtable(obj)
 dbkey(obj)
 dbkey(obj1)
