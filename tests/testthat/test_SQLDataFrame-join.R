@@ -1,11 +1,13 @@
 context("join SQLDataFrame")
 
-db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-db1 <- system.file("extdata", "test1.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = db,
-                     dbtable = "state",
-                     dbkey = c("region", "population"))
-obj1 <- SQLDataFrame(dbname = db1,
+test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
+test.db1 <- system.file("extdata", "test1.db", package = "SQLDataFrame")
+con <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+con1 <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db1)
+obj <- SQLDataFrame(conn = con,
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+obj1 <- SQLDataFrame(conn = con1,
                      dbtable = "state1",
                      dbkey = c("region", "population"))
 

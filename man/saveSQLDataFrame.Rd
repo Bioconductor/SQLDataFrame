@@ -4,7 +4,7 @@
 \alias{saveSQLDataFrame}
 \title{Save SQLDataFrame object as a new database table.}
 \usage{
-saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"), outfile,
+saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"),
   dbtable = deparse(substitute(x)), overwrite = FALSE, index = TRUE,
   ...)
 }
@@ -35,10 +35,11 @@ The function to save \code{SQLDataFrame} object as a
     user-supplied \code{dbname}, \code{dbtable}, and \code{dbkey}.
 }
 \examples{
-dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
+obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 obj1 <- obj[1:10, 2:3]
 obj1 <- saveSQLDataFrame(obj1, dbtable = "obj_subset")
-dbname(obj1)
+connSQLDataFrame(obj1)
 dbtable(obj1)
 }

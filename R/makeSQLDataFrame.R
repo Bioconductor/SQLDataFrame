@@ -86,7 +86,7 @@ makeSQLDataFrame <- function(filename,
                                                  unique = TRUE)
     }
  
-    out <- SQLDataFrame(dbname = dbname, dbtable = dbtable,
+    out <- SQLDataFrame(conn = con, dbtable = dbtable,
                         dbkey = dbkey)
     msg <- msg_saveSQLDataFrame(out, dbname, dbtable)
     message(msg)

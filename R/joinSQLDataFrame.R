@@ -1,14 +1,14 @@
 .join_union_prepare <- function(x, y)
 {
     if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
-        con <- .con_SQLDataFrame(x)
+        con <- connSQLDataFrame(x)
         tblx <- .open_tbl_from_connection(con, "main", x)
         
         if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {
             ## attach all databases from y except "main", which is
             ## temporary connection from "union" or "join"
             dbs <- .dblist(con)
-            cony <- .con_SQLDataFrame(y)
+            cony <- connSQLDataFrame(y)
             tbly <- .extract_tbl_from_SQLDataFrame(y)
             dbsy <- .dblist(cony)[-1,]
             
@@ -27,7 +27,7 @@
         }
     } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single"))
     {  
-        con <- .con_SQLDataFrame(y)
+        con <- connSQLDataFrame(y)
         tbly <- .open_tbl_from_connection(con, "main", y)
         tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
     } else {
@@ -39,11 +39,13 @@
     return(list(tblx, tbly))
 }
 
+## all the following utility functions are for SQLite connections. 
 .attachMaybe_and_open_tbl_in_new_connection <- function(con, sdf) {
     dbs <- .dblist(con)
-    aux <- dbs[match(dbname(sdf), dbs$file), "name"]
+    dbname <- connSQLDataFrame(sdf)@dbname
+    aux <- dbs[match(dbname, dbs$file), "name"]
     if (is.na(aux))
-        aux <- .attach_database(con, dbname(sdf))
+        aux <- .attach_database(con, dbname)
     res_tbl <- .open_tbl_from_connection(con, aux, sdf)
     return(res_tbl)
 }
@@ -52,7 +54,7 @@
     return(res)
 }
 .dblist_SQLDataFrame <- function(sdf) {
-    con <- .con_SQLDataFrame(sdf)
+    con <- connSQLDataFrame(sdf)
     .dblist(con)
 }
 .attach_database <- function(con, dbname, aux = NULL) {
@@ -120,12 +122,14 @@
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @examples
-#' db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
-#' obj1 <- SQLDataFrame(dbname = db1,
+#' test.db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' test.db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
+#' con1 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db1)
+#' con2 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db2)
+#' obj1 <- SQLDataFrame(conn = con1,
 #'                      dbtable = "state",
 #'                      dbkey = c("region", "population"))
-#' obj2 <- SQLDataFrame(dbname = db2,
+#' obj2 <- SQLDataFrame(conn = con2,
 #'                      dbtable = "state1",
 #'                      dbkey = c("region", "population"))
 #'
@@ -141,7 +145,7 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+    if (is(connSQLDataFrame(x), "MySQLConnection")) {
         out <- .doCompatibleFunction_mysql(x, y, copy = copy,
                                            FUN = dbplyr:::left_join.tbl_lazy)
     } else {
@@ -175,7 +179,7 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     copy = FALSE,
                                     suffix = c(".x", ".y"), ...) 
 {
-    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+    if (is(connSQLDataFrame(x), "MySQLConnection")) {
         out <- .doCompatibleFunction_mysql(x, y, copy = copy,
                                            FUN = dbplyr:::inner_join.tbl_lazy)
     } else {
@@ -217,7 +221,7 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+    if (is(connSQLDataFrame(x), "MySQLConnection")) {
         out <- .doCompatibleFunction_mysql(x, y, copy = copy,
                                            FUN = dbplyr:::semi_join.tbl_lazy)
     } else {
@@ -254,7 +258,7 @@ anti_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"), ...) 
 {
-    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
+    if (is(connSQLDataFrame(x), "MySQLConnection")) {
         out <- .doCompatibleFunction_mysql(x, y, copy = copy,
                                            FUN = dbplyr:::anti_join.tbl_lazy)
     } else {

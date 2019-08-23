@@ -22,12 +22,14 @@ A \code{SQLDataFrame} object.
 Performs rbind on \code{SQLDataFrame} objects.
 }
 \examples{
-db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
-db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
-obj1 <- SQLDataFrame(dbname = db1,
+test.db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
+test.db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
+con1 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db1)
+con2 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db2)
+obj1 <- SQLDataFrame(conn = con1,
                      dbtable = "state",
                      dbkey = c("region", "population"))
-obj2 <- SQLDataFrame(dbname = db2,
+obj2 <- SQLDataFrame(conn = con2,
                      dbtable = "state1",
                      dbkey = c("region", "population"))
 obj1_sub <- obj1[1:10, 2:3]

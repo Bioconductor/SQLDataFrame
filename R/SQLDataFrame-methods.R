@@ -54,8 +54,9 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 #' ## basic methods
 #' ##################
 #' 
-#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+#' test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
+#' obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 #' dim(obj)
 #' dimnames(obj)
 #' length(obj)
@@ -147,7 +148,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' @export
 #' @examples
 #'
-#' obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
+#' obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                      dbkey = c("region", "population"))
 
 #' ###############
@@ -362,23 +363,39 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(.con_SQLDataFrame(.data), "MySQLConnection")) {
-        con <- .con_SQLDataFrame(.data)
+    if (is(connSQLDataFrame(.data), "MySQLConnection")) {
+        con <- connSQLDataFrame(.data)
         tbl <- tblData(.data)
     } ## FIXME: generalize and remove duplicate code, check for SQLite
       ## cases, any chance to avoid creating new local connections?
     else {
         if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
-            con <- .con_SQLDataFrame(.data)
+            con <- connSQLDataFrame(.data)
             tbl <- tblData(.data)
         } else {
             dbname <- tempfile(fileext = ".db")
             con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-            aux <- .attach_database(con, dbname(.data))
+            aux <- .attach_database(con, connSQLDataFrame(.data)@dbname)
             auxSchema <- in_schema(aux, ident(dbtable(.data)))
         tbl <- tbl(con, auxSchema)
         }
     }
     tbl_out <- dplyr::mutate(tbl, ...)
     BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
+}
+
+#' @description \code{connSQLDataFrame} returns the connection of a
+#'     SQLDataFrame object.
+#' @rdname SQLDataFrame-methods
+#' @export
+#' @examples
+#' 
+#' ###################
+#' ## connection info
+#' ###################
+#'
+#' connSQLDataFrame(obj)
+connSQLDataFrame <- function(x)
+{
+    tblData(x)$src$con
 }

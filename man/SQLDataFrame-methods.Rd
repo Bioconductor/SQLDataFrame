@@ -15,8 +15,11 @@
 \alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
+\alias{[,SQLDataFrame,ANY,ANY,ANY-method}
 \alias{[,SQLDataFrame,ANY-method}
+\alias{[,SQLDataFrame,SQLDataFrame,ANY,ANY-method}
 \alias{[,SQLDataFrame,SQLDataFrame-method}
+\alias{[,SQLDataFrame,list,ANY,ANY-method}
 \alias{[,SQLDataFrame,list-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
@@ -26,6 +29,7 @@
 \alias{mutate.SQLDataFrame}
 \alias{mutate}
 \alias{mutate,SQLDataFrame-methods}
+\alias{connSQLDataFrame}
 \title{SQLDataFrame methods}
 \usage{
 \S4method{head}{SQLDataFrame}(x, n = 6L)
@@ -40,11 +44,12 @@
 
 \S4method{names}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
-\S4method{[}{SQLDataFrame,SQLDataFrame}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,SQLDataFrame,ANY,ANY}(x, i, j, ...,
+  drop = TRUE)
 
-\S4method{[}{SQLDataFrame,list}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,list,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 
@@ -53,6 +58,8 @@
 \method{filter}{SQLDataFrame}(.data, ...)
 
 \method{mutate}{SQLDataFrame}(.data, ...)
+
+connSQLDataFrame(x)
 }
 \arguments{
 \item{x}{An \code{SQLDataFrame} object.}
@@ -126,6 +133,9 @@ Use \code{filter()} to choose rows/cases where
     existing ones; It also preserves the number of rows of the
     input. New variables overwrite existing variables of the same
     name.
+
+\code{connSQLDataFrame} returns the connection of a
+    SQLDataFrame object.
 }
 \examples{
 
@@ -133,14 +143,15 @@ Use \code{filter()} to choose rows/cases where
 ## basic methods
 ##################
 
-dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
+obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 dim(obj)
 dimnames(obj)
 length(obj)
 names(obj)
 
-obj1 <- SQLDataFrame(dbname = dbname, dbtable = "state",
+obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 ###############
 ## subsetting
@@ -186,4 +197,10 @@ obj1 \%>\% filter(region == "West" & population > 10000)
 
 obj \%>\% mutate(p1 = population / 10)
 obj \%>\% mutate(s1 = size)
+
+###################
+## connection info
+###################
+
+connSQLDataFrame(obj)
 }

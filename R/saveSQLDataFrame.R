@@ -20,69 +20,69 @@
 #' @rawNamespace import(dplyr, except = c("first", "rename",
 #'     "setequal", "setdiff", "intersect", "union", "ident", "sql"))
 #' @examples
-#' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' obj <- SQLDataFrame(dbname = dbname, dbtable = "state", dbkey = "state")
+#' test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
+#' obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 #' obj1 <- obj[1:10, 2:3]
 #' obj1 <- saveSQLDataFrame(obj1, dbtable = "obj_subset")
-#' dbname(obj1)
+#' connSQLDataFrame(obj1)
 #' dbtable(obj1)
 #' @export
 
 saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
-                             outfile,
+                             ## outfile,
                              dbtable = deparse(substitute(x)),
                              overwrite = FALSE,
                              index = TRUE, ...)
 {
-    if (is(.con_SQLDataFrame(x), "MySQLConnection")) {
-        con <- .con_SQLDataFrame(x)
+    if (is(connSQLDataFrame(x), "MySQLConnection")) {
+        con <- connSQLDataFrame(x)
         sql_cmd <- db_sql_render(con, .extract_tbl_from_SQLDataFrame(x))
-        dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
+        ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
     } else { 
-    if (file.exists(dbname)) {
-        dbname <- file_path_as_absolute(dbname)
-        if (overwrite == FALSE)
-            stop("The 'dbname' already exists! Please provide a new value ",
-                 "OR change 'overwrite = TRUE'. ")
-    }
-
-    if (is(tblData(x)$ops, "op_base") ) {  
-        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        aux <- .attach_database(con, dbname(x))
-        tblx <- .open_tbl_from_connection(con, aux, x)  ## already
-                                                        ## evaluated
-                                                        ## ridx here.
-        sql_cmd <- dbplyr::db_sql_render(con, tblx)
-    } else if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) { 
-        con <- .con_SQLDataFrame(x)
-        sql_cmd <- dbplyr::db_sql_render(con, tblData(x))
-        if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
-            dbWriteTable(con, paste0(dbtable, "_ridx"),
-                         value = data.frame(ridx = ridx(x)))
+        if (file.exists(dbname)) {
+            dbname <- file_path_as_absolute(dbname)
+            if (overwrite == FALSE)
+                stop("The 'dbname' already exists! Please provide a new value ",
+                     "OR change 'overwrite = TRUE'. ")
         }
-    }
-    dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd, con = con))
-    ## error if "dbtable" already exist. "Error: table aa already
-    ## exists". Not likely happen here, because SQLDataFrame generated
-    ## from "join" or "union" has connection to a new temporary .db
-    ## file with empty contents.
-
-    ## add unique index file with dbkey(x)
-    if (index)
-        dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
-                                                 indexes = list(dbkey(x)),
-                                                 unique = TRUE)
-    ## FIXME: implement "overwrite" argument here for the index
-    ## file. if (found & overwrite)
-    ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
-    ## table_name.index_name; see also: dbRemoveTable()
-    
-    if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
-        file.copy(dbname(x), dbname, overwrite = overwrite)
-    }
-    msg_saveSQLDataFrame(x, dbname, dbtable)
-    res <- SQLDataFrame(dbname = dbname, dbtable = dbtable, dbkey = dbkey(x))
-    invisible(res)
+        if (is(tblData(x)$ops, "op_base") ) {  
+            con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+            aux <- .attach_database(con, connSQLDataFrame(x)@dbname)
+            tblx <- .open_tbl_from_connection(con, aux, x)  ## already
+            ## evaluated
+            ## ridx here.
+            sql_cmd <- dbplyr::db_sql_render(con, tblx)
+        } else if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) { 
+            con <- connSQLDataFrame(x)
+            sql_cmd <- dbplyr::db_sql_render(con, tblData(x))
+            if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
+                dbWriteTable(con, paste0(dbtable, "_ridx"),
+                             value = data.frame(ridx = ridx(x)))
+            }
+        }
+        dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd, con = con))
+        ## error if "dbtable" already exist. "Error: table aa already
+        ## exists". Not likely happen here, because SQLDataFrame generated
+        ## from "join" or "union" has connection to a new temporary .db
+        ## file with empty contents.
+        
+        ## add unique index file with dbkey(x)
+        if (index)
+            dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
+                                                     indexes = list(dbkey(x)),
+                                                     unique = TRUE)
+        ## FIXME: implement "overwrite" argument here for the index
+        ## file. if (found & overwrite)
+        ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
+        ## table_name.index_name; see also: dbRemoveTable()
+        
+        if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
+            file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
+        }
+        msg_saveSQLDataFrame(x, dbname, dbtable)
+        res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
+        invisible(res)
     }
 }
 

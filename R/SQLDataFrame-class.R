@@ -42,7 +42,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' 
 #' ## constructor
 #' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
+#' conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbname)
 #' obj <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                     dbkey = "state")
 #' obj
@@ -51,7 +51,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' obj1
 #'
 #' ## slot accessors
-#' ## dbname(obj)
+#' connSQLDataFrame(obj)
 #' dbtable(obj)
 #' dbkey(obj)
 #' dbkey(obj1)

@@ -98,7 +98,7 @@ A \code{SQLDataFrame} object.
 
 ## constructor
 dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
-conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbname)
 obj <- SQLDataFrame(conn = conn, dbtable = "state",
                     dbkey = "state")
 obj
@@ -107,7 +107,7 @@ obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
 obj1
 
 ## slot accessors
-## dbname(obj)
+connSQLDataFrame(obj)
 dbtable(obj)
 dbkey(obj)
 dbkey(obj1)

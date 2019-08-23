@@ -1,7 +1,8 @@
 context("SQLDataFrame-class")
 
 test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = test.db, dbtable = "colData",
+conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+obj <- SQLDataFrame(conn = conn, dbtable = "colData",
                     dbkey = "sampleID")
 
 test_that("SQLDataFrame constructor argument checking",
@@ -10,20 +11,20 @@ test_that("SQLDataFrame constructor argument checking",
     expect_error(SQLDataFrame())
 
     ## missing "dbtable"
-    expect_error(SQLDataFrame(dbname = test.db, dbkey = "sampleID"))
+    expect_error(SQLDataFrame(conn = conn, dbkey = "sampleID"))
 
     ## non-existing "dbtable"
     expect_error(SQLDataFrame(
-        dbname = test.db, dbtable = "random", dbkey = "sampleID"))
+        conn = conn, dbtable = "random", dbkey = "sampleID"))
 
     ## "row.names" does not work
     expect_error(SQLDataFrame(
-        dbname = test.db, dbtable = "colData", dbkey = "sampleID",
+        conn = conn, dbtable = "colData", dbkey = "sampleID",
         row.names = letters), "unused argument")
 
     ## non-matching "col.names"
     expect_warning(SQLDataFrame(
-        dbname = test.db, dbtable = "colData", dbkey = "sampleID",
+        conn = conn, dbtable = "colData", dbkey = "sampleID",
         col.names = letters))
 })
 
@@ -34,7 +35,7 @@ test_that("SQLDataFrame constructor works",
     expect_true(validObject(obj))
     exp <- c("dbkey", "dbnrows", "tblData", "indexes", "dbconcatKey")
     expect_identical(exp, slotNames(obj))
-    expect_identical(normalizePath(test.db), normalizePath(dbname(obj)))
+    expect_identical(normalizePath(test.db), normalizePath(connSQLDataFrame(obj)@dbname))
     expect_identical("colData", dbtable(obj))
     expect_identical("sampleID", dbkey(obj))
     expect_identical(c(26L, 2L), dim(obj))

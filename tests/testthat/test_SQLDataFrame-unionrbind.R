@@ -1,15 +1,19 @@
 context("rbind SQLDataFrame")
 
-db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-db1 <- system.file("extdata", "test1.db", package = "SQLDataFrame")
-db2 <- system.file("extdata", "test2.db", package = "SQLDataFrame")
-obj <- SQLDataFrame(dbname = db,
-                     dbtable = "state",
-                     dbkey = c("region", "population"))
-obj1 <- SQLDataFrame(dbname = db1,
+test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
+test.db1 <- system.file("extdata", "test1.db", package = "SQLDataFrame")
+test.db2 <- system.file("extdata", "test2.db", package = "SQLDataFrame")
+con <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+con1 <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db1)
+con2 <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db2)
+
+obj <- SQLDataFrame(conn = con,
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+obj1 <- SQLDataFrame(conn = con1,
                      dbtable = "state1",
                      dbkey = c("region", "population"))
-obj2 <- SQLDataFrame(dbname = db2,
+obj2 <- SQLDataFrame(conn = con2,
                      dbtable = "state2",
                      dbkey = c("region", "population"))
 
@@ -31,7 +35,7 @@ test_that("union SQLDataFrame with same source works!", {
     expect_true(validObject(u1))
     expect_identical(dim(u1), c(15L, 2L))
     expect_null(ridx(u1))
-    expect_identical(normalizePath(dirname(dbname(u1))),
+    expect_identical(normalizePath(dirname(connSQLDataFrame(u1)@dbname)),
                      normalizePath(tempdir()))
     expect_warning(dbtable(u1))
 })
@@ -42,7 +46,7 @@ test_that("union SQLDataFrame with difference source works!", {
     expect_true(validObject(u2))
     expect_identical(dim(u2), c(15L, 2L))
     expect_null(ridx(u2))
-    expect_identical(normalizePath(dirname(dbname(u2))),
+    expect_identical(normalizePath(dirname(connSQLDataFrame(u2)@dbname)),
                      normalizePath(tempdir()))
     expect_warning(dbtable(u2))
 
@@ -50,11 +54,11 @@ test_that("union SQLDataFrame with difference source works!", {
     expect_true(validObject(u3))
     expect_identical(dim(u3), c(18L, 2L))
     expect_null(ridx(u3))
-    expect_identical(dbname(u2), dbname(u3))
+    expect_identical(connSQLDataFrame(u2)@dbname, connSQLDataFrame(u3)@dbname)
 
     u4 <- union(obj21, u2)
     expect_identical(as.data.frame(u3), as.data.frame(u4))
-    expect_identical(dbname(u3), dbname(u4)) 
+    expect_identical(connSQLDataFrame(u3)@dbname, connSQLDataFrame(u4)@dbname) 
 })
 
 #########
@@ -67,7 +71,7 @@ test_that("rbind SQLDataFrame works!", {
     expect_true(validObject(r1))
     expect_identical(dim(r1), c(18L, 2L))
     expect_identical(ridx(r1), match(ROWNAMES(r1), dbconcatKey(r1)))
-    expect_identical(normalizePath(dirname(dbname(r1))),
+    expect_identical(normalizePath(dirname(connSQLDataFrame(r1)@dbname)),
                      normalizePath(tempdir()))
     expect_warning(dbtable(r1))
 
@@ -75,11 +79,11 @@ test_that("rbind SQLDataFrame works!", {
     expect_true(validObject(r2))
     expect_identical(dim(r2), c(22L, 2L))
     expect_identical(ridx(r2), match(ROWNAMES(r2), dbconcatKey(r2)))
-    expect_identical(dbname(r1), dbname(r2))
+    expect_identical(connSQLDataFrame(r1)@dbname, connSQLDataFrame(r2)@dbname)
 
     r3 <- rbind(obj21, r1)
     expect_identical(dim(r3), dim(r2))
-    expect_identical(dbname(r2), dbname(r3)) 
+    expect_identical(connSQLDataFrame(r2)@dbname, connSQLDataFrame(r3)@dbname) 
 
     ## multiple inputs
     r4 <- rbind(obj01, obj11, obj12, obj21)

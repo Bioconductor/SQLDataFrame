@@ -10,11 +10,6 @@
     match(dbkey(x), colnames(tblData(x)))
 }
 
-.con_SQLDataFrame <- function(x)
-{
-    tblData(x)$src$con
-}
-
 ridx <- function(x)
 {
     x@indexes[[1]]

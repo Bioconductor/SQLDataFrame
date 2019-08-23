@@ -114,9 +114,9 @@ functions.
 
 ```{r}
 slotNames(obj)
-## dbname(obj)
 dbtable(obj)
 dbkey(obj)
+connSQLDataFrame(obj)
 ```
 
 Besides, many useful common methods are defined on `SQLDataFrame`
@@ -152,8 +152,8 @@ aa
 dbtable(aa)  ## message
 bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
                        dbtable = "aa", overwrite = TRUE)
+connSQLDataFrame(bb)
 dbtable(bb)
-## dbname(bb)
 ```
 
 # makeSQLDataFrame
@@ -179,7 +179,7 @@ write.csv(mtc, file= filename, row.names = FALSE)
 aa <- makeSQLDataFrame(filename, dbkey = "rowname", sep = ",",
                        overwrite = TRUE)
 aa
-dbname(aa)
+connSQLDataFrame(aa)
 dbtable(aa)
 ```
 
@@ -199,11 +199,11 @@ avoid too many lazy layers which slows down the data processing.
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
 obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
-## dbname(obj)
+conn
 dbtable(obj)
 obj1 <- saveSQLDataFrame(obj, dbname = tempfile(fileext = ".db"),
                         dbtable = "obj_copy")
-## dbname(obj1)
+connSQLDataFrame(obj1)
 dbtable(obj1)
 ```
 
