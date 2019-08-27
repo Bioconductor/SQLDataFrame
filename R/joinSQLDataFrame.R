@@ -1,45 +1,115 @@
-.join_union_prepare <- function(x, y)
+.join_union_prepare <- function(x, y,
+                                localConn, ## only used when both X and Y are remote.
+                                ldbtableNameX = NULL,
+                                ldbtableNameY = NULL)
 {
+    browser()
+    ## X and Y must built from same SQL database (e.g., SQLite, MySQL,
+    ## etc.)
+    stopifnot(identical(class(connSQLDataFrame(x)), class(connSQLDataFrame(y))))
+    
+    if (is(connSQLDataFrame(x), "MySQLConnection")) {
+        if(is.null(ldbtableNameX)) ldbtableNameX <- dplyr:::random_table_name()
+        if(is.null(ldbtableNameY)) ldbtableNameY <- dplyr:::random_table_name()
+    }
+    
     if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
+        ## may change: !is(tblData(x)$ops, "op_base")
         con <- connSQLDataFrame(x)
         tblx <- .open_tbl_from_connection(con, "main", x)
         
         if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {
-            ## attach all databases from y except "main", which is
-            ## temporary connection from "union" or "join"
-            dbs <- .dblist(con)
-            cony <- connSQLDataFrame(y)
-            tbly <- .extract_tbl_from_SQLDataFrame(y)
-            dbsy <- .dblist(cony)[-1,]
-            
-            idx <- match(paste(dbsy$name, dbsy$file, sep=":"),
-                         paste(dbs$name, dbs$file, sep=":"))
-            idx <- which(!is.na(idx))          
-            if (length(idx)) dbsy <- dbsy[-idx, ]
-            for (i in seq_len(nrow(dbsy))) {
-                .attach_database(con, dbsy[i, "file"], dbsy[i, "name"])
+            if (is(con, "SQLiteConnection")) {
+                ## attach all databases from y except "main", which is
+                ## temporary connection from "union" or "join"
+                dbs <- .dblist(con)
+                cony <- connSQLDataFrame(y)
+                tbly <- .extract_tbl_from_SQLDataFrame(y)
+                dbsy <- .dblist(cony)[-1,]
+                
+                idx <- match(paste(dbsy$name, dbsy$file, sep=":"),
+                             paste(dbs$name, dbs$file, sep=":"))
+                idx <- which(!is.na(idx))          
+                if (length(idx)) dbsy <- dbsy[-idx, ]
+                for (i in seq_len(nrow(dbsy))) {
+                    .attach_database(con, dbsy[i, "file"], dbsy[i, "name"])
+                }
+                ## open the lazy tbl from new connection
+                sql_cmd <- dbplyr::db_sql_render(cony, tbly)
+                tbly <- tbl(con, sql_cmd)
+            } else if (is(con, "MySQLConnection")) {
+                tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
+                                                                       con,
+                                                                       ldbtableNameY)
             }
-            ## open the lazy tbl from new connection
-            sql_cmd <- dbplyr::db_sql_render(cony, tbly)
-            tbly <- tbl(con, sql_cmd)
         } else {
-            tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
+            if (is(con, "SQLiteConnection")) {
+                tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
+            } else if (is(con, "MySQLConnection")) {
+                tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
+                                                                       con,
+                                                                       ldbtableNameY)
+            }
         }
-    } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single"))
-    {  
+    } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {  
         con <- connSQLDataFrame(y)
-        tbly <- .open_tbl_from_connection(con, "main", y)
-        tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
-    } else {
-        dbname <- tempfile(fileext = ".db")
-        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
-        tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
+        if (is(con, "SQLiteConnection")) {
+            tbly <- .open_tbl_from_connection(con, "main", y)
+            tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
+        } else if (is(con, "MySQLConnection")) {
+            tbly <- .extract_tbl_from_SQLDataFrame(y)
+            tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
+                                                                   con,
+                                                                   ldbtableNameX)
+        }
+    } else { ## open a new local connection.
+        ## FIXME: need to decide whether the existing connections are already local!!!
+        ## FIXME: need to further check whether the conX and conY are same!!!
+        ## FIXME: need to check if exist and federated table from existing remote table, and reuse!!! 
+        if (is(connSQLDataFrame(x), "SQLiteConnection")) {
+            dbname <- tempfile(fileext = ".db")
+            con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+            tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
+            tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
+        } else if (is(connSQLDataFrame(x), "MySQLConnection")) {
+            tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
+                                                                   localConn,
+                                                                   ldbtableNameX)
+            tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
+                                                                   localConn,
+                                                                   ldbtableNameY)
+        }
     }
     return(list(tblx, tbly))
 }
 
-## all the following utility functions are for SQLite connections. 
+## .isRemote <- function(con) {
+##     if(is(con, "SQLiteConnection")) {
+##         return(!file.exists(con@dbname))
+##     } else if(is(con, "MySQLConnection")) {
+##         ## check if from web... ok if local / on institute cluster
+##         dbGetInfo(con, "conType")
+##         return(TRUE) ## ??
+##     }
+## }
+
+.createFedTable_and_open_tbl_in_new_connection <- function(sdf, localConn, ldbtableName) {
+    ## check if the connSQLDataFrame(sdf) is a remote connection.
+    ## if (.isRemote(connSQLDataFrame(sdf))) {
+    .create_federated_table(remoteConn = connSQLDataFrame(sdf),
+                            dbtableName = dbtable(sdf),
+                            localConn = localConn, 
+                            ldbtableName = ldbtableName) 
+    res_tbl <- tbl(localConn, ldbtableName)
+    res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf)
+    ## } else {
+    ##     res_tbl <- .extract_tbl_from_SQLDataFrame(sdf)
+    ## }
+    return(res_tbl)
+}
+
+##-----------------------------------------------------##
+## These utility functions are for SQLite connections. 
 .attachMaybe_and_open_tbl_in_new_connection <- function(con, sdf) {
     dbs <- .dblist(con)
     dbname <- connSQLDataFrame(sdf)@dbname
@@ -73,22 +143,18 @@
     }
     return(tblx)
 }
+##-----------------------------------------------------------------##
 
-.doCompatibleFunction <- function(x, y, ..., FUN) {
-    tbls <- .join_union_prepare(x, y)
+.doCompatibleFunction <- function(x, y, localConn, ..., FUN) {
+    ## check if remote... if yes, add "localConn" argument, or
+    ## optionally "ldbtableNameX", "ldbtableNameY"
+
+    ## if (any(.isRemote(connSQLDataFrame(x)), .isRemote(connSQLDataFrame(y)))) {
+        tbls <- .join_union_prepare(x, y, localConn = localConn)
+    ## } else {
+    ##     tbls <- .join_union_prepare(x, y)
+    ## }
     tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
-    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n)
-
-    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
-                                       dbnrows = dbnrows,
-                                       indexes = vector("list", 2))
-    return(out)
-}
-
-.doCompatibleFunction_mysql <- function(x, y, ..., FUN) {
-    ## tbls <- .join_union_prepare(x, y)
-    tbl.out <- FUN(.extract_tbl_from_SQLDataFrame(x),
-                   .extract_tbl_from_SQLDataFrame(y), ...)
     dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
 
     out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
@@ -96,6 +162,18 @@
                                        indexes = vector("list", 2))
     return(out)
 }
+
+## .doCompatibleFunction_mysql <- function(x, y, ..., FUN) {
+##     ## tbls <- .join_union_prepare(x, y)
+##     tbl.out <- FUN(.extract_tbl_from_SQLDataFrame(x),
+##                    .extract_tbl_from_SQLDataFrame(y), ...)
+##     dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
+
+##     out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
+##                                        dbnrows = dbnrows,
+##                                        indexes = vector("list", 2))
+##     return(out)
+## }
 
 #########################
 ## left_join, inner_join
@@ -143,17 +221,14 @@
 
 left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
-                                   suffix = c(".x", ".y"), ...) 
+                                   suffix = c(".x", ".y"),
+                                   localConn = NULL, ...) 
 {
-    if (is(connSQLDataFrame(x), "MySQLConnection")) {
-        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
-                                           FUN = dbplyr:::left_join.tbl_lazy)
-    } else {
-        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
-                                     suffix = suffix,
-                                     auto_index = FALSE,
-                                     FUN = dbplyr:::left_join.tbl_lazy)
-    }
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                 suffix = suffix,
+                                 auto_index = FALSE,
+                                 FUN = dbplyr:::left_join.tbl_lazy,
+                                 localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -177,17 +252,14 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @export
 inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     copy = FALSE,
-                                    suffix = c(".x", ".y"), ...) 
+                                    suffix = c(".x", ".y"),
+                                    localConn = NULL, ...) 
 {
-    if (is(connSQLDataFrame(x), "MySQLConnection")) {
-        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
-                                           FUN = dbplyr:::inner_join.tbl_lazy)
-    } else {
-        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
-                                     suffix = suffix,
-                                     auto_index = FALSE,
-                                     FUN = dbplyr:::inner_join.tbl_lazy)
-    }
+    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+                                 suffix = suffix,
+                                 auto_index = FALSE,
+                                 FUN = dbplyr:::inner_join.tbl_lazy,
+                                 localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -219,17 +291,19 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @export
 semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
-                                   suffix = c(".x", ".y"), ...) 
+                                   suffix = c(".x", ".y"),
+                                   localConn = NULL, ...) 
 {
-    if (is(connSQLDataFrame(x), "MySQLConnection")) {
-        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
-                                           FUN = dbplyr:::semi_join.tbl_lazy)
-    } else {
+    ## if (is(connSQLDataFrame(x), "MySQLConnection")) {
+    ##     out <- .doCompatibleFunction_mysql(x, y, copy = copy,
+    ##                                        FUN = dbplyr:::semi_join.tbl_lazy)
+    ## } else {
         out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                      suffix = suffix,
                                      auto_index = FALSE,
-                                     FUN = dbplyr:::semi_join.tbl_lazy)
-    }
+                                     FUN = dbplyr:::semi_join.tbl_lazy,
+                                     localConn = localConn)
+    ## }
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {        
