@@ -1,12 +1,12 @@
-.union_SQLDataFrame <- function(x, y, copy = FALSE)
+.union_SQLDataFrame <- function(x, y, copy = FALSE,
+                                localConn, ## only used when both X and Y are remote.
+                                pswdX = NULL, pswdY = NULL)
 {
-    if (is(connSQLDataFrame(x), "MySQLConnection")) {
-        out <- .doCompatibleFunction_mysql(x, y, copy = copy,
-                                           FUN = dbplyr:::union.tbl_lazy)
-    } else {
-        out <- .doCompatibleFunction(x, y, copy = copy,
-                                     FUN = dbplyr:::union.tbl_lazy)
-    }
+    out <- .doCompatibleFunction(x, y, copy = copy,
+                                 FUN = dbplyr:::union.tbl_lazy,
+                                 localConn = localConn,
+                                 pswdX = pswdX,
+                                 pswdY = pswdY)
     ## dbplyr:::union.tbl_lazy
     ## solving new @dbconcatKey
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))

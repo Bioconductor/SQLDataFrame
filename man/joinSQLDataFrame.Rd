@@ -16,16 +16,20 @@
 \title{join \code{SQLDataFrame} together}
 \usage{
 \method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+  suffix = c(".x", ".y"), localConn = NULL, pswdX = NULL,
+  pswdY = NULL, ...)
 
 \method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+  suffix = c(".x", ".y"), localConn = NULL, pswdX = NULL,
+  pswdY = NULL, ...)
 
 \method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+  suffix = c(".x", ".y"), localConn = NULL, pswdX = NULL,
+  pswdY = NULL, ...)
 
 \method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+  suffix = c(".x", ".y"), localConn = localConn, pswdX = NULL,
+  pswdY = NULL, ...)
 }
 \arguments{
 \item{x}{\code{SQLDataFrame} objects to join.}

@@ -6,7 +6,8 @@
 \alias{union,SQLDataFrame,SQLDataFrame-method}
 \title{Union of \code{SQLDataFrame} objects}
 \usage{
-\S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, copy = FALSE)
+\S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, copy = FALSE,
+  localConn, pswdX = NULL, pswdY = NULL)
 }
 \arguments{
 \item{x}{A \code{SQLDataFrame} object.}

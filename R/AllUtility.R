@@ -30,14 +30,14 @@ normalizeRowIndex <- function(x)
         tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf),
                                         dbconcatKey(sdf), ridx)
     tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))
-    ## ordered by "key + otherCols"
+    ## columns ordered by "key + otherCols"
     return(tbl)
 }
 
 .create_federated_table <- function(remoteConn, dbtableName,
-                                    localConn, ldbtableName)
+                                    localConn, ldbtableName, remotePswd=NULL)
 {
-    browser()
+    ## browser()
     ## open docker, require credentials here:
     
     stopifnot(is(remoteConn, "MySQLConnection"))
@@ -55,8 +55,11 @@ normalizeRowIndex <- function(x)
     remoteInfo <- dbGetInfo(remoteConn)
     sql_conn <-build_sql(sql(columninfo),
                          sql(paste0(" connection='mysql://",
-                                    remoteInfo$user, "@", remoteInfo$host,
-                                    "/", remoteInfo$dbname, "/",
+                                    remoteInfo$user,
+                                    ifelse(is.null(remotePswd), "",
+                                           paste0(":", remotePswd)),
+                                    "@", remoteInfo$host, "/",
+                                    remoteInfo$dbname, "/",
                                     dbtableName, "'")),
                          con = localConn)
     dbExecute(localConn, sql_conn)
