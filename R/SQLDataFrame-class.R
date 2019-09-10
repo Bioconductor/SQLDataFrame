@@ -108,6 +108,9 @@ SQLDataFrame <- function(conn,
              paste(flds, collapse = ", "), "\"")
     }
 
+    ## save system environment variable for connection password.
+    ## Sys.setenv()
+    
     ## construction
     tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer

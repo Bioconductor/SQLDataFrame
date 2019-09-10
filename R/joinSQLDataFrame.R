@@ -99,6 +99,7 @@
 ##     }
 ## }
 
+## when creating a federated table, it needs a localConn where the federated table locates, and the remote password for construction the "CONNECTION" info. 
 .createFedTable_and_open_tbl_in_new_connection <- function(sdf,
                                                            localConn,
                                                            ldbtableName,

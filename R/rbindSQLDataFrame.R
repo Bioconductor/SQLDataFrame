@@ -1,4 +1,7 @@
-.rbind_SQLDataFrame <- function(..., deparse.level = 1)
+.rbind_SQLDataFrame <- function(..., deparse.level = 1
+                                ## localConn, ## only used when both X and Y are remote.
+                                ## pswdX = NULL, pswdY = NULL
+                                )
 {
     objects <- list(...)
     ## check consistency of dbkey(), colnames()
@@ -13,7 +16,8 @@
     rnms_final <- do.call(c, lapply(objects, ROWNAMES))
 
     ## pairwise "union" with multiple input. 
-    out <- union(objects[[1]], objects[[2]])
+    out <- union(objects[[1]], objects[[2]], localConn = localConn, pswdX = pswdX,
+                 pswdY = pswdY)
     objects <- objects[-seq_len(2)]
     repeat{
         if(length(objects) == 0) break
