@@ -120,6 +120,8 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 .extractCOLS_SQLDataFrame <- function(x, j)
 {
     xstub <- setNames(seq_along(x), names(x))
+    if (is.character(j) & any(j %in% dbkey(x)))
+        j <- setdiff(j, dbkey(x))
     j <- normalizeSingleBracketSubscript(j, xstub)
     cidx <- x@indexes[[2]]
     if (is.null(cidx)) {
@@ -140,11 +142,11 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' @param j Column subscript.
 #' @param drop Whether to drop with reduced dimension. Default is
 #'     TRUE.
-#' @return A \code{SQLDataFrame} object or vector with realized column
-#'     values (with single column subsetting and default
-#'     \code{drop=TRUE}. )
-#' @aliases [,SQLDataFrame,ANY-method 
-#' @importFrom tibble tibble 
+#' @return \code{[i, j]}: A \code{SQLDataFrame} object or vector with
+#'     realized column values (with single column subsetting and
+#'     default \code{drop=TRUE}. )
+#' @aliases [,SQLDataFrame,ANY-method
+#' @importFrom tibble tibble
 #' @export
 #' @examples
 #'
@@ -184,6 +186,14 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #'           population = c("3615.0", "365.0")), ]
 #' ### remember to add the '.0' trailing for numeric values. If not sure,
 #' ### check `ROWNAMES()`.
+#'
+#' ## Subsetting with key columns
+#'
+#' obj["state"] ## list style subsetting, return a SQLDataFrame object with col = 0.
+#' obj[c("state", "division")]  ## list style subsetting, return a SQLDataFrame object with col = 1.
+#' obj[, "state"] ## realize specific key column value.
+#' obj[, c("state", "division")] ## col = 1, but do not realize.
+#' 
 
 
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
@@ -198,18 +208,13 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
             if (!missing(drop)) 
                 warning("'drop' argument ignored by list-style subsetting")
             if (missing(i)) 
-                return(x)
-            j <- i
+                return(x)  ## x[] 
+            j <- i  ## x[i]
         }
         if (!is(j, "IntegerRanges")) {
-            if (is.character(j) && length(j) == 1 && j %in% dbkey(x)) {
-                res <- .extract_tbl_from_SQLDataFrame(x) %>% select(j) %>% pull()
-                if (!drop)
-                    warning("'drop' argument ignored by subsetting only key columns")
-                return(res)
-            } else {
-                x <- .extractCOLS_SQLDataFrame(x, j)
-            }
+            x <- .extractCOLS_SQLDataFrame(x, j) ## x["key"] returns
+                                                 ## SQLSataFrame with
+                                                 ## 0 cols.
         }
         if (list_style_subsetting) 
             return(x)
@@ -218,16 +223,23 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
         x <- extractROWS(x, i)
     }
     if (missing(drop)) 
-        drop <- nrow(x) & ncol(x) == 1L ## if nrow(x)==0, return the
-                                        ## SQLDataFrame with 0 rows
-                                        ## and 1 column(s)
+        drop <- nrow(x) & ncol(x) %in% c(0L, 1L) ## if nrow(x)==0,
+                                                 ## return the
+                                                 ## SQLDataFrame with
+                                                 ## 0 rows and 1
+                                                 ## column(s)
     if (drop) {
-        if (ncol(x) == 1L) 
+        if (ncol(x) == 1L & length(j) == 1) ## x[, "col"] realize.
+                                            ## x[,c("key", "other")]
+                                            ## do not realize.
             return(x[[1L]])
+        if (ncol(x) == 0 & !is.null(j))
+            return(x[[j]]) ## x[,"key"] returns realized value of that
+                           ## key column.
         if (nrow(x) == 1L) 
             return(as(x, "list"))
     }
-    x  
+    x
 })
 
 #' @rdname SQLDataFrame-methods
@@ -294,43 +306,78 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 #' @export
 setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 
-#####################
-### filter & mutate
-#####################
+#############################
+### select, filter & mutate
+#############################
 
-#' @description Use \code{filter()} to choose rows/cases where
-#'     conditions are true.
+#' @description Use \code{select()} function to select certain
+#'     columns.
 #' @rdname SQLDataFrame-methods
-#' @aliases filter filter,SQLDataFrame-method
+#' @aliases select select,SQLDataFrame-methods
+#' @return \code{select}: always returns a SQLDataFrame object no
+#'     matter how may columns are selected. If only key column(s)
+#'     is(are) selected, it will return a \code{SQLDataFrame} object
+#'     with 0 col (only key columns are shown).
 #' @param .data A \code{SQLDataFrame} object.
 #' @param ... additional arguments to be passed.
 #' \itemize{
-#' \item{\code{filter()}: }{Logical predicates defined in terms of the
+#' \item \code{select()}: One or more unquoted expressions separated
+#'     by commas. You can treat variable names like they are
+#'     positions, so you can use expressions like ‘x:y’ to select
+#'     ranges of variables. Positive values select variables; negative
+#'     values drop variables. See \code{?dplyr::select} for more
+#'     details.
+#' \item \code{filter()}: Logical predicates defined in terms of the
 #'     variables in ‘.data’. Multiple conditions are combined with
 #'     ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
-#'     kept. See \code{?dplyr::filter} for more details.}
-#' \item{\code{mutate()}: }{Name-value pairs of expressions, each with
+#'     kept. See \code{?dplyr::filter} for more details.
+#' \item \code{mutate()}: Name-value pairs of expressions, each with
 #'     length 1 or the same length as the number of rows in the group
 #'     (if using ‘group_by()’) or in the entire input (if not using
 #'     groups). The name of each argument will be the name of a new
 #'     variable, and the value will be its corresponding value. Use a
 #'     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
-#'     overwrite existing variables of the same name.}}
-#' @return \code{filter}: A \code{SQLDataFrame} object with subset
-#'     rows of the input SQLDataFrame object matching conditions.
+#'     overwrite existing variables of the same name.
+#' }
 #' @export
 #' @examples
 #' 
 #' ###################
-#' ## filter & mutate 
+#' ## select, filter, mutate
 #' ###################
-#'
 #' library(dplyr)
+#' obj %>% select(division)  ## equivalent to obj["division"], or obj[, "division", drop = FALSE]
+#' obj %>% select(region:size)
+#' 
 #' obj %>% filter(region == "West" & size == "medium")
 #' obj1 %>% filter(region == "West" & population > 10000)
 #' 
 #' obj %>% mutate(p1 = population / 10)
 #' obj %>% mutate(s1 = size)
+#'
+#' obj %>% select(region, size, population) %>% 
+#'     filter(population > 10000) %>% 
+#'     mutate(pK = population/1000)
+#' obj1 %>% select(region, size, population) %>% 
+#'     filter(population > 10000) %>% 
+#'     mutate(pK = population/1000)  
+
+select.SQLDataFrame <- function(.data, ...)
+{
+    tbl <- .extract_tbl_from_SQLDataFrame(.data)
+    dots <- quos(...)
+    old_vars <- op_vars(tbl$ops)
+    new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tbl$ops))
+    .extractCOLS_SQLDataFrame(.data, new_vars)
+}
+
+#' @description Use \code{filter()} to choose rows/cases where
+#'     conditions are true.
+#' @rdname SQLDataFrame-methods
+#' @aliases filter filter,SQLDataFrame-method
+#' @return \code{filter}: A \code{SQLDataFrame} object with subset
+#'     rows of the input SQLDataFrame object matching conditions.
+#' @export
 
 filter.SQLDataFrame <- function(.data, ...)
 {
@@ -381,7 +428,16 @@ mutate.SQLDataFrame <- function(.data, ...)
         }
     }
     tbl_out <- dplyr::mutate(tbl, ...)
-    BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
+    out <- BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
+
+    ## check if not-null for the existing @indexes, and update for mutate.
+    cidx <- .data@indexes[[2]]
+    if (!is.null(cidx)) {
+        cidx <- c(cidx,
+                  setdiff(seq_len(ncol(tbl_out)), seq_len(ncol(tbl))) - length(dbkey(.data)))
+        out <- BiocGenerics:::replaceSlots(out, indexes = list(ridx(.data), cidx))
+    }
+    return(out)
 }
 
 #' @description \code{connSQLDataFrame} returns the connection of a

@@ -15,14 +15,14 @@
 \alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
-\alias{[,SQLDataFrame,ANY,ANY,ANY-method}
 \alias{[,SQLDataFrame,ANY-method}
-\alias{[,SQLDataFrame,SQLDataFrame,ANY,ANY-method}
 \alias{[,SQLDataFrame,SQLDataFrame-method}
-\alias{[,SQLDataFrame,list,ANY,ANY-method}
 \alias{[,SQLDataFrame,list-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
+\alias{select.SQLDataFrame}
+\alias{select}
+\alias{select,SQLDataFrame-methods}
 \alias{filter.SQLDataFrame}
 \alias{filter}
 \alias{filter,SQLDataFrame-method}
@@ -44,16 +44,17 @@
 
 \S4method{names}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,ANY}(x, i, j, ..., drop = TRUE)
 
-\S4method{[}{SQLDataFrame,SQLDataFrame,ANY,ANY}(x, i, j, ...,
-  drop = TRUE)
+\S4method{[}{SQLDataFrame,SQLDataFrame}(x, i, j, ..., drop = TRUE)
 
-\S4method{[}{SQLDataFrame,list,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,list}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 
 \S4method{$}{SQLDataFrame}(x, name)
+
+\method{select}{SQLDataFrame}(.data, ...)
 
 \method{filter}{SQLDataFrame}(.data, ...)
 
@@ -74,17 +75,24 @@ values, a named list of key values, and \code{SQLDataFrame},
 
 \item{...}{additional arguments to be passed.
 \itemize{
-\item{\code{filter()}: }{Logical predicates defined in terms of the
+\item \code{select()}: One or more unquoted expressions separated
+    by commas. You can treat variable names like they are
+    positions, so you can use expressions like ‘x:y’ to select
+    ranges of variables. Positive values select variables; negative
+    values drop variables. See \code{?dplyr::select} for more
+    details.
+\item \code{filter()}: Logical predicates defined in terms of the
     variables in ‘.data’. Multiple conditions are combined with
     ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
-    kept. See \code{?dplyr::filter} for more details.}
-\item{\code{mutate()}: }{Name-value pairs of expressions, each with
+    kept. See \code{?dplyr::filter} for more details.
+\item \code{mutate()}: Name-value pairs of expressions, each with
     length 1 or the same length as the number of rows in the group
     (if using ‘group_by()’) or in the entire input (if not using
     groups). The name of each argument will be the name of a new
     variable, and the value will be its corresponding value. Use a
     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
-    overwrite existing variables of the same name.}}}
+    overwrite existing variables of the same name.
+}}
 
 \item{drop}{Whether to drop with reduced dimension. Default is
 TRUE.}
@@ -105,9 +113,14 @@ TRUE.}
 
 \code{names}: A character vector
 
-A \code{SQLDataFrame} object or vector with realized column
-    values (with single column subsetting and default
-    \code{drop=TRUE}. )
+\code{[i, j]}: A \code{SQLDataFrame} object or vector with
+    realized column values (with single column subsetting and
+    default \code{drop=TRUE}. )
+
+\code{select}: always returns a SQLDataFrame object no
+    matter how may columns are selected. If only key column(s)
+    is(are) selected, it will return a \code{SQLDataFrame} object
+    with 0 col (only key columns are shown).
 
 \code{filter}: A \code{SQLDataFrame} object with subset
     rows of the input SQLDataFrame object matching conditions.
@@ -125,6 +138,9 @@ A \code{SQLDataFrame} object or vector with realized column
 
 \code{[i, j]} supports subsetting by \code{i} (for
     row) and \code{j} (for column) and respects ‘drop=FALSE’.
+
+Use \code{select()} function to select certain
+    columns.
 
 Use \code{filter()} to choose rows/cases where
     conditions are true.
@@ -150,6 +166,7 @@ dim(obj)
 dimnames(obj)
 length(obj)
 names(obj)
+connSQLDataFrame(obj)
 
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
@@ -187,20 +204,31 @@ obj1[list(region = c("South", "West"),
 ### remember to add the '.0' trailing for numeric values. If not sure,
 ### check `ROWNAMES()`.
 
-###################
-## filter & mutate 
-###################
+## Subsetting with key columns
 
+obj["state"] ## list style subsetting, return a SQLDataFrame object with col = 0.
+obj[c("state", "division")]  ## list style subsetting, return a SQLDataFrame object with col = 1.
+obj[, "state"] ## realize specific key column value.
+obj[, c("state", "division")] ## col = 1, but do not realize.
+
+
+###################
+## select, filter, mutate
+###################
 library(dplyr)
+obj \%>\% select(division)  ## equivalent to obj["division"], or obj[, "division", drop = FALSE]
+obj \%>\% select(region:size)
+
 obj \%>\% filter(region == "West" & size == "medium")
 obj1 \%>\% filter(region == "West" & population > 10000)
 
 obj \%>\% mutate(p1 = population / 10)
 obj \%>\% mutate(s1 = size)
 
-###################
-## connection info
-###################
-
-connSQLDataFrame(obj)
+obj \%>\% select(region, size, population) \%>\% 
+    filter(population > 10000) \%>\% 
+    mutate(pK = population/1000)
+obj1 \%>\% select(region, size, population) \%>\% 
+    filter(population > 10000) \%>\% 
+    mutate(pK = population/1000)  
 }
