@@ -23,17 +23,6 @@ normalizeRowIndex <- function(x)
     return(ridx)
 }
 
-.extract_tbl_from_SQLDataFrame_indexes <- function(tbl, sdf)
-{
-    ridx <- ridx(sdf)
-    if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf),
-                                        dbconcatKey(sdf), ridx)
-    tbl <- tbl %>% select(dbkey(sdf), colnames(sdf))
-    ## columns ordered by "key + otherCols"
-    return(tbl)
-}
-
 .create_federated_table <- function(remoteConn, dbtableName,
                                     localConn, ldbtableName, remotePswd=NULL)
 {

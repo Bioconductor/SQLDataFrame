@@ -166,7 +166,6 @@ dim(obj)
 dimnames(obj)
 length(obj)
 names(obj)
-connSQLDataFrame(obj)
 
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
@@ -231,4 +230,10 @@ obj \%>\% select(region, size, population) \%>\%
 obj1 \%>\% select(region, size, population) \%>\% 
     filter(population > 10000) \%>\% 
     mutate(pK = population/1000)  
+
+###################
+## connection info
+###################
+
+connSQLDataFrame(obj)
 }

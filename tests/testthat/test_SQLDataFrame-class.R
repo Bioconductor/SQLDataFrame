@@ -52,11 +52,11 @@ test_that("validity,SQLDataFrame works",
 })
 
 ## utility functions
-test_that("'.extract_tbl_from_SQLDataFrame' works",
+test_that("'.extract_tbl_from_SQLDataFrame_indexes' works",
 {
     obj1 <- obj[1:5, 2, drop=FALSE]
 
-    res <- .extract_tbl_from_SQLDataFrame(obj1)
+    res <- .extract_tbl_from_SQLDataFrame_indexes(tblData(obj1), obj1)
     expect_true(is(res, "tbl_dbi")) 
     expect_true(is.na(nrow(res)))
     expect_identical(ncol(res), 2L)
@@ -64,7 +64,7 @@ test_that("'.extract_tbl_from_SQLDataFrame' works",
 
     ## always keep key column in tblData
     obj2 <- obj[, 1, drop=FALSE]
-    res <- .extract_tbl_from_SQLDataFrame(obj2)
+    res <- .extract_tbl_from_SQLDataFrame_indexes(tblData(obj2), obj2)
     expect_identical(ncol(res), 2L)
     expect_identical(colnames(res), c("sampleID", "Treatment"))
 })
@@ -72,7 +72,7 @@ test_that("'.extract_tbl_from_SQLDataFrame' works",
 test_that("'.extract_tbl_rows_by_key' works",
 {
     obj1 <- obj[, 2, drop=FALSE]
-    tbl <- .extract_tbl_from_SQLDataFrame(obj1)
+    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(obj1), obj1)
     res <- .extract_tbl_rows_by_key(tbl, dbkey(obj), dbconcatKey(obj), 1:5)
     nrow <- res %>% summarize(n=n()) %>% pull(n)
     expect_identical(nrow, 5L)

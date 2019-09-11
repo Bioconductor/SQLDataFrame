@@ -284,7 +284,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
         stop("incorrect number of subscripts")
     ## extracting key col value 
     if (is.character(i) && length(i) == 1 && i %in% dbkey(x)) {
-        res <- .extract_tbl_from_SQLDataFrame(x) %>% select(i) %>% pull()
+        res <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x) %>% select(i) %>% pull()
         return(res)
     }
     i2 <- normalizeDoubleBracketSubscript(
@@ -296,7 +296,7 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     ## selectMethod("getListElement", "list") <- "simpleList"
     if (is.na(i2))
         return(NULL)
-    tblData <- .extract_tbl_from_SQLDataFrame(x) %>% select(- !!dbkey(x))
+    tblData <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x) %>% select(- !!dbkey(x))
     res <- tblData %>% pull(i2)
     return(res)
 })
@@ -364,7 +364,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 
 select.SQLDataFrame <- function(.data, ...)
 {
-    tbl <- .extract_tbl_from_SQLDataFrame(.data)
+    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(.data), .data)
     dots <- quos(...)
     old_vars <- op_vars(tbl$ops)
     new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tbl$ops))
@@ -381,7 +381,7 @@ select.SQLDataFrame <- function(.data, ...)
 
 filter.SQLDataFrame <- function(.data, ...)
 {
-    tbl <- .extract_tbl_from_SQLDataFrame(.data)
+    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(.data), .data)
     temp <- dplyr::filter(tbl, ...)
 
     rnms <- temp %>%

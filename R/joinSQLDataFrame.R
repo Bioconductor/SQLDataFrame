@@ -25,7 +25,7 @@
                 ## temporary connection from "union" or "join"
                 dbs <- .dblist(con)
                 cony <- connSQLDataFrame(y)
-                tbly <- .extract_tbl_from_SQLDataFrame(y)
+                tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
                 dbsy <- .dblist(cony)[-1,]
                 
                 idx <- match(paste(dbsy$name, dbsy$file, sep=":"),
@@ -60,7 +60,7 @@
             tbly <- .open_tbl_from_connection(con, "main", y)
             tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
         } else if (is(con, "MySQLConnection")) {
-            tbly <- .extract_tbl_from_SQLDataFrame(y)
+            tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
             tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
                                                                    con,
                                                                    ldbtableNameX,
@@ -114,7 +114,7 @@
     res_tbl <- tbl(localConn, ldbtableName)  ## time consuming...
     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf) ## time consuming...
     ## } else {
-    ##     res_tbl <- .extract_tbl_from_SQLDataFrame(sdf)
+    ##     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(sdf), sdf)
     ## }
     return(res_tbl)
 }
@@ -146,7 +146,7 @@
 }
 .open_tbl_from_connection <- function(con, aux, sdf) {
     if (aux == "main") {
-        tblx <- .extract_tbl_from_SQLDataFrame(sdf)
+        tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(sdf), sdf)
     } else {
         auxSchema <- in_schema(aux, ident(dbtable(sdf)))
         tblx <- tbl(con, auxSchema)

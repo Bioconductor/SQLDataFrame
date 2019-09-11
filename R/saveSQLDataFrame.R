@@ -37,7 +37,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
 {
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        sql_cmd <- db_sql_render(con, .extract_tbl_from_SQLDataFrame(x))
+        sql_cmd <- db_sql_render(con, .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x))
         ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
     } else { 
         if (file.exists(dbname)) {

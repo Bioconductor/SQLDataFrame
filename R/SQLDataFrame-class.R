@@ -322,21 +322,22 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 }
 
 ## Nothing special, just queried the ridx, and ordered tbl by "key+otherCols"
-.extract_tbl_from_SQLDataFrame <- function(x, collect = FALSE)
+.extract_tbl_from_SQLDataFrame_indexes <- function(tbl, sdf, collect = FALSE)
 {
-    ridx <- ridx(x)
-    tbl <- tblData(x)
+    ridx <- ridx(sdf)
     if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(x), dbconcatKey(x), ridx)
+        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf),
+                                        dbconcatKey(sdf), ridx)
     if (collect)
         tbl <- collect(tbl)
-    tbl.out <- tbl %>% select(dbkey(x), colnames(x))
+    tbl.out <- tbl %>% select(dbkey(sdf), colnames(sdf))
+    ## columns ordered by "key + otherCols"
     return(tbl.out)
 }
 
 ## .printROWS realize all ridx(x), so be careful here to only use small x.
 .printROWS <- function(x, index){
-    tbl <- .extract_tbl_from_SQLDataFrame(x, collect = TRUE)
+    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x, collect = TRUE)
     ## already ordered by "key + otherCols".
     out.tbl <- collect(tbl)
     ridx <- normalizeRowIndex(x)
@@ -413,7 +414,7 @@ setAs("SQLDataFrame", "data.frame", function(from)
 .as.data.frame.SQLDataFrame <- function(x, row.names = NULL,
                                         optional = NULL, ...)
 {
-    tbl <- .extract_tbl_from_SQLDataFrame(x)
+    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
     ridx <- normalizeRowIndex(x)
     i <- match(ridx, sort(unique(ridx))) 
     as.data.frame(tbl, row.names = row.names, optional = optional)[i, ]
