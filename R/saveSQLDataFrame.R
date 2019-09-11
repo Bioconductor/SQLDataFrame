@@ -101,24 +101,34 @@ saveSQLDataFrame <- function(x, localConn,
     ## operations don't. The @dbname from SQLite includes the path,
     ## MySQL doesn't. For MySQL, dbGetInfo(connSQLDataFrame(x))$dbname
     ## only include the database name.
-    if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
-        file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
+    if (is(con, "SQLiteConnection")) {
+        if(is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
+            file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
+        }
     }
-    msg_saveSQLDataFrame(x, dbname, dbtable)
+    msg_saveSQLDataFrame(x, con, dbtable)
     res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
     invisible(res)
 }
 
-
-msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
+msg_saveSQLDataFrame <- function(x, con, dbtable) {
+    if (is(con, "MySQLConnection")) {
+        info <- dbGetInfo(con)
+        databaseLine <- paste0("mysql ", info$serverVersion, " [",
+                               info$user, "@", info$host, ":/",
+                               info$dbname, "] \n")
+    } else if (is(con, "SQLiteConnection")) {
+        databaseLine <- paste0("sqlite ", dbplyr:::sqlite_version(),
+                               " [", con@dbname, "] \n")
+    }
     msg <- paste0("## A new database table is saved! \n",
                   "## Source: table<", dbtable, "> [",
                   paste(dim(x), collapse = " X "), "] \n",
-                  "## Database: ",
-                  paste("sqlite ", dbplyr:::sqlite_version(), " [", dbname, "] \n"),
+                  "## Database: ", databaseLine, 
                   "## Use the following command to reload into R: \n",
                   "## dat <- SQLDataFrame(\n",
-                  "##   dbname = \"", dbname, "\",\n",
+                  ## FIXME: localConn was not required in saveSQLDataFrame for SQLiteDataFrame...
+                  "##   conn = localConn", ",\n", 
                   "##   dbtable = \"", dbtable, "\",\n",
                   "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
                   paste(paste0("'", dbkey(x), "'"), collapse=", "),
