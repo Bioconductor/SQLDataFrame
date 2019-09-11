@@ -30,7 +30,8 @@
 #' @export
 
 
-saveSQLDataFrame <- function(x, localConn, remotePswd,
+saveSQLDataFrame <- function(x, localConn,
+                             remotePswd,
                              dbname = tempfile(fileext = ".db"), 
                              ## outfile,
                              dbtable = deparse(substitute(x)),
@@ -40,12 +41,21 @@ saveSQLDataFrame <- function(x, localConn, remotePswd,
     ## browser()
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        ## if (connection is not local) create a federated table in "localConn"
-        tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
-                                                              ldbtableName = dplyr:::random_table_name(),
-                                                              remotePswd = remotePswd)
-        sql_cmd <- db_sql_render(localConn, tbl)
-        dbExecute(localConn, build_sql("CREATE TABLE ", sql(dbtable), " AS ", sql_cmd, con = localConn))
+        if (!identical(con, localConn)) {
+            if (missing(remotePswd))
+                stop("password for the remote MySQL connection must be ",
+                     "provided in argument: 'remotePswd'")
+            tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
+                                                                  ldbtableName = dplyr:::random_table_name(),
+                                                                  remotePswd = remotePswd)
+            con <- localConn
+        } else {
+            tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
+            ## only "rbind" preserves the "@indexes[[1]]", "join" and
+            ## "union" dont and returns all null indexes. so could be
+            ## only: tbl <- tblData(x) directly. But doesn't cost
+            ## anything calling the above function if ridx() is NULL.
+        }
         ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
     } else { 
         if (file.exists(dbname)) {
@@ -57,43 +67,48 @@ saveSQLDataFrame <- function(x, localConn, remotePswd,
         if (is(tblData(x)$ops, "op_base") ) {  
             con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
             aux <- .attach_database(con, connSQLDataFrame(x)@dbname)
-            tblx <- .open_tbl_from_connection(con, aux, x)  ## already
+            tbl <- .open_tbl_from_connection(con, aux, x)  ## already
                                                             ## evaluated
                                                             ## ridx
                                                             ## here.
-            sql_cmd <- dbplyr::db_sql_render(con, tblx)
         } else if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) { 
             con <- connSQLDataFrame(x)
-            sql_cmd <- dbplyr::db_sql_render(con, tblData(x))
+            tbl <- tblData(x)
             if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
                 dbWriteTable(con, paste0(dbtable, "_ridx"),
                              value = data.frame(ridx = ridx(x)))
             }
         }
-        dbExecute(con, build_sql("CREATE TABLE ", sql(dbtable), " AS ", sql_cmd, con = con))
-        ## error if "dbtable" already exist. "Error: table aa already
-        ## exists". Not likely happen here, because SQLDataFrame generated
-        ## from "join" or "union" has connection to a new temporary .db
-        ## file with empty contents.
-        
-        ## add unique index file with dbkey(x)
-        if (index)
-            dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
-                                                     indexes = list(dbkey(x)),
-                                                     unique = TRUE)
-        ## FIXME: implement "overwrite" argument here for the index
-        ## file. if (found & overwrite)
-        ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
-        ## table_name.index_name; see also: dbRemoveTable()
-        
-        if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
-            file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
-        }
-        msg_saveSQLDataFrame(x, dbname, dbtable)
-        res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
-        invisible(res)
     }
+    sql_cmd <- db_sql_render(con, tbl)
+    dbExecute(con, build_sql("CREATE TABLE ", sql(dbtable), " AS ", sql_cmd, con = con))
+    ## error if "dbtable" already exist. "Error: table aa already
+    ## exists". Not likely happen here, because SQLDataFrame generated
+    ## from "join" or "union" has connection to a new temporary .db
+    ## file with empty contents.
+    
+    ## add unique index file with dbkey(x)
+    if (index)
+        dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
+                                                 indexes = list(dbkey(x)),
+                                                 unique = TRUE)
+    ## FIXME: implement "overwrite" argument here for the index
+    ## file. if (found & overwrite)
+    ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
+    ## table_name.index_name; see also: dbRemoveTable()
+
+    ## following condition applies to both SQLite and MySQL,
+    ## operations don't. The @dbname from SQLite includes the path,
+    ## MySQL doesn't. For MySQL, dbGetInfo(connSQLDataFrame(x))$dbname
+    ## only include the database name.
+    if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
+        file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
+    }
+    msg_saveSQLDataFrame(x, dbname, dbtable)
+    res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
+    invisible(res)
 }
+
 
 msg_saveSQLDataFrame <- function(x, dbname, dbtable) {
     msg <- paste0("## A new database table is saved! \n",
