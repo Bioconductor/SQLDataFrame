@@ -150,7 +150,8 @@ SQLDataFrame <- function(conn,
     
     ## concatKey
     concatKey <- tbl %>%
-        mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
+        ## mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
+        mutate(concatKey = paste(!!!syms(dbkey), sep=":")) %>%
         pull(concatKey)
 
     .SQLDataFrame(
@@ -311,7 +312,8 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     if (length(key) == 1) {
         out <- x %>% filter(!!sym(key) %in% !!(concatKey[i]))
     } else {
-        x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep="\b"))
+        ## x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep="\b"))
+        x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep=":"))
         ## FIXME: possible to remove the ".0" trailing after numeric values?
         ## see: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
         ### keys <- x %>% pull(concatKeys)

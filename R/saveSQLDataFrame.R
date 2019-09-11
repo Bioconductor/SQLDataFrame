@@ -29,15 +29,23 @@
 #' dbtable(obj1)
 #' @export
 
-saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"), 
+
+saveSQLDataFrame <- function(x, localConn, remotePswd,
+                             dbname = tempfile(fileext = ".db"), 
                              ## outfile,
                              dbtable = deparse(substitute(x)),
                              overwrite = FALSE,
                              index = TRUE, ...)
 {
+    ## browser()
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        sql_cmd <- db_sql_render(con, .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x))
+        ## if (connection is not local) create a federated table in "localConn"
+        tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
+                                                              ldbtableName = dplyr:::random_table_name(),
+                                                              remotePswd = remotePswd)
+        sql_cmd <- db_sql_render(localConn, tbl)
+        dbExecute(localConn, build_sql("CREATE TABLE ", sql(dbtable), " AS ", sql_cmd, con = localConn))
         ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
     } else { 
         if (file.exists(dbname)) {
@@ -50,8 +58,9 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
             con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
             aux <- .attach_database(con, connSQLDataFrame(x)@dbname)
             tblx <- .open_tbl_from_connection(con, aux, x)  ## already
-            ## evaluated
-            ## ridx here.
+                                                            ## evaluated
+                                                            ## ridx
+                                                            ## here.
             sql_cmd <- dbplyr::db_sql_render(con, tblx)
         } else if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) { 
             con <- connSQLDataFrame(x)
@@ -61,7 +70,7 @@ saveSQLDataFrame <- function(x, dbname = tempfile(fileext = ".db"),
                              value = data.frame(ridx = ridx(x)))
             }
         }
-        dbExecute(con, build_sql("CREATE TABLE ", dbtable, " AS ", sql_cmd, con = con))
+        dbExecute(con, build_sql("CREATE TABLE ", sql(dbtable), " AS ", sql_cmd, con = con))
         ## error if "dbtable" already exist. "Error: table aa already
         ## exists". Not likely happen here, because SQLDataFrame generated
         ## from "join" or "union" has connection to a new temporary .db

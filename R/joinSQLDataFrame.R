@@ -112,6 +112,8 @@
                             ldbtableName = ldbtableName,
                             remotePswd = remotePswd) 
     res_tbl <- tbl(localConn, ldbtableName)  ## time consuming...
+    ## FIXME: keep the original @indexes and only replace the @tblData slot?
+    ## ANS: this is to pass the original @indexes into the lazy queries of lazy tbl for SQL operation.
     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf) ## time consuming...
     ## } else {
     ##     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(sdf), sdf)
