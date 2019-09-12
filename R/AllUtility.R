@@ -23,11 +23,17 @@ normalizeRowIndex <- function(x)
     return(ridx)
 }
 
-.mysqlInfo <- function(mysqlConn, pswd = NULL){
+.mysql_info <- function(mysqlConn, pswd = NULL){
     info <- dbGetInfo(mysqlConn)
     if (is.null(pswd))
         return(paste0(info$user, "@", info$host))
     paste0(info$user, "@", info$host, ":", pswd)
+}
+
+.mysql_pswd <- function(con) {
+    dbenv <- Sys.getenv("SQLDBINFO")
+    dbenv <- do.call(rbind, strsplit(unlist(strsplit(dbenv, ";")), ":"))
+    dbenv[match(.mysql_info(con), dbenv[,1]), 2]
 }
 
 .create_federated_table <- function(remoteConn, dbtableName,

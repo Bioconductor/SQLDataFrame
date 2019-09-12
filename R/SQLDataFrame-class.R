@@ -117,7 +117,7 @@ SQLDataFrame <- function(conn,
         if (missing(password))
             stop("Please provided the \"password\" for database connection")
         dbinfo <- dbGetInfo(conn)  ## for MySQL. SQLite doesn't require password. 
-        dbenvnew <- .mysqlInfo(conn, password)
+        dbenvnew <- .mysql_info(conn, password)
         dbenv <- Sys.getenv("SQLDBINFO")
         if(dbenv == "") {
             Sys.setenv(SQLDBINFO = newdbenv)

@@ -50,9 +50,7 @@ saveSQLDataFrame <- function(x, localConn,
                 stop("A local MySQL connection must be provided ",
                      "in argument: localConn")
             ## if (!identical(con, localConn)) {
-            dbenv <- Sys.getenv("SQLDBINFO")
-            dbenv <- do.call(rbind, strsplit(unlist(strsplit(dbenv, ";")), ":"))
-            pswd <- dbenv[match(.mysqlInfo(con), dbenv[,1]), 2]
+            pswd <- .mysql_pswd(con)
             tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
                                                                   ldbtableName = dplyr:::random_table_name(),
                                                                   remotePswd = pswd)
@@ -124,7 +122,7 @@ msg_saveSQLDataFrame <- function(x, con, dbtable) {
     if (is(con, "MySQLConnection")) {
         info <- dbGetInfo(con)
         databaseLine <- paste0("mysql ", info$serverVersion, " [",
-                                .mysqlInfo(con),
+                                .mysql_info(con),
                                ":/", info$dbname, "] \n")  ## legacy format from lazy_tbl
     } else if (is(con, "SQLiteConnection")) {
         databaseLine <- paste0("sqlite ", dbplyr:::sqlite_version(),
@@ -144,3 +142,4 @@ msg_saveSQLDataFrame <- function(x, con, dbtable) {
                   ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
     message(msg)
 }
+
