@@ -31,7 +31,6 @@
 
 
 saveSQLDataFrame <- function(x, localConn,
-                             remotePswd,
                              dbname = tempfile(fileext = ".db"), 
                              ## outfile,
                              dbtable = deparse(substitute(x)),
@@ -41,13 +40,22 @@ saveSQLDataFrame <- function(x, localConn,
     ## browser()
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        if (!identical(con, localConn)) {
-            if (missing(remotePswd))
-                stop("password for the remote MySQL connection must be ",
-                     "provided in argument: 'remotePswd'")
+        if (is(tblData(x)$ops, "op_base") ) { ## simple ops e.g., 'sdf[,]'
+            ## FIXME: if 'con' is already a local connection, then
+            ## 'localConn' is not needed, and no need for generating
+            ## federated table. Also applies to '*_join', 'union'
+            ## functions.
+            ## NOW assume the con is remote.
+            if (missing(localConn))
+                stop("A local MySQL connection must be provided ",
+                     "in argument: localConn")
+            ## if (!identical(con, localConn)) {
+            dbenv <- Sys.getenv("SQLDBINFO")
+            dbenv <- do.call(rbind, strsplit(unlist(strsplit(dbenv, ";")), ":"))
+            pswd <- dbenv[match(.mysqlInfo(con), dbenv[,1]), 2]
             tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
                                                                   ldbtableName = dplyr:::random_table_name(),
-                                                                  remotePswd = remotePswd)
+                                                                  remotePswd = pswd)
             con <- localConn
         } else {
             tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
@@ -57,7 +65,7 @@ saveSQLDataFrame <- function(x, localConn,
             ## anything calling the above function if ridx() is NULL.
         }
         ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
-    } else { 
+    } else if (is(connSQLDataFrame(x), "SQLiteConnection")) { 
         if (file.exists(dbname)) {
             dbname <- file_path_as_absolute(dbname)
             if (overwrite == FALSE)
@@ -107,8 +115,9 @@ saveSQLDataFrame <- function(x, localConn,
         }
     }
     msg_saveSQLDataFrame(x, con, dbtable)
-    res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
-    invisible(res)
+    ## currently SQLDataFrame() constructor required 'password', so disable for now.
+    ## res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
+    ## invisible(res)
 }
 
 msg_saveSQLDataFrame <- function(x, con, dbtable) {
