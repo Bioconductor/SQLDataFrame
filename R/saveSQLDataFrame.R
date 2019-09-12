@@ -115,8 +115,8 @@ msg_saveSQLDataFrame <- function(x, con, dbtable) {
     if (is(con, "MySQLConnection")) {
         info <- dbGetInfo(con)
         databaseLine <- paste0("mysql ", info$serverVersion, " [",
-                               info$user, "@", info$host, ":/",
-                               info$dbname, "] \n")
+                                .mysqlInfo(con),
+                               ":/", info$dbname, "] \n")  ## legacy format from lazy_tbl
     } else if (is(con, "SQLiteConnection")) {
         databaseLine <- paste0("sqlite ", dbplyr:::sqlite_version(),
                                " [", con@dbname, "] \n")

@@ -23,6 +23,13 @@ normalizeRowIndex <- function(x)
     return(ridx)
 }
 
+.mysqlInfo <- function(mysqlConn, pswd = NULL){
+    info <- dbGetInfo(mysqlConn)
+    if (is.null(pswd))
+        return(paste0(info$user, "@", info$host))
+    paste0(info$user, "@", info$host, ":", pswd)
+}
+
 .create_federated_table <- function(remoteConn, dbtableName,
                                     localConn, ldbtableName, remotePswd=NULL)
 {
