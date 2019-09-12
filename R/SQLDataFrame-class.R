@@ -77,6 +77,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' obj
 
 SQLDataFrame <- function(conn,
+                         password, ## required for MySQL connection.
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table exists!
                          dbkey = character(0),
@@ -109,7 +110,22 @@ SQLDataFrame <- function(conn,
     }
 
     ## save system environment variable for connection password.
-    ## Sys.setenv()
+    ## FIXME: how about no password required for MySQL connection???
+    if (is(conn, "MySQLConnection")) {
+        ## local connection doesn't require passwd for creating
+        ## federated table, only need to build the connection.
+        if (missing(password))
+            stop("Please provided the \"password\" for database connection")
+        dbinfo <- dbGetInfo(conn)  ## for MySQL. SQLite doesn't require password. 
+        dbenvnew <- .mysqlInfo(conn, password)
+        dbenv <- Sys.getenv("SQLDBINFO")
+        if(dbenv == "") {
+            Sys.setenv(SQLDBINFO = newdbenv)
+        } else if (!grepl(dbenv, dbenvnew)) {
+            dbenvnew <- paste(dbenv, dbenvnew, sep = ";")
+            Sys.setenv(SQLDBINFO = newdbenv)
+        } else NULL
+    }        
     
     ## construction
     tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
