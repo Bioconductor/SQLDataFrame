@@ -232,7 +232,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                                             ## x[,c("key", "other")]
                                             ## do not realize.
             return(x[[1L]])
-        if (ncol(x) == 0 & !is.null(j))
+        if (ncol(x) == 0 & !is.null(j) & length(j) == 1)
             return(x[[j]]) ## x[,"key"] returns realized value of that
                            ## key column.
         if (nrow(x) == 1L) 
