@@ -32,8 +32,17 @@ normalizeRowIndex <- function(x)
 
 .mysql_pswd <- function(con) {
     dbenv <- Sys.getenv("SQLDBINFO")
-    dbenv <- do.call(rbind, strsplit(unlist(strsplit(dbenv, ";")), ":"))
-    dbenv[match(.mysql_info(con), dbenv[,1]), 2]
+    ## dbenv <- do.call(rbind, strsplit(unlist(strsplit(dbenv, ";")), ":"))
+    dbenv <- strsplit(unlist(strsplit(dbenv, ";")), ":")
+    idx_nopswd <- which(lengths(dbenv) == 1)
+    if (length(idx_nopswd)) {
+        dbenv[[idx_nopswd]] <- c(dbenv[[idx_nopswd]], "")
+    }
+    dbenv <- do.call(rbind, dbenv)
+    res <- dbenv[match(.mysql_info(con), dbenv[,1]), 2]
+    if(res == "")
+        return(NULL)  ## no password, return NULL.
+    res
 }
 
 .create_federated_table <- function(remoteConn, dbtableName,

@@ -114,8 +114,8 @@ saveSQLDataFrame <- function(x, localConn,
     }
     msg_saveSQLDataFrame(x, con, dbtable)
     ## currently SQLDataFrame() constructor required 'password', so disable for now.
-    ## res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
-    ## invisible(res)
+    res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
+    invisible(res)
 }
 
 msg_saveSQLDataFrame <- function(x, con, dbtable) {
