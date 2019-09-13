@@ -16,8 +16,11 @@
     if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
         ## may change: !is(tblData(x)$ops, "op_base")
         con <- connSQLDataFrame(x)
-        tblx <- .open_tbl_from_connection(con, "main", x)
-        
+        if (is(con, "SQLiteConnection")) {
+            tblx <- .open_tbl_from_connection(con, "main", x)
+        } else {
+            tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
+        }
         if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {
             if (is(con, "SQLiteConnection")) {
                 ## attach all databases from y except "main", which is
@@ -38,19 +41,33 @@
                 sql_cmd <- dbplyr::db_sql_render(cony, tbly)
                 tbly <- tbl(con, sql_cmd)
             } else if (is(con, "MySQLConnection")) { ## x: localConn, y: localConn?
-                tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
-                                                                       con,
+                   tbly <- if(.is_remote_mysql(connSQLDataFrame(y))) { 
+                        if (missing(localConn))
+                            stop("A local MySQL connection must be provided ",
+                                 "in argument: localConn")
+                        .createFedTable_and_open_tbl_in_new_connection(y,
+                                                                       localConn,
                                                                        ldbtableNameY,
                                                                        remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+                    } else {
+                        .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
+                    }
             }
         } else {
             if (is(con, "SQLiteConnection")) {
                 tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
             } else if (is(con, "MySQLConnection")) { ## x: localConn, y: remoteConn
-                tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
-                                                                       con,
+                tbly <- if(.is_remote_mysql(connSQLDataFrame(y))) { 
+                        if (missing(localConn))
+                            stop("A local MySQL connection must be provided ",
+                                 "in argument: localConn")
+                        .createFedTable_and_open_tbl_in_new_connection(y,
+                                                                       localConn,
                                                                        ldbtableNameY,
                                                                        remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+                    } else {
+                        .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
+                    }
             }
         }
     } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) { ## x: remoteConn, y:localConn  
@@ -60,10 +77,17 @@
             tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
         } else if (is(con, "MySQLConnection")) {
             tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
-            tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
-                                                                   con,
-                                                                   ldbtableNameX,
-                                                                   remotePswd = .mysql_pswd(connSQLDataFrame(x)))
+            tblx <- if(.is_remote_mysql(connSQLDataFrame(x))) {
+                        if (missing(localConn))
+                            stop("A local MySQL connection must be provided ",
+                                 "in argument: localConn")
+                        .createFedTable_and_open_tbl_in_new_connection(x,
+                                                                       localConn,
+                                                                       ldbtableNameX,
+                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(x)))
+                    } else {
+                        .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
+                    }
         }
     } else { ## open a new local connection.
         ## FIXME: need to decide whether the existing connections are already local!!!
@@ -75,28 +99,39 @@
             tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         } else if (is(connSQLDataFrame(x), "MySQLConnection")) {
-            tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
-                                                                   localConn,
-                                                                   ldbtableNameX,
-                                                                   remotePswd = .mysql_pswd(connSQLDataFrame(x)))
-            tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
-                                                                   localConn,
-                                                                   ldbtableNameY,
-                                                                   remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+            tblx <- if(.is_remote_mysql(connSQLDataFrame(x))) {
+                        if (missing(localConn))
+                            stop("A local MySQL connection must be provided ",
+                                 "in argument: localConn")
+                        .createFedTable_and_open_tbl_in_new_connection(x,
+                                                                       localConn,
+                                                                       ldbtableNameX,
+                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(x)))
+                    } else {
+                        .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
+                    }
+            tbly <- if(.is_remote_mysql(connSQLDataFrame(y))) {
+                        if (missing(localConn))
+                            stop("A local MySQL connection must be provided ",
+                                 "in argument: localConn")
+                        .createFedTable_and_open_tbl_in_new_connection(y,
+                                                                       localConn,
+                                                                       ldbtableNameY,
+                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+                    } else {
+                        .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
+                    }
         }
     }
     return(list(tblx, tbly))
 }
 
-## .isRemote <- function(con) {
-##     if(is(con, "SQLiteConnection")) {
-##         return(!file.exists(con@dbname))
-##     } else if(is(con, "MySQLConnection")) {
-##         ## check if from web... ok if local / on institute cluster
-##         dbGetInfo(con, "conType")
-##         return(TRUE) ## ??
-##     }
-## }
+.is_remote_mysql <- function(con) {
+    ## check if from web... ok if local / on institute cluster
+    host <- dbGetInfo(con)$host
+    host != "127.0.0.1"
+}
+
 
 ## when creating a federated table, it needs a localConn where the federated table locates, and the remote password for construction the "CONNECTION" info. 
 .createFedTable_and_open_tbl_in_new_connection <- function(sdf,
@@ -222,7 +257,7 @@
 left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn = NULL,
+                                   localConn,
                                    ...) 
 {
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
@@ -254,7 +289,7 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
 inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     copy = FALSE,
                                     suffix = c(".x", ".y"),
-                                    localConn = NULL,...) 
+                                    localConn,...) 
 {
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
@@ -293,7 +328,7 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn = NULL,...) 
+                                   localConn, ...) 
 {
         out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                      suffix = suffix,
@@ -327,7 +362,7 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
 anti_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn = localConn,...) 
+                                   localConn,...) 
 {
     out <- .doCompatibleFunction(x, y, copy = copy,
                                  FUN = dbplyr:::anti_join.tbl_lazy,

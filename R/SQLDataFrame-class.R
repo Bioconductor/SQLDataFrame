@@ -77,11 +77,11 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' obj
 
 SQLDataFrame <- function(conn,
-                         password = NULL, ## required for certain MySQL connection.
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table exists!
                          dbkey = character(0),
-                         col.names = NULL
+                         col.names = NULL,
+                         password = NULL ## required for certain MySQL connection.
                          ){
     ## check dbname, and backend connection
     ## browser()

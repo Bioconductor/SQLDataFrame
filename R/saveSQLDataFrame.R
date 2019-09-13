@@ -40,7 +40,8 @@ saveSQLDataFrame <- function(x, localConn,
     ## browser()
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        if (is(tblData(x)$ops, "op_base") ) { ## simple ops e.g., 'sdf[,]'
+        if (.is_remote_mysql(con)) {
+            ## if (is(tblData(x)$ops, "op_base") ) { ## simple ops e.g., 'sdf[,]'
             ## FIXME: if 'con' is already a local connection, then
             ## 'localConn' is not needed, and no need for generating
             ## federated table. Also applies to '*_join', 'union'
