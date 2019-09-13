@@ -16,8 +16,7 @@
     rnms_final <- do.call(c, lapply(objects, ROWNAMES))
 
     ## pairwise "union" with multiple input. 
-    out <- union(objects[[1]], objects[[2]], localConn = localConn, pswdX = pswdX,
-                 pswdY = pswdY)
+    out <- union(objects[[1]], objects[[2]], localConn = localConn)
     objects <- objects[-seq_len(2)]
     repeat{
         if(length(objects) == 0) break

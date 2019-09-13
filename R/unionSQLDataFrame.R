@@ -1,12 +1,9 @@
 .union_SQLDataFrame <- function(x, y, copy = FALSE,
-                                localConn, ## only used when both X and Y are remote.
-                                pswdX = NULL, pswdY = NULL)
+                                localConn) ## only used when both X and Y are remote.
 {
     out <- .doCompatibleFunction(x, y, copy = copy,
                                  FUN = dbplyr:::union.tbl_lazy,
-                                 localConn = localConn,
-                                 pswdX = pswdX,
-                                 pswdY = pswdY)
+                                 localConn = localConn)
     ## dbplyr:::union.tbl_lazy
     ## solving new @dbconcatKey
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))

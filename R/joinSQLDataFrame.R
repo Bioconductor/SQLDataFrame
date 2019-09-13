@@ -1,8 +1,7 @@
 .join_union_prepare <- function(x, y,
                                 localConn, ## only used when both X and Y are remote.
                                 ldbtableNameX = NULL,
-                                ldbtableNameY = NULL,
-                                pswdX, pswdY)
+                                ldbtableNameY = NULL)
 {
     ## browser()
     ## X and Y must built from same SQL database (e.g., SQLite, MySQL,
@@ -38,23 +37,23 @@
                 ## open the lazy tbl from new connection
                 sql_cmd <- dbplyr::db_sql_render(cony, tbly)
                 tbly <- tbl(con, sql_cmd)
-            } else if (is(con, "MySQLConnection")) {
+            } else if (is(con, "MySQLConnection")) { ## x: localConn, y: localConn?
                 tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
                                                                        con,
                                                                        ldbtableNameY,
-                                                                       remotePswd = pswdY)
+                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(y)))
             }
         } else {
             if (is(con, "SQLiteConnection")) {
                 tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
-            } else if (is(con, "MySQLConnection")) {
+            } else if (is(con, "MySQLConnection")) { ## x: localConn, y: remoteConn
                 tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
                                                                        con,
                                                                        ldbtableNameY,
-                                                                       remotePswd = pswdY)
+                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(y)))
             }
         }
-    } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {  
+    } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) { ## x: remoteConn, y:localConn  
         con <- connSQLDataFrame(y)
         if (is(con, "SQLiteConnection")) {
             tbly <- .open_tbl_from_connection(con, "main", y)
@@ -64,7 +63,7 @@
             tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
                                                                    con,
                                                                    ldbtableNameX,
-                                                                   remotePswd = pswdX)
+                                                                   remotePswd = .mysql_pswd(connSQLDataFrame(x)))
         }
     } else { ## open a new local connection.
         ## FIXME: need to decide whether the existing connections are already local!!!
@@ -79,11 +78,11 @@
             tblx <- .createFedTable_and_open_tbl_in_new_connection(x,
                                                                    localConn,
                                                                    ldbtableNameX,
-                                                                   remotePswd = pswdX)
+                                                                   remotePswd = .mysql_pswd(connSQLDataFrame(x)))
             tbly <- .createFedTable_and_open_tbl_in_new_connection(y,
                                                                    localConn,
                                                                    ldbtableNameY,
-                                                                   remotePswd = pswdY)
+                                                                   remotePswd = .mysql_pswd(connSQLDataFrame(y)))
         }
     }
     return(list(tblx, tbly))
@@ -103,7 +102,7 @@
 .createFedTable_and_open_tbl_in_new_connection <- function(sdf,
                                                            localConn,
                                                            ldbtableName,
-                                                           remotePswd) {
+                                                           remotePswd = NULL) {
     ## check if the connSQLDataFrame(sdf) is a remote connection.
     ## if (.isRemote(connSQLDataFrame(sdf))) {
     .create_federated_table(remoteConn = connSQLDataFrame(sdf),
@@ -158,12 +157,12 @@
 }
 ##-----------------------------------------------------------------##
 
-.doCompatibleFunction <- function(x, y, localConn, pswdX, pswdY, ..., FUN) {
+.doCompatibleFunction <- function(x, y, localConn, ..., FUN) {
     ## check if remote... if yes, add "localConn" argument, or
     ## optionally "ldbtableNameX", "ldbtableNameY"
 
     ## if (any(.isRemote(connSQLDataFrame(x)), .isRemote(connSQLDataFrame(y)))) {
-        tbls <- .join_union_prepare(x, y, localConn = localConn, pswdX = pswdX, pswdY = pswdY)
+        tbls <- .join_union_prepare(x, y, localConn = localConn)
     ## } else {
     ##     tbls <- .join_union_prepare(x, y)
     ## }
@@ -224,15 +223,13 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    localConn = NULL,
-                                   pswdX = NULL, pswdY = NULL, ...) 
+                                   ...) 
 {
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::left_join.tbl_lazy,
-                                 localConn = localConn,
-                                 pswdX = pswdX,
-                                 pswdY = pswdY)
+                                 localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -257,15 +254,13 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
 inner_join.SQLDataFrame <- function(x, y, by = NULL,
                                     copy = FALSE,
                                     suffix = c(".x", ".y"),
-                                    localConn = NULL,
-                                    pswdX = NULL, pswdY = NULL,...) 
+                                    localConn = NULL,...) 
 {
     out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::inner_join.tbl_lazy,
-                                 localConn = localConn,
-                                 pswdX = pswdX, pswdY = pswdY)
+                                 localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -298,16 +293,13 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 semi_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn = NULL,
-                                   pswdX = NULL, pswdY = NULL,...) 
+                                   localConn = NULL,...) 
 {
         out <- .doCompatibleFunction(x, y, by = by, copy = copy,
                                      suffix = suffix,
                                      auto_index = FALSE,
                                      FUN = dbplyr:::semi_join.tbl_lazy,
-                                     localConn = localConn,
-                                     pswdX = pswdX,
-                                     pswdY = pswdY)
+                                     localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {        
@@ -335,14 +327,11 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
 anti_join.SQLDataFrame <- function(x, y, by = NULL,
                                    copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn = localConn,
-                                   pswdX = NULL, pswdY = NULL,...) 
+                                   localConn = localConn,...) 
 {
     out <- .doCompatibleFunction(x, y, copy = copy,
                                  FUN = dbplyr:::anti_join.tbl_lazy,
-                                 localConn = localConn,
-                                 pswdX = pswdX,
-                                 pswdY = pswdY)
+                                 localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {

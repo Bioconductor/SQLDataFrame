@@ -37,7 +37,7 @@ normalizeRowIndex <- function(x)
 }
 
 .create_federated_table <- function(remoteConn, dbtableName,
-                                    localConn, ldbtableName, remotePswd=NULL)
+                                    localConn, ldbtableName, remotePswd)
 {
     ## browser()
     ## open docker, require credentials here:
@@ -58,7 +58,7 @@ normalizeRowIndex <- function(x)
     sql_conn <-build_sql(sql(columninfo),
                          sql(paste0(" connection='mysql://",
                                     remoteInfo$user,
-                                    ifelse(is.null(remotePswd), "",
+                                    ifelse(is.null(remotePswd), "", ## if no password required.
                                            paste0(":", remotePswd)),
                                     "@", remoteInfo$host, "/",
                                     remoteInfo$dbname, "/",
