@@ -277,8 +277,12 @@ setGeneric(
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
+    if (!all(value %in% colnames(tblData(x))))
+        stop("Please choose \"dbkey\" from the following: ",
+             paste(colnames(tblData(x)), collapse = ", "))
     concatKey <- tblData(x) %>%
-        mutate(concatKey = paste(!!!syms(value), sep="\b")) %>%
+        ## mutate(concatKey = paste(!!!syms(value), sep="\b")) %>%
+        mutate(concatKey = paste(!!!syms(value), sep=":")) %>%
         pull(concatKey)
     BiocGenerics:::replaceSlots(x, dbkey = value,
                                 dbconcatKey = concatKey,

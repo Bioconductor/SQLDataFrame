@@ -385,7 +385,7 @@ filter.SQLDataFrame <- function(.data, ...)
     temp <- dplyr::filter(tbl, ...)
 
     rnms <- temp %>%
-        transmute(concat = paste(!!!syms(dbkey(.data)), sep = "\b")) %>%
+        transmute(concat = paste(!!!syms(dbkey(.data)), sep = ":")) %>%
         pull(concat)
     idx <- match(rnms, ROWNAMES(.data))
 
