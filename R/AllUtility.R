@@ -23,27 +23,32 @@ normalizeRowIndex <- function(x)
     return(ridx)
 }
 
-.mysql_info <- function(mysqlConn, pswd = NULL){
-    info <- dbGetInfo(mysqlConn)
-    if (is.null(pswd))
-        return(paste0(info$user, "@", info$host))
-    paste0(info$user, "@", info$host, ":", pswd)
+#########################################################
+## MySQL connection & password in package environment
+#########################################################
+
+mysqlEnvironment <- new.env()
+
+.set_mysql_var <- function(conn, pswd = NULL) {
+    var <- .mysql_info(conn)
+    allvar <- ls(mysqlEnvironment)
+    if (!var %in% allvar)
+        assign(var, pswd, envir = mysqlEnvironment)
 }
 
-.mysql_pswd <- function(con) {
-    dbenv <- Sys.getenv("SQLDBINFO")
-    ## dbenv <- do.call(rbind, strsplit(unlist(strsplit(dbenv, ";")), ":"))
-    dbenv <- strsplit(unlist(strsplit(dbenv, ";")), ":")
-    idx_nopswd <- which(lengths(dbenv) == 1)
-    if (length(idx_nopswd)) {
-        dbenv[[idx_nopswd]] <- c(dbenv[[idx_nopswd]], "")
-    }
-    dbenv <- do.call(rbind, dbenv)
-    res <- dbenv[match(.mysql_info(con), dbenv[,1]), 2]
-    if(res == "")
-        return(NULL)  ## no password, return NULL.
-    res
+.get_mysql_var <- function(conn) {
+    var <- .mysql_info(conn)
+    get(var, envir = mysqlEnvironment)
 }
+
+.mysql_info <- function(mysqlConn){  ## return user@host
+    info <- dbGetInfo(mysqlConn)
+    paste0(info$user, "@", info$host)
+}
+
+#########################################################
+## MySQL create federated table in local connection (having write permission)
+#########################################################
 
 .create_federated_table <- function(remoteConn, dbtableName,
                                     localConn, ldbtableName, remotePswd)

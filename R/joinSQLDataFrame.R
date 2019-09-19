@@ -48,7 +48,7 @@
                         .createFedTable_and_open_tbl_in_new_connection(y,
                                                                        localConn,
                                                                        ldbtableNameY,
-                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+                                                                       remotePswd = .get_mysql_var(connSQLDataFrame(y)))
                     } else {
                         .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
                     }
@@ -64,7 +64,7 @@
                         .createFedTable_and_open_tbl_in_new_connection(y,
                                                                        localConn,
                                                                        ldbtableNameY,
-                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+                                                                       remotePswd = .get_mysql_var(connSQLDataFrame(y)))
                     } else {
                         .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
                     }
@@ -84,7 +84,7 @@
                         .createFedTable_and_open_tbl_in_new_connection(x,
                                                                        localConn,
                                                                        ldbtableNameX,
-                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(x)))
+                                                                       remotePswd = .get_mysql_var(connSQLDataFrame(x)))
                     } else {
                         .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
                     }
@@ -106,7 +106,7 @@
                         .createFedTable_and_open_tbl_in_new_connection(x,
                                                                        localConn,
                                                                        ldbtableNameX,
-                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(x)))
+                                                                       remotePswd = .get_mysql_var(connSQLDataFrame(x)))
                     } else {
                         .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
                     }
@@ -117,7 +117,7 @@
                         .createFedTable_and_open_tbl_in_new_connection(y,
                                                                        localConn,
                                                                        ldbtableNameY,
-                                                                       remotePswd = .mysql_pswd(connSQLDataFrame(y)))
+                                                                       remotePswd = .get_mysql_var(connSQLDataFrame(y)))
                     } else {
                         .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
                     }

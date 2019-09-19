@@ -110,7 +110,7 @@ SQLDataFrame <- function(conn,
     }
 
     ## save system environment variable for connection password.
-    ## FIXME: how about no password required for MySQL connection???
+    ## FIXME: how about no password required for MySQL connection??? use NULL.
     if (is(conn, "MySQLConnection")) {
         ## FIXME: local connection doesn't require passwd for creating
         ## federated table, only need to build the connection.
@@ -121,15 +121,7 @@ SQLDataFrame <- function(conn,
         ## not?
 
         ## if (missing(password)) stop("Please provided the \"password\" for database connection")
-        dbinfo <- dbGetInfo(conn)  ## for MySQL. SQLite doesn't require password. 
-        dbenvnew <- .mysql_info(conn, password)
-        dbenv <- Sys.getenv("SQLDBINFO")
-        if(dbenv == "") {
-            Sys.setenv(SQLDBINFO = dbenvnew)
-        } else if (!grepl(dbenvnew, dbenv)) {
-            dbenvnew <- paste(dbenv, dbenvnew, sep = ";")
-            Sys.setenv(SQLDBINFO = dbenvnew)
-        } else NULL
+        .set_mysql_var(conn, password)
     }        
     
     ## construction

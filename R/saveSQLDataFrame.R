@@ -51,10 +51,9 @@ saveSQLDataFrame <- function(x, localConn,
                 stop("A local MySQL connection must be provided ",
                      "in argument: localConn")
             ## if (!identical(con, localConn)) {
-            pswd <- .mysql_pswd(con)
             tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
                                                                   ldbtableName = dplyr:::random_table_name(),
-                                                                  remotePswd = pswd)
+                                                                  remotePswd = .get_mysql_var(con))
             con <- localConn
         } else {
             tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
