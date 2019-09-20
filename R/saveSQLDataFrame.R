@@ -56,10 +56,14 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             ## 'genome'@'c-67-99-175-226.roswellpark.org' for table
             ## 'sdf1'>
         } else {
-            tbl <- .createFedTable_and_open_tbl_in_new_connection(x,
-                                                                  localConn,
-                                                                  ldbtableName = dplyr:::random_table_name(),
-                                                                  remotePswd = .get_mysql_var(con))
+            ## FIXME: check if lazy table (with queries) in remote
+            ## connection. If yes, create fedtable separately, and
+            ## pass old queries into new fed tables. If no, do the
+            ## following.
+            tbl <- .createFedTable_and_reopen_tbl(x,
+                                                  localConn,
+                                                  ldbtableName = dplyr:::random_table_name(),
+                                                  remotePswd = .get_mysql_var(con))
             con <- localConn
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable)," AS ",
                                  db_sql_render(con, tbl), con = con) 
