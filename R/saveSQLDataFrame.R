@@ -30,40 +30,45 @@
 #' @export
 
 
-saveSQLDataFrame <- function(x, localConn,
-                             dbname = tempfile(fileext = ".db"), 
-                             ## outfile,
+saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
+                             dbname = tempfile(fileext = ".db"),  ## only used for SQLiteConnection.
                              dbtable = deparse(substitute(x)),
                              overwrite = FALSE,
                              index = TRUE, ...)
 {
-    ## browser()
+    browser()
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        if (.is_remote_mysql(con)) {
-            ## if (is(tblData(x)$ops, "op_base") ) { ## simple ops e.g., 'sdf[,]'
-            ## FIXME: if 'con' is already a local connection, then
-            ## 'localConn' is not needed, and no need for generating
-            ## federated table. Also applies to '*_join', 'union'
-            ## functions.
-            ## NOW assume the con is remote.
-            if (missing(localConn))
-                stop("A local MySQL connection must be provided ",
-                     "in argument: localConn")
-            ## if (!identical(con, localConn)) {
-            tbl <- .createFedTable_and_open_tbl_in_new_connection(x, localConn,
+        if (identical(con, localConn)) {
+            tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
+            sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
+                                 db_sql_render(con, tbl), con = con) 
+            tryWrite <- try(dbExecute(con, sql_cmd), silent = TRUE)
+            if (is(tryWrite, "try-error"))
+                stop(.mysqlErrorMsg(dbtable))
+            ## error1 table exists: <simpleError in .local(conn,
+            ## statement, ...): could not run statement: Table 'sdf1'
+            ## already exists>
+            
+            ## error2 no write permission: <simpleError in .local(conn,
+            ## statement, ...): could not run statement: INSERT, CREATE
+            ## command denied to user
+            ## 'genome'@'c-67-99-175-226.roswellpark.org' for table
+            ## 'sdf1'>
+        } else {
+            tbl <- .createFedTable_and_open_tbl_in_new_connection(x,
+                                                                  localConn,
                                                                   ldbtableName = dplyr:::random_table_name(),
                                                                   remotePswd = .get_mysql_var(con))
             con <- localConn
-        } else {
-            tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
-            ## only "rbind" preserves the "@indexes[[1]]", "join" and
-            ## "union" dont and returns all null indexes. so could be
-            ## only: tbl <- tblData(x) directly. But doesn't cost
-            ## anything calling the above function if ridx() is NULL.
+            sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable)," AS ",
+                                 db_sql_render(con, tbl), con = con) 
+            tryWrite <- try(dbExecute(con, sql_cmd))
+            if (is(tryWrite, "try-error"))
+                stop(.mysqlErrorMsg(dbtable))
+            ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
         }
-        ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
-    } else if (is(connSQLDataFrame(x), "SQLiteConnection")) { 
+    } else if(is(connSQLDataFrame(x), "SQLiteConnection")) { 
         if (file.exists(dbname)) {
             dbname <- file_path_as_absolute(dbname)
             if (overwrite == FALSE)
@@ -79,15 +84,22 @@ saveSQLDataFrame <- function(x, localConn,
                                                             ## here.
         } else if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) { 
             con <- connSQLDataFrame(x)
-            tbl <- tblData(x)
+            tbl <- tblData(x)  ## Since the "*_join", "union" function
+                               ## returns @indexes as NULL. Only
+                               ## "rbind" will retain the
+                               ## @indexes[[1]], and which be
+                               ## processed as an additional file
+                               ## "dbtable_ridx". So here we only use
+                               ## "tblData(x)" instead of
+                               ## ".extract_tbl_from_SQLDataFrame_indexes"
             if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
                 dbWriteTable(con, paste0(dbtable, "_ridx"),
                              value = data.frame(ridx = ridx(x)))
             }
         }
+        sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ", db_sql_render(con, tbl), con = con)
+        dbExecute(con, sql_cmd)
     }
-    sql_cmd <- db_sql_render(con, tbl)
-    dbExecute(con, build_sql("CREATE TABLE ", sql(dbtable), " AS ", sql_cmd, con = con))
     ## error if "dbtable" already exist. "Error: table aa already
     ## exists". Not likely happen here, because SQLDataFrame generated
     ## from "join" or "union" has connection to a new temporary .db
@@ -118,6 +130,14 @@ saveSQLDataFrame <- function(x, localConn,
     invisible(res)
 }
 
+.mysqlErrorMsg <- function(dbtable) {
+    paste0("ERROR: \n", "1. Check you connection is still valid. \n",
+           "2. Check if the table of '", dbtable,
+           "' already exists! \n",
+           "3. Make sure your provided MySQL connection ",
+           "has write permission.")
+}
+    
 msg_saveSQLDataFrame <- function(x, con, dbtable) {
     if (is(con, "MySQLConnection")) {
         info <- dbGetInfo(con)
