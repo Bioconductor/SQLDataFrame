@@ -46,6 +46,17 @@ mysqlEnvironment <- new.env()
     paste0(info$user, "@", info$host)
 }
 
+
+#############################################
+## if MySQL connection has write permission
+#############################################
+.mysql_has_write_perm <- function(conn)
+{
+    grants <- dbGetQuery(conn, "show grants for current_user")
+    keywords <- "ALL PRIVILEGES|CREATE"
+    any(grepl(keywords, grants[,1]))   
+}
+
 #########################################################
 ## MySQL create federated table in local connection (having write permission)
 #########################################################
