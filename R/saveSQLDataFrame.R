@@ -36,16 +36,17 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
                              overwrite = FALSE,
                              index = TRUE, ...)
 {
-    browser()
+    ## browser()
     if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
         if (identical(con, localConn)) {
+            if (!.mysql_has_write_perm(con))
+                stop("Please provide a MySQL connection ",
+                     "with write permission in argument: localConn")
             tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
                                  db_sql_render(con, tbl), con = con) 
-            tryWrite <- try(dbExecute(con, sql_cmd), silent = TRUE)
-            if (is(tryWrite, "try-error"))
-                stop(.mysqlErrorMsg(dbtable))
+            dbExecute(con, sql_cmd)
             ## error1 table exists: <simpleError in .local(conn,
             ## statement, ...): could not run statement: Table 'sdf1'
             ## already exists>
@@ -60,6 +61,9 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             ## connection. If yes, create fedtable separately, and
             ## pass old queries into new fed tables. If no, do the
             ## following.
+            if (!.mysql_has_write_perm(localConn))
+                stop("Please provide a MySQL connection ",
+                     "with write permission in argument: localConn")
             tbl <- .createFedTable_and_reopen_tbl(x,
                                                   localConn,
                                                   ldbtableName = dplyr:::random_table_name(),
@@ -67,10 +71,7 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             con <- localConn
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable)," AS ",
                                  db_sql_render(con, tbl), con = con) 
-            tryWrite <- try(dbExecute(con, sql_cmd))
-            if (is(tryWrite, "try-error"))
-                stop(.mysqlErrorMsg(dbtable))
-            ## dbExecute(con, build_sql(sql_cmd, " INTO OUTFILE ", outfile, con = con))
+            dbExecute(con, sql_cmd)
         }
     } else if(is(connSQLDataFrame(x), "SQLiteConnection")) { 
         if (file.exists(dbname)) {
@@ -134,13 +135,13 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
     invisible(res)
 }
 
-.mysqlErrorMsg <- function(dbtable) {
-    paste0("ERROR: \n", "1. Check you connection is still valid. \n",
-           "2. Check if the table of '", dbtable,
-           "' already exists! \n",
-           "3. Make sure your provided MySQL connection ",
-           "has write permission.")
-}
+## .mysqlErrorMsg <- function(dbtable) {
+##     paste0("ERROR: \n", "1. Check you connection is still valid. \n",
+##            "2. Check if the table of '", dbtable,
+##            "' already exists! \n",
+##            "3. Make sure your provided MySQL connection ",
+##            "has write permission.")
+## }
     
 msg_saveSQLDataFrame <- function(x, con, dbtable) {
     if (is(con, "MySQLConnection")) {
