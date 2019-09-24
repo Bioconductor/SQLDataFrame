@@ -30,8 +30,9 @@
 \alias{coerce,ANY,SQLDataFrame-method}
 \title{SQLDataFrame class}
 \usage{
-SQLDataFrame(conn, dbtable = character(0), dbkey = character(0),
-  col.names = NULL)
+SQLDataFrame(conn, host, user, dbname, password = NULL,
+  type = c("SQLite", "MySQL"), dbtable = character(0),
+  dbkey = character(0), col.names = NULL)
 
 \S4method{tblData}{SQLDataFrame}(x)
 
@@ -54,7 +55,18 @@ SQLDataFrame(conn, dbtable = character(0), dbkey = character(0),
 }
 \arguments{
 \item{conn}{a valid \code{DBIConnection} from \code{SQLite} or
-\code{MySQL}.}
+\code{MySQL}. If provided, arguments of `user`, `host`,
+`dbname`, `password` will be ignored.}
+
+\item{host}{host name for SQL database.}
+
+\item{user}{user name for SQL database.}
+
+\item{dbname}{database name for SQL connection.}
+
+\item{password}{password for SQL database connection.}
+
+\item{type}{The SQL database type, supports "SQLite" and "MySQL".}
 
 \item{dbtable}{A character string for the table name in that
 database. If not provided and there is only one table

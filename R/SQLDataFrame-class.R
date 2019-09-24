@@ -25,7 +25,13 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #'     method and coercion methods to \code{DataFrame} and
 #'     \code{data.frame} objects.
 #' @param conn a valid \code{DBIConnection} from \code{SQLite} or
-#'     \code{MySQL}.
+#'     \code{MySQL}. If provided, arguments of `user`, `host`,
+#'     `dbname`, `password` will be ignored.
+#' @param host host name for SQL database.
+#' @param user user name for SQL database. 
+#' @param dbname database name for SQL connection.
+#' @param password password for SQL database connection. 
+#' @param type The SQL database type, supports "SQLite" and "MySQL". 
 #' @param dbtable A character string for the table name in that
 #'     database. If not provided and there is only one table
 #'     available, it will be read in by default.
@@ -45,7 +51,8 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbname)
 #' obj <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                     dbkey = "state")
-#' obj
+#' obj <- SQDataFrame(dbname = dbname, type = "SQLite",
+#'                    dbtable = "state", dbkey = "state") ## equivalent to above.
 #' obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                      dbkey = c("region", "population"))
 #' obj1
@@ -77,17 +84,36 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' obj
 
 SQLDataFrame <- function(conn,
+                         host, user, dbname,
+                         password = NULL, ## required for certain MySQL connection.
+                         type = c("SQLite", "MySQL"),
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table exists!
                          dbkey = character(0),
-                         col.names = NULL,
-                         password = NULL ## required for certain MySQL connection.
+                         col.names = NULL
                          ){
     ## check dbname, and backend connection
     ## browser()
     ## src <- src_dbi(con, auto_disconnect = TRUE)
     ## on.exit(DBI::dbDisconnect(con))
 
+    if (missing(conn)) {
+        conn <- switch(type,
+                       MySQL = DBI::dbConnect(dbDriver("MySQL"),
+                                              host = host,
+                                              user = user,
+                                              password = password,
+                                              dbname = dbname),
+                       SQLite = DBI::dbConnect(dbDriver("SQLite"),
+                                               dbname = dbname)
+                       )
+    } else {
+        ifcred <- c(host = !missing(host), user = !missing(user),
+                    dbname = !missing(dbname), password = !missing(password))
+        if (any(ifcred))
+            message("These arguments are ignored: ",
+                    paste(names(ifcred[ifcred]), collapse = ", "))
+    }
     ## check dbtable
     tbls <- DBI::dbListTables(conn)
     if (missing(dbtable) || !dbExistsTable(conn, dbtable)) {
@@ -108,18 +134,15 @@ SQLDataFrame <- function(conn,
              "which must be one of: \"",
              paste(flds, collapse = ", "), "\"")
     }
-
-    ## save system environment variable for connection password.
-    ## FIXME: how about no password required for MySQL connection??? use NULL.
+    
     if (is(conn, "MySQLConnection")) {
-        ## FIXME: local connection doesn't require passwd for creating
+        ## local connection doesn't require passwd for creating
         ## federated table, only need to build the connection.
-
+        
         ## FIXME: remote connection sometimes don't require
         ## password. Add a default password = NULL? Also need to check
         ## if password = NULL, could the connection be constructed or
         ## not?
-
         ## if (missing(password)) stop("Please provided the \"password\" for database connection")
         .set_mysql_var(conn, password)
     }        
@@ -127,7 +150,7 @@ SQLDataFrame <- function(conn,
     ## construction
     tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer
-
+    
     ## col.names
     cns <- colnames(tbl)
     if (is.null(col.names)) {
@@ -153,7 +176,7 @@ SQLDataFrame <- function(conn,
             cidx <- match(col.names, cns)
         }
     }
-
+    
     ## ridx
     ridx <- NULL
     ridxTableName <- paste0(dbtable, "_ridx")
@@ -166,7 +189,7 @@ SQLDataFrame <- function(conn,
         ## mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
         mutate(concatKey = paste(!!!syms(dbkey), sep=":")) %>%
         pull(concatKey)
-
+    
     .SQLDataFrame(
         dbkey = dbkey,
         dbnrows = dbnrows,

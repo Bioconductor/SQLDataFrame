@@ -44,6 +44,21 @@ test_that("SQLDataFrame constructor works",
     expect_identical(2L, length(obj))
 })
 
+test_that("SQLDataFrame constructor alternative arguments works!")
+{
+    obj <- SQLDataFrame(conn = conn, dbtable = "colData",
+                        dbkey = "sampleID")
+    obj1 <- SQLDataFrame(dbname = dbname, type = "SQLite",
+                         dbtable = "colData",
+                         dbkey = "sampleID")
+    expect_identical(obj, obj1)
+
+    expect_message(SQLDataFrame(conn = conn, dbname = dbname,
+                                dbtable = "colData",
+                                dbkey = "sampleID"),
+                   "These arguments are ignored: dbname")
+}
+
 test_that("validity,SQLDataFrame works",
 {
     expect_error(initialize(obj, indexes = vector("list", 3)))
