@@ -7,7 +7,7 @@
 \title{Union of \code{SQLDataFrame} objects}
 \usage{
 \S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, copy = FALSE,
-  localConn, pswdX = NULL, pswdY = NULL)
+  localConn)
 }
 \arguments{
 \item{x}{A \code{SQLDataFrame} object.}

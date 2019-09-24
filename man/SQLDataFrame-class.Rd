@@ -113,7 +113,8 @@ dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbname)
 obj <- SQLDataFrame(conn = conn, dbtable = "state",
                     dbkey = "state")
-obj
+obj <- SQDataFrame(dbname = dbname, type = "SQLite",
+                   dbtable = "state", dbkey = "state") ## equivalent to above.
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 obj1
