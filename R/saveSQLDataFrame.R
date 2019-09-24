@@ -64,14 +64,19 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             if (!.mysql_has_write_perm(localConn))
                 stop("Please provide a MySQL connection ",
                      "with write permission in argument: localConn")
+            ldbtableName <- dplyr:::random_table_name()
             tbl <- .createFedTable_and_reopen_tbl(x,
                                                   localConn,
-                                                  ldbtableName = dplyr:::random_table_name(),
+                                                  ldbtableName = ldbtableName,
                                                   remotePswd = .get_mysql_var(con))
             con <- localConn
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable)," AS ",
                                  db_sql_render(con, tbl), con = con) 
-            dbExecute(con, sql_cmd)
+            trycreate <- try(dbExecute(con, sql_cmd))
+            if (!is(trycreate, "try-error")) {
+                sql_drop <- build_sql("DROP TABLE ", sql(ldbtableName), con = con)
+                dbExecute(con, sql_drop)
+            }
         }
     } else if(is(connSQLDataFrame(x), "SQLiteConnection")) { 
         if (file.exists(dbname)) {
