@@ -61,6 +61,9 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             ## connection. If yes, create fedtable separately, and
             ## pass old queries into new fed tables. If no, do the
             ## following.
+            if (is(tblData(x)$ops, "op_join"))
+                stop("Saving SQLDataFrame with lazy join queries ",
+                     "is not supported!")
             if (!.mysql_has_write_perm(localConn))
                 stop("Please provide a MySQL connection ",
                      "with write permission in argument: localConn")
