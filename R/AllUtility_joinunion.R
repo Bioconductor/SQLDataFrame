@@ -1,6 +1,5 @@
 .join_union_prepare <- function(x, y, localConn)
 {
-    browser()
     ## X and Y must built from same SQL database (e.g., SQLite, MySQL,
     ## etc.)
     connTypeX <- class(connSQLDataFrame(x))
@@ -15,7 +14,6 @@
 
 .join_union_prepare_sqlite <- function(x, y)
 {
-    ## browser()
     if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
         ## may change: !is(tblData(x)$ops, "op_base")
         con <- connSQLDataFrame(x)
@@ -94,7 +92,6 @@
 .join_union_prepare_mysql <- function(x, y,
                                 localConn) ## only used when both X and Y has no write permission.
 {
-    browser()  
     fedtablex <- dplyr:::random_table_name()
     fedtabley <- dplyr:::random_table_name()
     
@@ -102,33 +99,34 @@
     cony <- connSQLDataFrame(y)
     tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
     tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
+
     if (identical(conx, cony)) return(list(tblx, tbly))
 
-    tryfed <- try(
+    ifwrite <- c(conx = .mysql_has_write_perm(conx),
+                 cony = .mysql_has_write_perm(cony))
+    conwrite <- names(ifwrite[ifwrite])[1]
+    if (conwrite == "conx") {
         tbly <- .createFedTable_and_reopen_tbl(y,
                                                conx,
                                                fedtabley,
-                                               remotePswd = .get_mysql_var(connSQLDataFrame(y))))
-    if (is(tryfed, "try-error")) {
-        tryfed <- try(
-            tblx <- .createFedTable_and_reopen_tbl(x,
-                                                   cony,
-                                                   fedtablex,
-                                                   remotePswd = .get_mysql_var(connSQLDataFrame(x))))
-        if (is(tryfed, "try-error")) {
-            if (missing(localConn))
-                stop("MySQL connection with write permission must be ",
-                     "provided in argument: localConn")
-            fedx <- .createFedTable_and_reopen_tbl(x,
-                                                   localConn,
-                                                   fedtablex,
-                                                   remotePswd = .get_mysql_var(connSQLDataFrame(x)))
-            fedy <- .createFedTable_and_reopen_tbl(y,
-                                                   localConn,
-                                                   fedtabley,
-                                                   remotePswd = .get_mysql_var(connSQLDataFrame(y)))
-            
-        }
+                                               remotePswd = .get_mysql_var(cony))
+    } else if (conwrite == "cony") {
+        tblx <- .createFedTable_and_reopen_tbl(x,
+                                               cony,
+                                               fedtablex,
+                                               remotePswd = .get_mysql_var(conx))
+    } else {
+        if (missing(localConn) | !.mysql_has_write_perm(localConn))
+            stop("Please provide a MySQL connection ",
+                     "with write permission in argument: localConn")
+        fedx <- .createFedTable_and_reopen_tbl(x,
+                                               localConn,
+                                               fedtablex,
+                                               remotePswd = .get_mysql_var(connSQLDataFrame(x)))
+        fedy <- .createFedTable_and_reopen_tbl(y,
+                                               localConn,
+                                               fedtabley,
+                                               remotePswd = .get_mysql_var(connSQLDataFrame(y)))
     }
     return(list(tblx, tbly))
 }    
@@ -140,19 +138,12 @@
                                            localConn,
                                            fedtable,
                                            remotePswd = NULL) {
-    ## check if the connSQLDataFrame(sdf) is a remote connection.
-    ## if (.isRemote(connSQLDataFrame(sdf))) {
     .create_federated_table(remoteConn = connSQLDataFrame(sdf),
                             dbtableName = dbtable(sdf),
                             localConn = localConn, 
                             fedtable = fedtable,
                             remotePswd = remotePswd) 
     res_tbl <- tbl(localConn, fedtable)  ## time consuming...
-    ## FIXME: keep the original @indexes and only replace the @tblData slot?
-    ## ANS: this is to pass the original @indexes into the lazy queries of lazy tbl for SQL operation.
     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf) ## time consuming...
-    ## } else {
-    ##     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(sdf), sdf)
-    ## }
     return(res_tbl)
 }
