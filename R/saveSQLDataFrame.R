@@ -137,7 +137,7 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
         }
     }
-    msg_saveSQLDataFrame(x, con, dbtable)
+    .msg_saveSQLDataFrame(x, con, dbtable)
     ## currently SQLDataFrame() constructor required 'password', so disable for now.
     res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
     invisible(res)
@@ -150,17 +150,43 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
 ##            "3. Make sure your provided MySQL connection ",
 ##            "has write permission.")
 ## }
-    
-msg_saveSQLDataFrame <- function(x, con, dbtable) {
-    if (is(con, "MySQLConnection")) {
-        info <- dbGetInfo(con)
-        databaseLine <- paste0("mysql ", info$serverVersion, " [",
-                                .mysql_info(con),
-                               ":/", info$dbname, "] \n")  ## legacy format from lazy_tbl
-    } else if (is(con, "SQLiteConnection")) {
-        databaseLine <- paste0("sqlite ", dbplyr:::sqlite_version(),
-                               " [", con@dbname, "] \n")
-    }
+
+.msg_saveSQLDataFrame <- function(x, con, dbtable)
+{
+    type <- class(con)
+    switch(type,
+           MySQLConnection = .msg_save_mysql(x, con, dbtable),
+           SQLiteConnection = .msg_save_sqlite(x, con, dbtable)
+           ) 
+}
+
+.msg_save_mysql <- function(x, con, dbtable) {
+    info <- dbGetInfo(con)
+    databaseLine <- paste0("mysql ", info$serverVersion, " [",
+                           .mysql_info(con),
+                           ":/", info$dbname, "] \n")  ## legacy format from lazy_tbl
+    msg <- paste0("## A new database table is saved! \n",
+                  "## Source: table<", dbtable, "> [",
+                  paste(dim(x), collapse = " X "), "] \n",
+                  "## Database: ", databaseLine, 
+                  "## Use the following command to reload into R: \n",
+                  "## dat <- SQLDataFrame(\n",
+                  "##   host = \"", info$host, "\",\n",
+                  "##   user = \"", info$user, "\",\n",
+                  ## "##   password = \"", .get_mysql_var(con), "\",\n",
+                  "##   password", ",\n",
+                  "##   type = \"MySQL\",\n",
+                  "##   dbname = \"", info$dbname, "\",\n",
+                  "##   dbtable = \"", dbtable, "\",\n",
+                  "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
+                  paste(paste0("'", dbkey(x), "'"), collapse=", "),
+                  ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
+    message(msg)
+}
+
+.msg_save_sqlite <- function(x, con, dbtable) {
+    databaseLine <- paste0("sqlite ", dbplyr:::sqlite_version(),
+                           " [", con@dbname, "] \n")
     msg <- paste0("## A new database table is saved! \n",
                   "## Source: table<", dbtable, "> [",
                   paste(dim(x), collapse = " X "), "] \n",
@@ -168,7 +194,8 @@ msg_saveSQLDataFrame <- function(x, con, dbtable) {
                   "## Use the following command to reload into R: \n",
                   "## dat <- SQLDataFrame(\n",
                   ## FIXME: localConn was not required in saveSQLDataFrame for SQLiteDataFrame...
-                  "##   conn = localConn", ",\n", 
+                  "##   dbname = \"", con@dbname, "\",\n",
+                  "##   type = \"SQLite\",\n",
                   "##   dbtable = \"", dbtable, "\",\n",
                   "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
                   paste(paste0("'", dbkey(x), "'"), collapse=", "),
