@@ -108,16 +108,19 @@ A \code{SQLDataFrame} object.
 }
 \examples{
 
-## constructor
+## SQLDataFrame construction
 dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbname)
 obj <- SQLDataFrame(conn = conn, dbtable = "state",
                     dbkey = "state")
-obj <- SQDataFrame(dbname = dbname, type = "SQLite",
-                   dbtable = "state", dbkey = "state") ## equivalent to above.
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 obj1
+
+### construction from database credentials
+obj2 <- SQLDataFrame(dbname = dbname, type = "SQLite",
+                     dbtable = "state", dbkey = "state")
+all.equal(obj, obj2)  ## [1] TRUE
 
 ## slot accessors
 connSQLDataFrame(obj)

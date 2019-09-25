@@ -46,17 +46,20 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' @import dbplyr
 #' @examples
 #' 
-#' ## constructor
+#' ## SQLDataFrame construction
 #' dbname <- system.file("extdata/test.db", package = "SQLDataFrame")
 #' conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbname)
 #' obj <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                     dbkey = "state")
-#' obj <- SQDataFrame(dbname = dbname, type = "SQLite",
-#'                    dbtable = "state", dbkey = "state") ## equivalent to above.
 #' obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
 #'                      dbkey = c("region", "population"))
 #' obj1
 #'
+#' ### construction from database credentials
+#' obj2 <- SQLDataFrame(dbname = dbname, type = "SQLite",
+#'                      dbtable = "state", dbkey = "state")
+#' all.equal(obj, obj2)  ## [1] TRUE
+#' 
 #' ## slot accessors
 #' connSQLDataFrame(obj)
 #' dbtable(obj)
@@ -92,13 +95,11 @@ SQLDataFrame <- function(conn,
                          dbkey = character(0),
                          col.names = NULL
                          ){
-    ## check dbname, and backend connection
-    ## browser()
-    ## src <- src_dbi(con, auto_disconnect = TRUE)
-    ## on.exit(DBI::dbDisconnect(con))
 
     type <- match.arg(type)
     if (missing(conn)) {
+        ## FIXME: Error in .local(drv, ...) : Cannot allocate a new
+        ## connection: 16 connections already opened
         conn <- switch(type,
                        MySQL = DBI::dbConnect(dbDriver("MySQL"),
                                               host = host,
@@ -110,7 +111,8 @@ SQLDataFrame <- function(conn,
                        )
     } else {
         ifcred <- c(host = !missing(host), user = !missing(user),
-                    dbname = !missing(dbname), password = !missing(password))
+                    dbname = !missing(dbname), password = !missing(password),
+                    type = !missing(type))
         if (any(ifcred))
             message("These arguments are ignored: ",
                     paste(names(ifcred[ifcred]), collapse = ", "))
@@ -137,14 +139,6 @@ SQLDataFrame <- function(conn,
     }
     
     if (is(conn, "MySQLConnection")) {
-        ## local connection doesn't require passwd for creating
-        ## federated table, only need to build the connection.
-        
-        ## FIXME: remote connection sometimes don't require
-        ## password. Add a default password = NULL? Also need to check
-        ## if password = NULL, could the connection be constructed or
-        ## not?
-        ## if (missing(password)) stop("Please provided the \"password\" for database connection")
         .set_mysql_var(conn, password)
     }        
     
@@ -187,7 +181,6 @@ SQLDataFrame <- function(conn,
     
     ## concatKey
     concatKey <- tbl %>%
-        ## mutate(concatKey = paste(!!!syms(dbkey), sep="\b")) %>%
         mutate(concatKey = paste(!!!syms(dbkey), sep=":")) %>%
         pull(concatKey)
     
@@ -199,8 +192,6 @@ SQLDataFrame <- function(conn,
         dbconcatKey = concatKey
     )
 }
-
-## FIXME: use of "dbConnect" has limits??
 
 .validity_SQLDataFrame <- function(object)
 {
@@ -230,18 +221,6 @@ setMethod("tblData", "SQLDataFrame", function(x)
 {
     x@tblData
 })
-
-## setGeneric("dbname", signature = "x", function(x)
-##     standardGeneric("dbname"))
-
-## #' @rdname SQLDataFrame-class
-## #' @aliases dbname dbname,SQLDataFrame-method
-## #' @export
-
-## setMethod("dbname", "SQLDataFrame", function(x)
-## {
-##     tblData(x)$src$con@dbname
-## })
 
 setGeneric("dbtable", signature = "x", function(x)
     standardGeneric("dbtable"))
@@ -353,11 +332,9 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
     if (length(key) == 1) {
         out <- x %>% filter(!!sym(key) %in% !!(concatKey[i]))
     } else {
-        ## x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep="\b"))
         x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep=":"))
         ## FIXME: possible to remove the ".0" trailing after numeric values?
         ## see: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
-        ### keys <- x %>% pull(concatKeys)
         out <- x %>% filter(concatKeys %in% !!(concatKey[i])) %>% select(-concatKeys)
         ## returns "tbl_dbi" object, no realization. 
     }
