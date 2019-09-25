@@ -140,14 +140,14 @@
 ## the "CONNECTION" info.
 .createFedTable_and_reopen_tbl <- function(sdf,
                                            localConn,
-                                           fedtable,
+                                           ldbtableName,
                                            remotePswd = NULL) {
     .create_federated_table(remoteConn = connSQLDataFrame(sdf),
                             dbtableName = dbtable(sdf),
                             localConn = localConn, 
-                            fedtable = fedtable,
+                            ldbtableName = ldbtableName,
                             remotePswd = remotePswd) 
-    res_tbl <- tbl(localConn, fedtable)  ## time consuming...
+    res_tbl <- tbl(localConn, ldbtableName)  ## time consuming...
     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf) ## time consuming...
     return(res_tbl)
 }

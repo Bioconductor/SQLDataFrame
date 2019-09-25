@@ -67,17 +67,21 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
             if (!.mysql_has_write_perm(localConn))
                 stop("Please provide a MySQL connection ",
                      "with write permission in argument: localConn")
-            ldbtableName <- dplyr:::random_table_name()
+            fedtable <- dplyr:::random_table_name()  ## temporary,
+                                                     ## will be
+                                                     ## removed if
+                                                     ## saved
+                                                     ## correctly!
             tbl <- .createFedTable_and_reopen_tbl(x,
                                                   localConn,
-                                                  ldbtableName = ldbtableName,
+                                                  fedtable,
                                                   remotePswd = .get_mysql_var(con))
             con <- localConn
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable)," AS ",
                                  db_sql_render(con, tbl), con = con) 
             trycreate <- try(dbExecute(con, sql_cmd))
             if (!is(trycreate, "try-error")) {
-                sql_drop <- build_sql("DROP TABLE ", sql(ldbtableName), con = con)
+                sql_drop <- build_sql("DROP TABLE ", sql(fedtable), con = con)
                 dbExecute(con, sql_drop)
             }
         }
@@ -174,7 +178,7 @@ saveSQLDataFrame <- function(x, localConn = connSQLDataFrame(x),
                   "##   host = '", info$host, "',\n",
                   "##   user = '", info$user, "',\n",
                   ## "##   password = \"", .get_mysql_var(con), "\",\n",
-                  "##   password", ",\n",
+                  "##   password = '',", "   ## Only if required!", "\n",
                   "##   type = 'MySQL',\n",
                   "##   dbname = '", info$dbname, "',\n",
                   "##   dbtable = '", dbtable, "',\n",
