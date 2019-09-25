@@ -119,7 +119,9 @@
                                                cony,
                                                fedtablex,
                                                remotePswd = .get_mysql_var(conx))
-    } else {
+    } else { ## situation will be rare, joining two SQLDataFrame
+             ## objects, neither of which has write permission to
+             ## their connections. Not recommended!
         if (missing(localConn) | !.mysql_has_write_perm(localConn))
             stop("Please provide a MySQL connection ",
                      "with write permission in argument: localConn")

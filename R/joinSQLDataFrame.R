@@ -32,11 +32,46 @@
 #'     the default, ‘*_join()’ will do a natural join, using all
 #'     variables with common names across the two tables. See
 #'     \code{?dplyr::join} for details.
-#' @param copy see \code{?dplyr::join} for details. 
+#' @param copy see \code{?dplyr::join} for details.
 #' @param suffix A character vector of length 2 specify the suffixes
 #'     to be added if there are non-joined duplicate variables in ‘x’
 #'     and ‘y’. Default values are ".x" and ".y".See
 #'     \code{?dplyr::join} for details.
+#' @param localConn A MySQL connection with write permission. Will be
+#'     used only when \code{join}-ing two SQLDataFrame objects from
+#'     different MySQL connections (to different MySQL databases), and
+#'     neither has write permission. The situation is rare and should
+#'     be avoided. See Details.
+#' @details The \code{*_join} functions support aggregation of
+#'     SQLDataFrame objects from same or different connection (e.g.,
+#'     cross databases), either with or without write permission. 
+#'
+#'     SQLite database tables are supported by SQLDataFrame package,
+#'     in the same/cross-database aggregation, and saving.
+#'
+#'     For MySQL databases, There are different situations:
+#'
+#'     When the input SQLDataFrame objects connects to same remote
+#'     MySQL database without write permission (e.g., ensembl), the
+#'     functions work like \code{dbplyr} with the lazy operations and
+#'     a \code{DataFrame} interface. Note that the aggregated
+#'     SQLDataFrame can not be saved using \code{saveSQLDataFrame}.
+#'
+#'     When the input SQLDataFrame objects connects to different MySQL
+#'     databases, and neither has write permission, the \code{*_join}
+#'     functions are supported but will be quite time consuming. To
+#'     avoid this situation, a more efficient way is to save the
+#'     database table in local MySQL server using
+#'     \code{saveSQLDataFrame}, and then call the \code{*_join}
+#'     functions again.
+#'
+#'     More frequent situation will be the \code{*_join} operation on
+#'     two SQLDataFrame objects, of which at least one has write
+#'     permission. Then the cross-database aggregation through
+#'     SQLDataFrame package will be supported by generating federated
+#'     table from the non-writable connection in the writable
+#'     connection. Look for MySQL database manual for more details.
+#' 
 #' @param ... additional arguments to be passed.
 #' @return A \code{SQLDataFrame} object.
 #' @export
