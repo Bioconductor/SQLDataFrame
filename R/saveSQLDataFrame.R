@@ -55,8 +55,8 @@ saveSQLDataFrame <- function(x,
                                  db_sql_render(con, tbl), con = con) 
             dbExecute(con, sql_cmd)
         } else {
-            if (is(tblData(x)$ops, "op_join"))
-                stop("Saving SQLDataFrame with lazy join queries ",
+            if (is(tblData(x)$ops, "op_double")) ## from "*_join" or "union", etc
+                stop("Saving SQLDataFrame with lazy join / union queries ",
                      "from same non-writable MySQL database is not supported!")
             if (!.mysql_has_write_perm(localConn))
                 stop("Please provide a MySQL connection ",
@@ -85,7 +85,7 @@ saveSQLDataFrame <- function(x,
                      "OR change 'overwrite = TRUE'. ")
         }
         if (is(tblData(x)$ops, "op_base") ) {  
-            con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
+            con <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
             aux <- .attach_database(con, connSQLDataFrame(x)@dbname)
             tbl <- .open_tbl_from_connection(con, aux, x)  ## already
                                                             ## evaluated
@@ -99,11 +99,6 @@ saveSQLDataFrame <- function(x,
             ## and which be processed as an additional file
             ## "dbtable_ridx". So here we only use "tblData(x)"
             ## instead of ".extract_tbl_from_SQLDataFrame_indexes"
-
-            if (!is.null(ridx(x))) {  ## applies to SQLDataFrame from "rbind"
-                dbWriteTable(con, paste0(dbtable, "_ridx"),
-                             value = data.frame(ridx = ridx(x)))
-            }
         }
         sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
                              db_sql_render(con, tbl), con = con)
@@ -119,14 +114,25 @@ saveSQLDataFrame <- function(x,
     ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
     ## table_name.index_name; see also: dbRemoveTable()
 
+    ## This chunk applies to an input SQLDataFrame from "rbind"
     if (is(con, "SQLiteConnection")) {
         if(is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
             file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
-        }  ## save database file into the provided "dbname" file path.
+            sql_drop <- build_sql("DROP TABLE ", sql(dbtable), con = con)
+            dbExecute(con, sql_drop)
+            con <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
+            if (!is.null(ridx(x))) {
+                dbWriteTable(con, paste0(dbtable, "_ridx"),
+                             value = data.frame(ridx = ridx(x)))
+            }  ## save database file into the provided "dbname" file path.
+        }
     }
     .msg_saveSQLDataFrame(x, con, dbtable)
-    res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x))
+    suppressMessages(res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x)))
     invisible(res)
+}
+
+.write_ridx_sqlite <- function(x, dbtable, con) {
 }
 
 .msg_saveSQLDataFrame <- function(x, con, dbtable)
@@ -148,10 +154,9 @@ saveSQLDataFrame <- function(x,
                   paste(dim(x), collapse = " X "), "] \n",
                   "## Database: ", databaseLine, 
                   "## Use the following command to reload into R: \n",
-                  "## dat <- SQLDataFrame(\n",
+                  "## sdf <- SQLDataFrame(\n",
                   "##   host = '", info$host, "',\n",
                   "##   user = '", info$user, "',\n",
-                  ## "##   password = \"", .get_mysql_var(con), "\",\n",
                   "##   password = '',", "   ## Only if required!", "\n",
                   "##   type = 'MySQL',\n",
                   "##   dbname = '", info$dbname, "',\n",
@@ -170,8 +175,7 @@ saveSQLDataFrame <- function(x,
                   paste(dim(x), collapse = " X "), "] \n",
                   "## Database: ", databaseLine, 
                   "## Use the following command to reload into R: \n",
-                  "## dat <- SQLDataFrame(\n",
-                  ## FIXME: localConn was not required in saveSQLDataFrame for SQLiteDataFrame...
+                  "## sdf <- SQLDataFrame(\n",
                   "##   dbname = '", con@dbname, "',\n",
                   "##   type = 'SQLite',\n",
                   "##   dbtable = '", dbtable, "',\n",

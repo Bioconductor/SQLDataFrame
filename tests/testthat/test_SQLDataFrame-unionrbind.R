@@ -57,7 +57,7 @@ test_that("union SQLDataFrame with difference source works!", {
     expect_identical(connSQLDataFrame(u2)@dbname, connSQLDataFrame(u3)@dbname)
 
     u4 <- union(obj21, u2)
-    expect_identical(as.data.frame(u3), as.data.frame(u4))
+    expect_identical(as.data.frame(u3), as.data.frame(u4))  ## dbconcatKey sorted and reordered!
     expect_identical(connSQLDataFrame(u3)@dbname, connSQLDataFrame(u4)@dbname) 
 })
 
@@ -91,4 +91,10 @@ test_that("rbind SQLDataFrame works!", {
     expect_identical(ridx(r4), match(ROWNAMES(r4), dbconcatKey(r4)))
 })
 
+test_that("saveSQLDataFrame after rbind preserves row index!", {
+    r1 <- rbind(obj01, obj11)
+    r11 <- saveSQLDataFrame(r1)
+    expect_identical(ridx(r1), ridx(r11))
+    expect_identical(as.data.frame(r1), as.data.frame(r11))
+})
 
