@@ -97,6 +97,7 @@ SQLDataFrame <- function(conn,
     ## src <- src_dbi(con, auto_disconnect = TRUE)
     ## on.exit(DBI::dbDisconnect(con))
 
+    type <- match.arg(type)
     if (missing(conn)) {
         conn <- switch(type,
                        MySQL = DBI::dbConnect(dbDriver("MySQL"),
@@ -119,20 +120,20 @@ SQLDataFrame <- function(conn,
     if (missing(dbtable) || !dbExistsTable(conn, dbtable)) {
         if (length(tbls) == 1) {
             dbtable <- tbls
-            message(paste0("Using the only table: \"", tbls,
-                           "\" that is available in the connection"))
+            message(paste0("Using the only table: '", tbls,
+                           "' that is available in the connection"))
         } else {
-            stop("Please specify the \"dbtable\" argument, ",
-                 "which must be one of: \"",
-                 paste(tbls, collapse = ", "), "\"")
+            stop("Please specify the 'dbtable' argument, ",
+                 "which must be one of: '",
+                 paste(tbls, collapse = ", "), "'")
         }
     }
     ## check dbkey
     flds <- dbListFields(conn, dbtable)
     if (!all(dbkey %in% flds)){
-        stop("Please specify the \"dbkey\" argument, ",
-             "which must be one of: \"",
-             paste(flds, collapse = ", "), "\"")
+        stop("Please specify the 'dbkey' argument, ",
+             "which must be one of: '",
+             paste(flds, collapse = ", "), "'")
     }
     
     if (is(conn, "MySQLConnection")) {
@@ -159,19 +160,19 @@ SQLDataFrame <- function(conn,
     } else {
         idx <- col.names %in% cns
         wmsg <- paste0(
-            "The \"col.names\" of \"",
+            "The 'col.names' of '",
             paste(col.names[!idx], collapse = ", "),
-            "\" does not exist!")
+            "' does not exist!")
         if (!any(idx)) {
             warning(
-                wmsg, " Will use \"col.names = colnames(dbtable)\"",
+                wmsg, " Will use 'col.names = colnames(dbtable)'",
                 " as default.")
             col.names <- cns
             cidx <- NULL
         } else {
-            warning(wmsg, " Only \"",
+            warning(wmsg, " Only '",
                     paste(col.names[idx], collapse = ", "),
-                    "\" will be used.")
+                    "' will be used.")
             col.names <- col.names[idx]
             cidx <- match(col.names, cns)
         }
@@ -205,7 +206,7 @@ SQLDataFrame <- function(conn,
 {
     idx <- object@indexes
     if (length(idx) != 2) {
-        stop("The indexes for \"SQLDataFrame\" should have \"length == 2\"")
+        stop("The indexes for SQLDataFrame should have 'length == 2'")
     }
     if (any(duplicated(dbconcatKey(object)))) {
         stop("The 'dbkey' column of SQLDataFrame '", dbkey(object),
@@ -293,7 +294,7 @@ setGeneric(
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
     if (!all(value %in% colnames(tblData(x))))
-        stop("Please choose \"dbkey\" from the following: ",
+        stop("Please choose 'dbkey' from the following: ",
              paste(colnames(tblData(x)), collapse = ", "))
     concatKey <- tblData(x) %>%
         ## mutate(concatKey = paste(!!!syms(value), sep="\b")) %>%
@@ -504,8 +505,8 @@ setAs("data.frame", "SQLDataFrame", function(from)
     }
     dbkey <- colnames(from)[i]
     msg <- paste0("## Using the '", dbkey, "' as 'dbkey' column. \n",
-                  "## Otherwise, construct a \"SQLDataFrame\" by: \n",
-                  "## \"makeSQLDataFrame(filename, dbkey = \"\")\" \n")
+                  "## Otherwise, construct a 'SQLDataFrame' by: \n",
+                  "## 'makeSQLDataFrame(filename, dbkey = '')' \n")
     message(msg)
     makeSQLDataFrame(from, dbkey = colnames(from)[i])
 })
@@ -530,7 +531,7 @@ setAs("ANY", "SQLDataFrame", function(from)
     from <- as.data.frame(from)
     if (ncol(from) == 1)
         stop("There should be more than 1 columns available ",
-             "to construct a \"SQLDataFrame\" object")
+             "to construct a 'SQLDataFrame' object")
     if (anyDuplicated(tolower(colnames(from))))
         stop("Please use distinct colnames (case-unsensitive)!")
     as(as.data.frame(from), "SQLDataFrame")

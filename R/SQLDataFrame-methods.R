@@ -250,8 +250,8 @@ setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
           function(x, i, j, ..., drop = TRUE)
 {
     if (!identical(dbkey(x), dbkey(i)))
-        stop("The dbkey() must be same between \"", deparse(substitute(x)),
-             "\" and \"", deparse(substitute(i)), "\".", "\n")
+        stop("The dbkey() must be same between '", deparse(substitute(x)),
+             "' and '", deparse(substitute(i)), "'.", "\n")
     i <- ROWNAMES(i)
     callNextMethod()
 })
@@ -263,8 +263,8 @@ setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
           function(x, i, j, ..., drop = TRUE)
 {
     if (!identical(dbkey(x), union(dbkey(x), names(i))))
-        stop("Please use: \"", paste(dbkey(x), collapse=", "),
-             "\" as the query list name(s).")
+        stop("Please use: '", paste(dbkey(x), collapse=", "),
+             "' as the query list name(s).")
     i <- do.call(paste, c(i[dbkey(x)], sep="\b"))
     callNextMethod()
 })
