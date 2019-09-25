@@ -1,3 +1,8 @@
+## this function switches between the connection type of input
+## SQLDataFrame. If we define generic function and dispatch to
+## different connection type, the original info (e.g., @indexes) from
+## SQLDataFrame will be lost...
+
 .join_union_prepare <- function(x, y, localConn)
 {
     ## X and Y must built from same SQL database (e.g., SQLite, MySQL,
@@ -9,8 +14,7 @@
            "SQLiteConnection" = .join_union_prepare_sqlite(x, y),
            "MySQLConnection" = .join_union_prepare_mysql(x, y, localConn)
            )
-}
-    
+} 
 
 .join_union_prepare_sqlite <- function(x, y)
 {
