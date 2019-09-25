@@ -4,22 +4,30 @@
 \alias{saveSQLDataFrame}
 \title{Save SQLDataFrame object as a new database table.}
 \usage{
-saveSQLDataFrame(x, localConn = connSQLDataFrame(x),
-  dbname = tempfile(fileext = ".db"), dbtable = deparse(substitute(x)),
+saveSQLDataFrame(x, dbname = tempfile(fileext = ".db"),
+  dbtable = deparse(substitute(x)), localConn = connSQLDataFrame(x),
   overwrite = FALSE, index = TRUE, ...)
 }
 \arguments{
 \item{x}{The \code{SQLDataFrame} object to be saved.}
 
 \item{dbname}{A character string of the file path of to be saved
-database file.}
+SQLite database file. Will only be used when the input
+SQLDataFrame represents a SQLite database table. Default to
+save in a temporary file.}
 
 \item{dbtable}{A character string for the to be saved database
 table name. Default is the name of the input
 \code{SQLDataFrame}.}
 
+\item{localConn}{A MySQL connection with write permission. Will be
+used only when the input SQLDataFrame objects connects to MySQL
+connections without write permission. A new MySQL table will be
+written in the the database this argument provides.}
+
 \item{overwrite}{Whether to overwrite the \code{dbtable} if already
-exists. Default is FALSE.}
+exists. Only applies to the saving of SQLDataFrame objects
+representing SQLite database tables. Default is FALSE.}
 
 \item{index}{Whether to create the database index. Default is TRUE.}
 
