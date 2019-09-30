@@ -64,7 +64,6 @@ mysqlEnvironment <- new.env()
 .create_federated_table <- function(remoteConn, dbtableName,
                                     localConn, ldbtableName, remotePswd)
 {
-    ## browser()
     ## open docker, require credentials here:
     
     stopifnot(is(remoteConn, "MySQLConnection"))
