@@ -1,4 +1,4 @@
-.union_SQLDataFrame_mysql <- function(x, y, copy, 
+.union_SQLDataFrame_mysql <- function(x, y,
                                       localConn) ## "localConn" only
                                                  ## used when both X
                                                  ## and Y are
@@ -6,7 +6,7 @@
                                                  ## without write
                                                  ## permission.
 {
-    out <- .doCompatibleFunction(x, y, copy = copy,
+    out <- .doCompatibleFunction(x, y, copy = FALSE,
                                  FUN = dbplyr:::union.tbl_lazy,
                                  localConn = localConn)
     ## dbplyr:::union.tbl_lazy for MySQL will preserve the original
@@ -15,9 +15,9 @@
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))
     BiocGenerics:::replaceSlots(out, dbconcatKey = rnms)
 }
-.union_SQLDataFrame_sqlite <- function(x, y, copy)
+.union_SQLDataFrame_sqlite <- function(x, y)
 {
-    out <- .doCompatibleFunction(x, y, copy = copy,
+    out <- .doCompatibleFunction(x, y, copy = FALSE,
                                  FUN = dbplyr:::union.tbl_lazy,
                                  localConn = localConn)
     ## dbplyr:::union.tbl_lazy will reorder the records (SQLite). need
@@ -36,12 +36,12 @@
     BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
 }
 
-.union_SQLDataFrame <- function(x, y, copy = FALSE, localConn, ...)
+.union_SQLDataFrame <- function(x, y, localConn, ...)
 {
     type <- class(connSQLDataFrame(x))
     switch(type,
-           SQLiteConnection = .union_SQLDataFrame_sqlite(x, y, copy),
-           MySQLConnection = .union_SQLDataFrame_mysql(x, y, copy, localConn))
+           SQLiteConnection = .union_SQLDataFrame_sqlite(x, y),
+           MySQLConnection = .union_SQLDataFrame_mysql(x, y, localConn))
 }
 
 #' Union of \code{SQLDataFrame} objects
@@ -52,7 +52,6 @@
 #'     objects.
 #' @param x A \code{SQLDataFrame} object.
 #' @param y A \code{SQLDataFrame} object.
-#' @param copy see \code{?dplyr::union} for details.
 #' @param localConn A MySQL connection with write permission. Will be
 #'     used only when \code{union}-ing two SQLDataFrame objects from
 #'     different MySQL connections (to different MySQL databases), and

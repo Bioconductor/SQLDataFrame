@@ -1,12 +1,5 @@
-.doCompatibleFunction <- function(x, y, localConn, ..., FUN) {
-    ## check if remote... if yes, add "localConn" argument, or
-    ## optionally "ldbtableNameX", "ldbtableNameY"
-
-    ## if (any(.isRemote(connSQLDataFrame(x)), .isRemote(connSQLDataFrame(y)))) {
-        tbls <- .join_union_prepare(x, y, localConn = localConn)
-    ## } else {
-    ##     tbls <- .join_union_prepare(x, y)
-    ## }
+.doCompatibleFunction <- function(x, y, localconn, ..., FUN) {
+    tbls <- .join_union_prepare(x, y, localConn)
     tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
     dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
 
@@ -32,7 +25,6 @@
 #'     the default, ‘*_join()’ will do a natural join, using all
 #'     variables with common names across the two tables. See
 #'     \code{?dplyr::join} for details.
-#' @param copy see \code{?dplyr::join} for details.
 #' @param suffix A character vector of length 2 specify the suffixes
 #'     to be added if there are non-joined duplicate variables in ‘x’
 #'     and ‘y’. Default values are ".x" and ".y".See
@@ -97,12 +89,11 @@
 #' anti_join(obj1_sub, obj2_sub)
 
 left_join.SQLDataFrame <- function(x, y, by = NULL,
-                                   copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    localConn,
                                    ...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+    out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::left_join.tbl_lazy,
@@ -129,11 +120,10 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @aliases inner_join inner_join,SQLDataFrame-method
 #' @export
 inner_join.SQLDataFrame <- function(x, y, by = NULL,
-                                    copy = FALSE,
                                     suffix = c(".x", ".y"),
                                     localConn,...) 
 {
-    out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+    out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::inner_join.tbl_lazy,
@@ -168,11 +158,10 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @aliases semi_join semi_join,SQLDataFrame-method
 #' @export
 semi_join.SQLDataFrame <- function(x, y, by = NULL,
-                                   copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    localConn, ...) 
 {
-        out <- .doCompatibleFunction(x, y, by = by, copy = copy,
+        out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                      suffix = suffix,
                                      auto_index = FALSE,
                                      FUN = dbplyr:::semi_join.tbl_lazy,
@@ -202,11 +191,10 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @aliases anti_join anti_join,SQLDataFrame-method
 #' @export
 anti_join.SQLDataFrame <- function(x, y, by = NULL,
-                                   copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    localConn,...) 
 {
-    out <- .doCompatibleFunction(x, y, copy = copy,
+    out <- .doCompatibleFunction(x, y, copy = FALSE,
                                  FUN = dbplyr:::anti_join.tbl_lazy,
                                  localConn = localConn)
     if (!identical(dbkey(x), dbkey(y))) {
