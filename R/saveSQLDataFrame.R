@@ -21,6 +21,10 @@
 #'     representing SQLite database tables. Default is FALSE.
 #' @param index Whether to create the database index. Default is TRUE.
 #' @param ... other parameters passed to methods.
+#' @details For SQLDataFrame from \code{union} or \code{rbind}, if
+#'     representation of MySQL tables, the data will be sorted by key
+#'     columns, and saved as MySQL table in the connection with write
+#'     permission.
 #' @return A \code{SQLDataFrame} object.
 #' @import DBI
 #' @import dbplyr
