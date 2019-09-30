@@ -1,3 +1,18 @@
+##-----------------------------------------------------##
+## utility function to call directly from union/join
+##-----------------------------------------------------##
+
+.doCompatibleFunction <- function(x, y, localConn, ..., FUN) {
+    tbls <- .join_union_prepare(x, y, localConn)
+    tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
+    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
+
+    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
+                                       dbnrows = dbnrows,
+                                       indexes = vector("list", 2))
+    return(out)
+}
+
 ## this function switches between the connection type of input
 ## SQLDataFrame. If we define generic function and dispatch to
 ## different connection type, the original info (e.g., @indexes) from
@@ -15,6 +30,10 @@
            "MySQLConnection" = .join_union_prepare_mysql(x, y, localConn)
            )
 } 
+
+##-----------------------------------------------------##
+## These utility functions are for SQLite connections. 
+##-----------------------------------------------------##
 
 .join_union_prepare_sqlite <- function(x, y)
 {
@@ -56,8 +75,6 @@
     return(list(tblx, tbly))
 }
 
-##-----------------------------------------------------##
-## These utility functions are for SQLite connections. 
 .attachMaybe_and_open_tbl_in_new_connection <- function(con, sdf) {
     dbs <- .dblist(con)
     dbname <- connSQLDataFrame(sdf)@dbname
@@ -92,7 +109,10 @@
     return(tblx)
 }
 
-##################################################################################################
+##-----------------------------------------------------##
+## These utility functions are for MySQL connections. 
+##-----------------------------------------------------##
+
 .join_union_prepare_mysql <- function(x, y,
                                 localConn) ## only used when both X and Y has no write permission.
 {
@@ -153,3 +173,4 @@
     res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf) ## time consuming...
     return(res_tbl)
 }
+

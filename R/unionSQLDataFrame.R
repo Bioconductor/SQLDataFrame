@@ -1,3 +1,11 @@
+.union_SQLDataFrame <- function(x, y, localConn, ...)
+{
+    type <- class(connSQLDataFrame(x))
+    switch(type,
+           SQLiteConnection = .union_SQLDataFrame_sqlite(x, y),
+           MySQLConnection = .union_SQLDataFrame_mysql(x, y, localConn))
+}
+
 .union_SQLDataFrame_mysql <- function(x, y,
                                       localConn) ## "localConn" only
                                                  ## used when both X
@@ -15,6 +23,7 @@
     rnms <- unique(c(ROWNAMES(x), ROWNAMES(y)))
     BiocGenerics:::replaceSlots(out, dbconcatKey = rnms)
 }
+
 .union_SQLDataFrame_sqlite <- function(x, y)
 {
     out <- .doCompatibleFunction(x, y, copy = FALSE,
@@ -34,14 +43,6 @@
     dbrnms <- rnms[od]
     
     BiocGenerics:::replaceSlots(out, dbconcatKey = dbrnms)
-}
-
-.union_SQLDataFrame <- function(x, y, localConn, ...)
-{
-    type <- class(connSQLDataFrame(x))
-    switch(type,
-           SQLiteConnection = .union_SQLDataFrame_sqlite(x, y),
-           MySQLConnection = .union_SQLDataFrame_mysql(x, y, localConn))
 }
 
 #' Union of \code{SQLDataFrame} objects

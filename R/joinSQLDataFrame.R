@@ -1,14 +1,3 @@
-.doCompatibleFunction <- function(x, y, localconn, ..., FUN) {
-    tbls <- .join_union_prepare(x, y, localConn)
-    tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
-    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
-
-    out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
-                                       dbnrows = dbnrows,
-                                       indexes = vector("list", 2))
-    return(out)
-}
-
 #########################
 ## left_join, inner_join
 #########################
