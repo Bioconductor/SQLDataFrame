@@ -189,7 +189,7 @@ obj[, NULL]
 obj[1:5, 2:3]
 obj[c(TRUE, FALSE), c(TRUE, FALSE)]
 obj[c("Alabama", "South Dakota"), ]
-obj1[c("South\\b3615.0", "West\\b3559.0"), ]
+obj1[c("South:3615.0", "West:3559.0"), ]
 ### Remeber to add `.0` trailing for numeric values. If not sure,
 ### check `ROWNAMES()`.
 

@@ -53,8 +53,6 @@
 #'     SQLDataFrame package will be supported by generating federated
 #'     table from the non-writable connection in the writable
 #'     connection. Look for MySQL database manual for more details.
-#' 
-#' @param ... additional arguments to be passed.
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @examples

@@ -130,7 +130,7 @@ For `SQLDataFrame` object with composite keys:
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 ROWNAMES(obj1[1:10,])
-obj1[c("South\b3615.0", "West\b365.0"), ]
+obj1[c("South:3615.0", "West:365.0"), ]
 ```
 
 # SessionInfo()

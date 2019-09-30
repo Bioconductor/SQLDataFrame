@@ -169,7 +169,7 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' obj[1:5, 2:3]
 #' obj[c(TRUE, FALSE), c(TRUE, FALSE)]
 #' obj[c("Alabama", "South Dakota"), ]
-#' obj1[c("South\b3615.0", "West\b3559.0"), ]
+#' obj1[c("South:3615.0", "West:3559.0"), ]
 #' ### Remeber to add `.0` trailing for numeric values. If not sure,
 #' ### check `ROWNAMES()`.
 #'
@@ -265,7 +265,7 @@ setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
     if (!identical(dbkey(x), union(dbkey(x), names(i))))
         stop("Please use: '", paste(dbkey(x), collapse=", "),
              "' as the query list name(s).")
-    i <- do.call(paste, c(i[dbkey(x)], sep="\b"))
+    i <- do.call(paste, c(i[dbkey(x)], sep=":"))
     callNextMethod()
 })
 

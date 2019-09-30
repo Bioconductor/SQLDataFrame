@@ -49,8 +49,6 @@ neither has write permission. The situation is rare and should
 be avoided. See Details.}
 
 \item{...}{Other arguments passed on to \code{*_join} methods.}
-
-\item{...}{additional arguments to be passed.}
 }
 \value{
 A \code{SQLDataFrame} object.

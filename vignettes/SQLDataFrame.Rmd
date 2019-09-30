@@ -257,7 +257,7 @@ obj[c("Alabama", "Colorado"), ]
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
 rnms <- ROWNAMES(obj1)
-obj1[c("South\b3615.0", "West\b365.0"), ]
+obj1[c("South:3615.0", "West:365.0"), ]
 ```
 
 List style subsetting is also allowed to extract certain columns from
