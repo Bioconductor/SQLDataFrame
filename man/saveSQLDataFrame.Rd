@@ -42,6 +42,12 @@ The function to save \code{SQLDataFrame} object as a
     returns a \code{SQLDataFrame} object constructed from the
     user-supplied \code{dbname}, \code{dbtable}, and \code{dbkey}.
 }
+\details{
+For SQLDataFrame from \code{union} or \code{rbind}, if
+    representation of MySQL tables, the data will be sorted by key
+    columns, and saved as MySQL table in the connection with write
+    permission.
+}
 \examples{
 test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)

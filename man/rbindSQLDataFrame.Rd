@@ -21,6 +21,12 @@ A \code{SQLDataFrame} object.
 \description{
 Performs rbind on \code{SQLDataFrame} objects.
 }
+\details{
+\code{rbind} supports aggregation of SQLDataFrame
+    objects. For representation of SQLite tables, same or different
+    connections are supported. For representation of MySQL tables,
+    at least one SQLDataFrame must have write permission.
+}
 \examples{
 test.db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
 test.db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
