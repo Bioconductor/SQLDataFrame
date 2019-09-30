@@ -111,8 +111,7 @@ SQLDataFrame <- function(conn,
                        )
     } else {
         ifcred <- c(host = !missing(host), user = !missing(user),
-                    dbname = !missing(dbname), password = !missing(password),
-                    type = !missing(type))
+                    dbname = !missing(dbname), password = !missing(password))
         if (any(ifcred))
             message("These arguments are ignored: ",
                     paste(names(ifcred[ifcred]), collapse = ", "))

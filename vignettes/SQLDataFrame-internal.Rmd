@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 4/5/2018"
+date: "last edit: 9/30/2019"
 
 [dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
 
@@ -54,7 +54,6 @@ returned through these 5 slots using slot accessors or other utility
 functions. 
 ```{r}
 slotNames(obj)
-## dbname(obj)
 dbtable(obj)
 dbkey(obj)
 ```
@@ -101,14 +100,18 @@ obj_sub@indexes
 identical(tblData(obj), tblData(obj_sub))
 ```
 
-With a `filter` function (which is similar to `[i, ]` subsetting),
-only the `indexes` slot will be updated for the row index pointing to
-the `tblData`.
+With a `filter` or `select` function (which is similar to `[i, ]`
+subsetting), only the `indexes` slot will be updated for the row or
+column index pointing to the `tblData`.
 
 ```{r}
 obj_filter <- obj %>% filter(division == "South Atlantic" & size == "medium")
 obj_filter@indexes
 identical(tblData(obj), tblData(obj_filter))
+
+obj_select <- obj %>% select(division, size)
+obj_select@indexes
+identical(tblData(obj), tblData(obj_select))
 ```
 
 # SQLDataFrame methods

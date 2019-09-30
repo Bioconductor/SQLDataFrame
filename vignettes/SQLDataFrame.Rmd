@@ -23,38 +23,57 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 4/5/2018"
+date: "last edit: 9/30/2019"
 
 # Introduction
 
-As the genomic data are getting increasingly large. With the memory
-limit of _R_, it's getting more and more difficult to manipuate large
-data. the `matrix`-like high-throughput genomic data are now being able to easily loaded and
-manipulated within R by extending[DelayedArray][] to represent on-disk
-data structures with different back-end in R-user-friendly array data
-structure (e.g.,[HDF5Array][], [GDSArray][]). However, the annotation
-file usually have`data.frame`-like structure, and include meta info with different data type. Here we
- have developed an _Bioconductor_ package`SQLDataFrame` to have the `DataFrame` metaphor with database table backend.
+SQL database are very commonly used in the storage of very large
+genomic data resources. Many useful tools, such as [DBI][], [dbplyr][]
+have provided convenient interfaces for R users to check and
+manipulate the data. These tools represent the SQL tables in tidy
+formats and support lazy and quick aggregation operations (e.g,
+`*_join`, `union`, etc.) for tables from same resources. Cross
+database aggregation is also supported when opted (using `copy=TRUE`)
+but become very expensive due to the internal copying process of a
+whole table into the other connection. Use of advanced functions or
+debugging often involves specialized SQL knowledge which brings
+challenges for common _R_ users.
 
-Currently we are only supporting the DBI backend of `RSQLite`. But
-theoretically, we would implement this package so that users could
-choose to use different database backend when doing the `SQLDataFrame`
-constructor and `saveSQLDataFrame`. 
+The SQLDataFrame package was developed using familiar DataFrame-like
+paradigm and lazily represents the very large dataset from different
+SQL databases, such as SQLite and MySQL. The DataFrame-like interface
+provides familiarity for common _R_ users in easy data manipulations
+such as square bracket subsetting, rbinding, etc. For modern _R_
+users, it also recognizes the `tidy` data analysis and [dplyr][]
+grammar by supporting, such as, `%>%`, `select`, `filter`, `mutate`,
+etc. More importantly, special SQL-based strategies were implemented
+in SQLDataFrame to efficiently handle the cross-database operations
+without incurring any internally expensive processes (especially for
+database with write permission). Some previously difficult data
+operations are made possible in _R_, such as cross-database ID
+matching and conversion, variant annotation extraction, etc. The
+scalability and interoperability for SQLDataFrame with other
+bioinformatics tools are expected to significantly promote the gaining
+of biological insights.
 
-Support of other backends will be added for next version. Five
-commonly used backends are:
+Currently `SQLDataFrame` supports the DBI backend of `RSQLite` and
+`MySQL`. In the future or upon feature request, we would implement
+this package so that users could choose to use different database
+backend when doing the `SQLDataFrame` constructor and
+`saveSQLDataFrame`.  
+
+Here is a list of commonly used backends (bolded are already supported!):
 
 - **RSQLite**: embeds a SQLite database. (now used as default)
-- _RMySQL_: connects to MySQL and MariaDB
+- **RMySQL**: connects to MySQL and MariaDB
+- _bigrquery_ connects to Google’s BigQuery.
 - _RPostgreSQL_: connects to Postgres and Redshift.
 - _odbc_ connects to many commercial databases via the open database
   connectivity protocol.
-- _bigrquery_ connects to Google’s BigQuery.
 
-[dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
-[DelayedArray]: https://bioconductor.org/packages/DelayedArray
-[GDSArray]: https://bioconductor.org/packages/GDSArray
-[HDF5Array]: https://bioconductor.org/packages/HDF5Array
+[DBI]: https://CRAN.R-project.org/package=DBI 
+[dbplyr]:  https://CRAN.R-project.org/package=dbplyr
+[dplyr]: https://CRAN.R-project.org/package=dplyr
 
 # Installation
 
@@ -73,32 +92,51 @@ BiocManager::install("Liubuntu/SQLDataFrame")
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
 library(DBI)
+library(RMySQL)
 ```
 
 # `SQLDataFrame` class
 
 ## `SQLDataFrame` constructor
-To construct a `SQLDataFrame` object, 3 arguments are needed:
-`dbname`, `dbtable` and `dbkey`. The `dbname` is the file path to the
-database that is on-disk or remote. `dbtable` argument specifies the
+There are two ways to construct a `SQLDataFrame` object: 
+
+1) Provide an argument of `conn`, `dbtable` and `dbkey`. `conn` is a
+valid DBIConnection from SQLite or MySQL; `dbtable` specifies the
 database table name that is going to be represented as `SQLDataFrame`
 object. If only one table is available in the specified database name,
 this argument could be left blank. The `dbkey` argument is used to
 specify the column name in the table which could uniquely identify all
-the data observations (rows).  
+the data observations (rows). 
 
+2) Provide `dbtable`, `dbkey` as specified above, and credentials to
+build valid DBIConnections. for SQLite, the credential argument
+includes `dbname`. For MySQL, the credential arguments are `host`,
+`user`, `password`. Additional to the credentials, users must provide
+the `type` argument to specify the SQL database type. Supported types
+are "SQLite" and "MySQL". If not specified, "SQLite" is used by
+default. Supported database tables could be on-disk or remote on the
+web or cloud.
+
+```{r constructor_conn}
+dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
+obj <- SQLDataFrame(conn = conn, dbtable = "state",
+                    dbkey = "state")
+```
+
+construction from database credentials:
+```{r constructor_credentials}
+obj1 <- SQLDataFrame(dbname = dbfile, type = "SQLite",
+                     dbtable = "state", dbkey = "state")
+all.equal(obj, obj1)
+```
 Note that after reading the database table into `SQLDataFrame`, the
 key columns will be kept as fixed columns showing on the left hand
 side, with `|` separating key column(s) with the other columns. The
 `ncol`, `colnames`, and corresponding column subsetting will only
 apply to the non-key-columns.
 
-
-```{r constructor}
-dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile)
-obj <- SQLDataFrame(
-    conn = conn, dbtable = "colData", dbkey = "sampleID")
+```{r}
 obj
 dim(obj)
 colnames(obj)
@@ -196,10 +234,7 @@ It's also recommended that users call `saveSQLDataFrame` frequently to
 avoid too many lazy layers which slows down the data processing. 
 
 ```{r}
-dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
-obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
-conn
+connSQLDataFrame(obj)
 dbtable(obj)
 obj1 <- saveSQLDataFrame(obj, dbname = tempfile(fileext = ".db"),
                         dbtable = "obj_copy")
@@ -245,7 +280,7 @@ obj[, "population"]  ## realized column value
 
 Subsetting with character vector works for the `SQLDataFrame`
 objects. With composite keys, users need to concatenate the key values
-by `\b` for row subsetting (See the vignette for internal
+by `:` for row subsetting (See the vignette for internal
 implementation for more details).
 
 ```{r}
@@ -315,11 +350,6 @@ obj2 <- rbind(ss11, ss21)
 obj2  ## keeping the original order by updating the row index
 ```
 
-**maybe remove this part for vignette.** 
-```{r, eval=FALSE}
-identical(as.data.frame(tblData(ss11)), as.data.frame(tblData(ss21)))
-```
-
 ## *_join methods
 
 The `*_join` family methods was implemented for `SQLDataFrame`
@@ -334,6 +364,30 @@ left_join(ss12, ss22)
 inner_join(ss12, ss22)
 semi_join(ss12, ss22)
 anti_join(ss12, ss22)
+```
+
+
+# Support of MySQL database data
+
+SQLDataFrame now supports the MySQL database tables, for local MySQL
+servers, or remote ones on the web or cloud. The SQLDataFrame
+construction, `*_join` functions, `union`, `rbind`, and saving are all
+supported. Aggregation operations are supported for same or cross
+MySQL databases. Details please see the function documentations.
+
+Here I'll show a simple use case for MySQL tables from ensembl. 
+
+```{r, mysql}
+ensbConn <- dbConnect(dbDriver("MySQL"),
+                        host="genome-mysql.soe.ucsc.edu",
+                        user = "genome",
+                        dbname = "xenTro9")
+enssdf <- SQLDataFrame(conn = ensbConn,
+                       dbtable = "xenoRefGene",
+                       dbkey = c("name", "txStart"))
+enssdf1 <- enssdf[1:20, 1:2]
+enssdf2 <- enssdf[11:30,3:4]
+res <- left_join(enssdf1, enssdf2)
 ```
 
 # SessionInfo()
