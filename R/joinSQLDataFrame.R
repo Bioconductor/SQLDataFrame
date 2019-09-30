@@ -42,6 +42,7 @@
 #'     different MySQL connections (to different MySQL databases), and
 #'     neither has write permission. The situation is rare and should
 #'     be avoided. See Details.
+#' @param ... Other arguments passed on to \code{*_join} methods. 
 #' @details The \code{*_join} functions support aggregation of
 #'     SQLDataFrame objects from same or different connection (e.g.,
 #'     cross databases), either with or without write permission. 
