@@ -4,8 +4,9 @@
 \alias{makeSQLDataFrame}
 \title{Construct SQLDataFrame from file.}
 \usage{
-makeSQLDataFrame(filename, dbkey = character(), dbname = NULL,
-  dbtable = NULL, overwrite = FALSE, sep = ",", index = TRUE, ...)
+makeSQLDataFrame(filename, dbtable = NULL, dbkey = character(), conn,
+  host, user, dbname = NULL, password = NULL, type = c("SQLite",
+  "MySQL"), overwrite = FALSE, sep = ",", index = FALSE, ...)
 }
 \arguments{
 \item{filename}{A \code{data.frame} or \code{DataFrame} object, or
@@ -13,19 +14,31 @@ a character string of the filepath to the text file that to be
 saved as SQL database table. For filepath, the data columns
 should not be quoted on disk.}
 
-\item{dbkey}{A character vector of column name(s) that could
-uniquely identify each row of the filename. Must be provided in
-order to construct a SQLDataFrame.}
-
-\item{dbname}{A character string of the filepath of to-be-saved
-database file. If not provided, will use a
-\code{tempfile(fileext = ".db")}.}
-
 \item{dbtable}{A character string for the to be saved database
 table name. If not provided, will use the name of the input
 \code{data.frame} or \code{DataFrame} object, or the
 \code{basename(filename)} without extension if \code{filename}
 is a character string.}
+
+\item{dbkey}{A character vector of column name(s) that could
+uniquely identify each row of the filename. Must be provided in
+order to construct a SQLDataFrame.}
+
+\item{conn}{a valid \code{DBIConnection} from \code{SQLite} or
+\code{MySQL}. If provided, arguments of `user`, `host`,
+`dbname`, `password` will be ignored.}
+
+\item{host}{host name for SQL database.}
+
+\item{user}{user name for SQL database.}
+
+\item{dbname}{database name for SQL connection. For SQLite
+connection, it uses a \code{tempfile(fileext = ".db")} if not
+provided.}
+
+\item{password}{password for SQL database connection.}
+
+\item{type}{The SQL database type, supports "SQLite" and "MySQL".}
 
 \item{overwrite}{Whether to overwrite the \code{dbtable} if already
 exists. Default is FALSE.}
@@ -33,7 +46,7 @@ exists. Default is FALSE.}
 \item{sep}{a character string to separate the terms.  Not
 ‘NA_character_’. Default is \code{,}.}
 
-\item{index}{Whether to create an index table. Default is TRUE.}
+\item{index}{Whether to create an index table. Default is FALSE.}
 
 \item{...}{additional arguments to be passed.}
 }
@@ -42,7 +55,7 @@ A \code{SQLDataFrame} object.
 }
 \description{
 Given a file name, \code{makeSQLDataFrame} will write
-    the file contents into SQLite database, and open the database
+    the file contents into SQL database, and open the database
     table as SQLDataFrame.
 }
 \details{
@@ -64,4 +77,13 @@ write.csv(mtc, file= filename, row.names = FALSE, quote = FALSE)
 obj <- makeSQLDataFrame(filename, dbkey = "rowname")
 obj
 
+## save as MySQL database
+\dontrun{
+localConn <- DBI::dbConnect(dbDriver("MySQL"),
+                            host = "",
+                            user = "",
+                            password = "",
+                            dbname = "")
+makeSQLDataFrame(filename, dbtable = "mtcMysql", dbkey = "rowname", conn = localConn)
+}
 }
