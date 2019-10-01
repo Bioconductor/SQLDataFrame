@@ -1,5 +1,5 @@
 ---
-title: "SQLDataFrame: Lazy representation of database table in DataFrame metaphor"
+title: "SQLDataFrame: Lazy representation of SQL database in DataFrame metaphor"
 author:
 - name: Qian Liu
   affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
@@ -12,7 +12,7 @@ output:
         toc_float: true
 package: SQLDataFrame
 vignette: >
-  %\VignetteIndexEntry{SQLDataFrame: Lazy representation of database table in DataFrame metaphor}
+  %\VignetteIndexEntry{SQLDataFrame: Lazy representation of SQL database in DataFrame metaphor}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -35,9 +35,12 @@ formats and support lazy and quick aggregation operations (e.g,
 `*_join`, `union`, etc.) for tables from same resources. Cross
 database aggregation is also supported when opted (using `copy=TRUE`)
 but become very expensive due to the internal copying process of a
-whole table into the other connection. Use of advanced functions or
-debugging often involves specialized SQL knowledge which brings
-challenges for common _R_ users.
+whole table into the other connection. Use of advanced functions often
+involves specialized SQL knowledge which brings challenges for common
+_R_ users. The interoperability of existing bioinformatics tools are
+suboptimal, e.g., the [SummarizedExperiment][] container for
+representation of sequencing or genotyping experiments that many
+modern bioinformatics pipelines are based.
 
 The SQLDataFrame package was developed using familiar DataFrame-like
 paradigm and lazily represents the very large dataset from different
@@ -45,16 +48,16 @@ SQL databases, such as SQLite and MySQL. The DataFrame-like interface
 provides familiarity for common _R_ users in easy data manipulations
 such as square bracket subsetting, rbinding, etc. For modern _R_
 users, it also recognizes the `tidy` data analysis and [dplyr][]
-grammar by supporting, such as, `%>%`, `select`, `filter`, `mutate`,
-etc. More importantly, special SQL-based strategies were implemented
-in SQLDataFrame to efficiently handle the cross-database operations
+grammar by supporting `%>%`, `select`, `filter`, `mutate`, etc. More
+importantly, database type-specific strategies were implemented in
+SQLDataFrame to efficiently handle the cross-database operations
 without incurring any internally expensive processes (especially for
 database with write permission). Some previously difficult data
-operations are made possible in _R_, such as cross-database ID
+operations are made quick and easy in _R_, such as cross-database ID
 matching and conversion, variant annotation extraction, etc. The
-scalability and interoperability for SQLDataFrame with other
-bioinformatics tools are expected to significantly promote the gaining
-of biological insights.
+scalability and interoperability of SQLDataFrame are expected to
+significantly promote the handling of very large genomic data
+resources and facilitating the overall bioinformatics analysis.
 
 Currently `SQLDataFrame` supports the DBI backend of `RSQLite` and
 `MySQL`. In the future or upon feature request, we would implement
@@ -74,6 +77,7 @@ Here is a list of commonly used backends (bolded are already supported!):
 [DBI]: https://CRAN.R-project.org/package=DBI 
 [dbplyr]:  https://CRAN.R-project.org/package=dbplyr
 [dplyr]: https://CRAN.R-project.org/package=dplyr
+[SummarizedExperiment]: https://bioconductor.org/packages/SummarizedExperiment/ 
 
 # Installation
 
