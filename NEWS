@@ -1,2 +1,14 @@
+CHANGES IN VERSION 1.0.0 (2019-10-01)
+--------------------------------------
+NEW FEATURES
+
++ Supports tidy grammar for 'select', 'filter', 'mutate' and '%>%' pipe. 
++ Supports representation and saving of MySQL database tables.
++ Supports lazy cross-MySQL database table aggregations, such as join, union, rbind, etc. 
+
+BUG FIXES
+
++ Fixed bugs for single square bracket subsetting with key column(s).
+
 Changes in version 0.99.0 (2019-04-05)
 + Submitted to Bioconductor
