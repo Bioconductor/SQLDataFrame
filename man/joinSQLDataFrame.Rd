@@ -15,17 +15,17 @@
 \alias{anti_join,SQLDataFrame-method}
 \title{join \code{SQLDataFrame} together}
 \usage{
-\method{left_join}{SQLDataFrame}(x, y, by = NULL, suffix = c(".x",
-  ".y"), localConn, ...)
+\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
+  suffix = c(".x", ".y"), ...)
 
-\method{inner_join}{SQLDataFrame}(x, y, by = NULL, suffix = c(".x",
-  ".y"), localConn, ...)
+\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
+  suffix = c(".x", ".y"), ...)
 
-\method{semi_join}{SQLDataFrame}(x, y, by = NULL, suffix = c(".x",
-  ".y"), localConn, ...)
+\method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
+  suffix = c(".x", ".y"), ...)
 
-\method{anti_join}{SQLDataFrame}(x, y, by = NULL, suffix = c(".x",
-  ".y"), localConn, ...)
+\method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
+  suffix = c(".x", ".y"), ...)
 }
 \arguments{
 \item{x}{\code{SQLDataFrame} objects to join.}
@@ -37,18 +37,21 @@ the default, ‘*_join()’ will do a natural join, using all
 variables with common names across the two tables. See
 \code{?dplyr::join} for details.}
 
+\item{copy}{Only kept for S3 generic/method consistency. Used as
+"copy = FALSE" internally and not modifiable.}
+
 \item{suffix}{A character vector of length 2 specify the suffixes
 to be added if there are non-joined duplicate variables in ‘x’
 and ‘y’. Default values are ".x" and ".y".See
 \code{?dplyr::join} for details.}
 
-\item{localConn}{A MySQL connection with write permission. Will be
-used only when \code{join}-ing two SQLDataFrame objects from
-different MySQL connections (to different MySQL databases), and
-neither has write permission. The situation is rare and should
-be avoided. See Details.}
-
-\item{...}{Other arguments passed on to \code{*_join} methods.}
+\item{...}{Other arguments passed on to \code{*_join}
+methods. \code{localConn} can be passed here for one MySQL
+connection with write permission. Will be used only when
+\code{join}-ing two SQLDataFrame objects from different MySQL
+connections (to different MySQL databases), and neither has
+write permission. The situation is rare and should be
+avoided. See Details.}
 }
 \value{
 A \code{SQLDataFrame} object.
@@ -60,7 +63,7 @@ A \code{SQLDataFrame} object.
 \details{
 The \code{*_join} functions support aggregation of
     SQLDataFrame objects from same or different connection (e.g.,
-    cross databases), either with or without write permission. 
+    cross databases), either with or without write permission.
 
     SQLite database tables are supported by SQLDataFrame package,
     in the same/cross-database aggregation, and saving.

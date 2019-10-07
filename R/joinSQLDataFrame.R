@@ -14,19 +14,22 @@
 #'     the default, ‘*_join()’ will do a natural join, using all
 #'     variables with common names across the two tables. See
 #'     \code{?dplyr::join} for details.
+#' @param copy Only kept for S3 generic/method consistency. Used as
+#'     "copy = FALSE" internally and not modifiable.
 #' @param suffix A character vector of length 2 specify the suffixes
 #'     to be added if there are non-joined duplicate variables in ‘x’
 #'     and ‘y’. Default values are ".x" and ".y".See
 #'     \code{?dplyr::join} for details.
-#' @param localConn A MySQL connection with write permission. Will be
-#'     used only when \code{join}-ing two SQLDataFrame objects from
-#'     different MySQL connections (to different MySQL databases), and
-#'     neither has write permission. The situation is rare and should
-#'     be avoided. See Details.
-#' @param ... Other arguments passed on to \code{*_join} methods. 
+#' @param ... Other arguments passed on to \code{*_join}
+#'     methods. \code{localConn} can be passed here for one MySQL
+#'     connection with write permission. Will be used only when
+#'     \code{join}-ing two SQLDataFrame objects from different MySQL
+#'     connections (to different MySQL databases), and neither has
+#'     write permission. The situation is rare and should be
+#'     avoided. See Details.
 #' @details The \code{*_join} functions support aggregation of
 #'     SQLDataFrame objects from same or different connection (e.g.,
-#'     cross databases), either with or without write permission. 
+#'     cross databases), either with or without write permission.
 #'
 #'     SQLite database tables are supported by SQLDataFrame package,
 #'     in the same/cross-database aggregation, and saving.
@@ -75,16 +78,15 @@
 #' semi_join(obj1_sub, obj2_sub)
 #' anti_join(obj1_sub, obj2_sub)
 
-left_join.SQLDataFrame <- function(x, y, by = NULL,
+left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn,
                                    ...) 
 {
     out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::left_join.tbl_lazy,
-                                 localConn = localConn)
+                                 ...)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -106,15 +108,15 @@ left_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @rdname joinSQLDataFrame
 #' @aliases inner_join inner_join,SQLDataFrame-method
 #' @export
-inner_join.SQLDataFrame <- function(x, y, by = NULL,
+inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                     suffix = c(".x", ".y"),
-                                    localConn,...) 
+                                    ...) 
 {
     out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                  suffix = suffix,
                                  auto_index = FALSE,
                                  FUN = dbplyr:::inner_join.tbl_lazy,
-                                 localConn = localConn)
+                                 ...)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
@@ -144,15 +146,15 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @rdname joinSQLDataFrame
 #' @aliases semi_join semi_join,SQLDataFrame-method
 #' @export
-semi_join.SQLDataFrame <- function(x, y, by = NULL,
+semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn, ...) 
+                                   ...) 
 {
         out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
                                      suffix = suffix,
                                      auto_index = FALSE,
                                      FUN = dbplyr:::semi_join.tbl_lazy,
-                                     localConn = localConn)
+                                     ...)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {        
@@ -177,13 +179,13 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL,
 #' @rdname joinSQLDataFrame
 #' @aliases anti_join anti_join,SQLDataFrame-method
 #' @export
-anti_join.SQLDataFrame <- function(x, y, by = NULL,
+anti_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
                                    suffix = c(".x", ".y"),
-                                   localConn,...) 
+                                   ...) 
 {
     out <- .doCompatibleFunction(x, y, copy = FALSE,
                                  FUN = dbplyr:::anti_join.tbl_lazy,
-                                 localConn = localConn)
+                                 ...)
     if (!identical(dbkey(x), dbkey(y))) {
         dbkey(out) <- c(dbkey(x), dbkey(y))
     } else {
