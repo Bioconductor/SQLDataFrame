@@ -33,7 +33,9 @@ Imports:
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 6.1.1
-Suggests: 
+Suggests:
+    RMySQL,
+    bigrquery,
     testthat,
     knitr,
     rmarkdown,

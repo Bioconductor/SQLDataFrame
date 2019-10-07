@@ -7,6 +7,7 @@
 #' @importFrom methods setOldClass new
 ## add other connections. 
 setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
+              "tbl_BigQueryConnection",
               "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
@@ -15,7 +16,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
         dbnrows = "integer",  
         tblData = "tbl_dbi",
         indexes = "list",
-        dbconcatKey = "character" 
+        dbconcatKey = "ANY" 
     )
 )
 
@@ -24,25 +25,30 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' @description \code{SQLDataFrame} constructor, slot getters, show
 #'     method and coercion methods to \code{DataFrame} and
 #'     \code{data.frame} objects.
-#' @param conn a valid \code{DBIConnection} from \code{SQLite} or
-#'     \code{MySQL}. If provided, arguments of `user`, `host`,
-#'     `dbname`, `password` will be ignored.
-#' @param host host name for SQL database.
-#' @param user user name for SQL database. 
+#' @param conn a valid \code{DBIConnection} from \code{SQLite},
+#'     \code{MySQL} or \code{BigQuery}. If provided, arguments of
+#'     `user`, `host`, `dbname`, `password` will be ignored.
+#' @param host host name for MySQL database or project name for
+#'     BigQuery.
+#' @param user user name for SQL database.
 #' @param dbname database name for SQL connection.
-#' @param password password for SQL database connection. 
-#' @param type The SQL database type, supports "SQLite" and "MySQL". 
+#' @param password password for SQL database connection.
+#' @param billing the Google Cloud project name with authorized
+#'     billing information.
+#' @param type The SQL database type, supports "SQLite", "MySQL" and
+#'     "BigQuery".
 #' @param dbtable A character string for the table name in that
 #'     database. If not provided and there is only one table
 #'     available, it will be read in by default.
 #' @param dbkey A character vector for the name of key columns that
-#'     could uniquely identify each row of the database table.
+#'     could uniquely identify each row of the database table. Will be
+#'     ignored for \code{BigQueryConnection}.
 #' @param col.names A character vector specifying the column names you
 #'     want to read into the \code{SQLDataFrame}.
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @importFrom tools file_path_as_absolute
-#' @importFrom RSQLite SQLite
+#' @import RSQLite
 #' @import dbplyr
 #' @examples
 #' 
@@ -85,11 +91,51 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' ## dbkey replacement
 #' dbkey(obj) <- c("region", "population")
 #' obj
+#'
+#' ## construction from MySQL 
+#' \dontrun{
+#' mysqlConn <- DBI::dbConnect(dbDriver("MySQL"),
+#'                             host = "",
+#'                             user = "",
+#'                             password = "",  ## required if need further
+#'                                             ## aggregation operations such as
+#'                                             ## join, union, rbind, etc. 
+#'                             dbname = "")
+#' sdf <- SQLDataFrame(conn = mysqlConn, dbtable = "", dbkey = "")
+#'
+#' ## Or pass credentials directly into constructor
+#' objensb <- SQLDataFrame(user = "genome",
+#'                         host = "genome-mysql.soe.ucsc.edu",
+#'                         dbname = "xenTro9",
+#'                         type = "MySQL",
+#'                         dbtable = "xenoRefGene",
+#'                         dbkey = c("name", "txStart"))
+#' 
+#' }
+#' 
+#' ## construction from BigQuery
+#' \dontrun{
+#' con <- DBI::dbConnect(bigquery(),  ## equivalent dbDriver("bigquery")
+#'                       project = "bigquery-public-data",
+#'                       dataset = "human_variant_annotation",
+#'                       billing = "")  ## your project name that linked to
+#'                                      ## Google Cloud with billing information.
+#' sdf <- SQLDataFrame(conn = con, dbtable = "ncbi_clinvar_hg38_20180701")
+#'
+#' ## Or pass credentials directly into constructor
+#' sdf1 <- SQLDataFrame(host = "bigquery-public-data",
+#'                      dbname = "human_variant_annotation",
+#'                      billing = "",
+#'                      type = "BigQuery",
+#'                      dbtable = "ncbi_clinvar_hg38_20180701")
+#'
+#' }
 
 SQLDataFrame <- function(conn,
                          host, user, dbname,
                          password = NULL, ## required for certain MySQL connection.
-                         type = c("SQLite", "MySQL"),
+                         billing = character(0),  ## BigQuery connection.
+                         type = c("SQLite", "MySQL", "BigQuery"),
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table exists!
                          dbkey = character(0),
@@ -107,11 +153,16 @@ SQLDataFrame <- function(conn,
                                               password = password,
                                               dbname = dbname),
                        SQLite = DBI::dbConnect(dbDriver("SQLite"),
-                                               dbname = dbname)
+                                               dbname = dbname),
+                       BigQuery = DBI::dbConnect(dbDriver("bigquery"),
+                                                 project = host,
+                                                 dataset = dbname,
+                                                 billing = billing)
                        )
     } else {
         ifcred <- c(host = !missing(host), user = !missing(user),
-                    dbname = !missing(dbname), password = !missing(password))
+                    dbname = !missing(dbname), password = !missing(password),
+                    billing = !missing(billing))
         if (any(ifcred))
             message("These arguments are ignored: ",
                     paste(names(ifcred[ifcred]), collapse = ", "))
@@ -130,11 +181,16 @@ SQLDataFrame <- function(conn,
         }
     }
     ## check dbkey
-    flds <- dbListFields(conn, dbtable)
-    if (!all(dbkey %in% flds)){
-        stop("Please specify the 'dbkey' argument, ",
-             "which must be one of: '",
-             paste(flds, collapse = ", "), "'")
+    if (is(conn, "BigQueryConnection")) {
+        if (!missing(dbkey))
+            cat("The argument: '", dbkey, "' is ignored for BigQueryConnection.")        
+    } else {
+        flds <- dbListFields(conn, dbtable)
+        if (!all(dbkey %in% flds)){
+            stop("Please specify the 'dbkey' argument, ",
+                 "which must be one of: '",
+                 paste(flds, collapse = ", "), "'")
+        }
     }
     
     if (is(conn, "MySQLConnection")) {
@@ -142,7 +198,14 @@ SQLDataFrame <- function(conn,
     }        
     
     ## construction
-    tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
+    ### ROW_NUMBER() only works here for "BigQueryConnection", not for
+    ### SQLiteConnection, and MySQLConnection
+    if (is(conn, "BigQueryConnection")) {
+        tbl <- tbl(conn, sql(paste0("SELECT ROW_NUMBER() OVER() AS SurrogateKey, * FROM ", dbtable)))
+        dbkey <- "SurrogateKey"
+    } else {
+        tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
+    }
     dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer
     
     ## col.names
@@ -179,10 +242,13 @@ SQLDataFrame <- function(conn,
     }
     
     ## concatKey
-    concatKey <- tbl %>%
-        mutate(concatKey = paste(!!!syms(dbkey), sep=":")) %>%
-        pull(concatKey)
-    
+    if (is(conn, "BigQueryConnection")) {
+        concatKey <- seq_len(dbnrows)
+    } else {
+        concatKey <- tbl %>%
+            mutate(concatKey = paste(!!!syms(dbkey), sep=":")) %>%
+            pull(concatKey)
+    }
     .SQLDataFrame(
         dbkey = dbkey,
         dbnrows = dbnrows,
@@ -271,11 +337,12 @@ setGeneric(
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
+    if (is(connSQLDataFrame(x), "BigQueryConnection"))
+        stop("Redefining of 'dbkey' for BigQueryConnection is not supported!")
     if (!all(value %in% colnames(tblData(x))))
         stop("Please choose 'dbkey' from the following: ",
              paste(colnames(tblData(x)), collapse = ", "))
     concatKey <- tblData(x) %>%
-        ## mutate(concatKey = paste(!!!syms(value), sep="\b")) %>%
         mutate(concatKey = paste(!!!syms(value), sep=":")) %>%
         pull(concatKey)
     BiocGenerics:::replaceSlots(x, dbkey = value,
@@ -328,15 +395,15 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 {
     ## always require a dbkey(), and accommodate with multiple key columns. 
     i <- sort(unique(i))
-    if (length(key) == 1) {
-        out <- x %>% filter(!!sym(key) %in% !!(concatKey[i]))
+    if (is(x$src$con, "BigQueryConnection")) {
+        out <- x %>% filter(SurrogateKey %in% i)
     } else {
         x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep=":"))
         ## FIXME: possible to remove the ".0" trailing after numeric values?
         ## see: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
         out <- x %>% filter(concatKeys %in% !!(concatKey[i])) %>% select(-concatKeys)
-        ## returns "tbl_dbi" object, no realization. 
     }
+    ## returns "tbl_dbi" object, no realization.
     return(out)
 }
 

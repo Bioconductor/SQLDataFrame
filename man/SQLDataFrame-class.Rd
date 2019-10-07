@@ -31,8 +31,8 @@
 \title{SQLDataFrame class}
 \usage{
 SQLDataFrame(conn, host, user, dbname, password = NULL,
-  type = c("SQLite", "MySQL"), dbtable = character(0),
-  dbkey = character(0), col.names = NULL)
+  billing = character(0), type = c("SQLite", "MySQL", "BigQuery"),
+  dbtable = character(0), dbkey = character(0), col.names = NULL)
 
 \S4method{tblData}{SQLDataFrame}(x)
 
@@ -54,11 +54,12 @@ SQLDataFrame(conn, host, user, dbname, password = NULL,
   optional = NULL, ...)
 }
 \arguments{
-\item{conn}{a valid \code{DBIConnection} from \code{SQLite} or
-\code{MySQL}. If provided, arguments of `user`, `host`,
-`dbname`, `password` will be ignored.}
+\item{conn}{a valid \code{DBIConnection} from \code{SQLite},
+\code{MySQL} or \code{BigQuery}. If provided, arguments of
+`user`, `host`, `dbname`, `password` will be ignored.}
 
-\item{host}{host name for SQL database.}
+\item{host}{host name for MySQL database or project name for
+BigQuery.}
 
 \item{user}{user name for SQL database.}
 
@@ -66,14 +67,19 @@ SQLDataFrame(conn, host, user, dbname, password = NULL,
 
 \item{password}{password for SQL database connection.}
 
-\item{type}{The SQL database type, supports "SQLite" and "MySQL".}
+\item{billing}{the Google Cloud project name with authorized
+billing information.}
+
+\item{type}{The SQL database type, supports "SQLite", "MySQL" and
+"BigQuery".}
 
 \item{dbtable}{A character string for the table name in that
 database. If not provided and there is only one table
 available, it will be read in by default.}
 
 \item{dbkey}{A character vector for the name of key columns that
-could uniquely identify each row of the database table.}
+could uniquely identify each row of the database table. Will be
+ignored for \code{BigQueryConnection}.}
 
 \item{col.names}{A character vector specifying the column names you
 want to read into the \code{SQLDataFrame}.}
@@ -147,4 +153,43 @@ as(obj, "DataFrame")
 ## dbkey replacement
 dbkey(obj) <- c("region", "population")
 obj
+
+## construction from MySQL 
+\dontrun{
+mysqlConn <- DBI::dbConnect(dbDriver("MySQL"),
+                            host = "",
+                            user = "",
+                            password = "",  ## required if need further
+                                            ## aggregation operations such as
+                                            ## join, union, rbind, etc. 
+                            dbname = "")
+sdf <- SQLDataFrame(conn = mysqlConn, dbtable = "", dbkey = "")
+
+## Or pass credentials directly into constructor
+objensb <- SQLDataFrame(user = "genome",
+                        host = "genome-mysql.soe.ucsc.edu",
+                        dbname = "xenTro9",
+                        type = "MySQL",
+                        dbtable = "xenoRefGene",
+                        dbkey = c("name", "txStart"))
+
+}
+
+## construction from BigQuery
+\dontrun{
+con <- DBI::dbConnect(bigquery(),  ## equivalent dbDriver("bigquery")
+                      project = "bigquery-public-data",
+                      dataset = "human_variant_annotation",
+                      billing = "")  ## your project name that linked to
+                                     ## Google Cloud with billing information.
+sdf <- SQLDataFrame(conn = con, dbtable = "ncbi_clinvar_hg38_20180701")
+
+## Or pass credentials directly into constructor
+sdf1 <- SQLDataFrame(host = "bigquery-public-data",
+                     dbname = "human_variant_annotation",
+                     billing = "",
+                     type = "BigQuery",
+                     dbtable = "ncbi_clinvar_hg38_20180701")
+
+}
 }
