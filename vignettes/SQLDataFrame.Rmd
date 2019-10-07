@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 9/30/2019"
+last edit: 10/7/2019
 
 # Introduction
 
@@ -59,17 +59,17 @@ scalability and interoperability of SQLDataFrame are expected to
 significantly promote the handling of very large genomic data
 resources and facilitating the overall bioinformatics analysis.
 
-Currently `SQLDataFrame` supports the DBI backend of `RSQLite` and
-`MySQL`. In the future or upon feature request, we would implement
-this package so that users could choose to use different database
-backend when doing the `SQLDataFrame` constructor and
-`saveSQLDataFrame`.  
+Currently SQLDataFrame supports the DBI backend of SQLite, MySQL and
+Google BigQuery, which are most commonly used SQL-based databases. In
+the future or upon feature request, we would implement this package so
+that users could choose to use different database backend for
+`SQLDataFrame` representation.
 
 Here is a list of commonly used backends (bolded are already supported!):
 
 - **RSQLite**: embeds a SQLite database. (now used as default)
 - **RMySQL**: connects to MySQL and MariaDB
-- _bigrquery_ connects to Google’s BigQuery.
+- **bigrquery** connects to Google’s BigQuery.
 - _RPostgreSQL_: connects to Postgres and Redshift.
 - _odbc_ connects to many commercial databases via the open database
   connectivity protocol.
@@ -96,7 +96,6 @@ BiocManager::install("Liubuntu/SQLDataFrame")
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
 library(DBI)
-library(RMySQL)
 ```
 
 # `SQLDataFrame` class
@@ -373,15 +372,19 @@ anti_join(ss12, ss22)
 
 # Support of MySQL database data
 
-SQLDataFrame now supports the MySQL database tables, for local MySQL
-servers, or remote ones on the web or cloud. The SQLDataFrame
-construction, `*_join` functions, `union`, `rbind`, and saving are all
-supported. Aggregation operations are supported for same or cross
-MySQL databases. Details please see the function documentations.
+SQLDataFrame now supports the MySQL database tables through [RMySQL][],
+for local MySQL servers, or remote ones on the web or cloud. The
+SQLDataFrame construction, `*_join` functions, `union`, `rbind`, and
+saving are all supported. Aggregation operations are supported for
+same or cross MySQL databases. Details please see the function
+documentations.
 
 Here I'll show a simple use case for MySQL tables from ensembl. 
 
+[RMySQL]: https://CRAN.R-project.org/package=RMySQL
+
 ```{r, mysql}
+library(RMySQL)
 ensbConn <- dbConnect(dbDriver("MySQL"),
                         host="genome-mysql.soe.ucsc.edu",
                         user = "genome",
@@ -393,6 +396,41 @@ enssdf1 <- enssdf[1:20, 1:2]
 enssdf2 <- enssdf[11:30,3:4]
 res <- left_join(enssdf1, enssdf2)
 ```
+
+# Support of Google BigQuery 
+
+SQLDataFrame has just added support for Google BigQuery
+tables. Construction and queries using `[` and `filter` are supported!
+
+"Authentication and authorization" will be needed when using
+[bigrquery][]. Check [here](https://github.com/r-dbi/bigrquery) for
+more details. 
+
+Also note that, the support of BigQuery tables has implemented
+specialized strategy for efficient data representation. The `dbkey()`
+is assigned by default as `SurrogateKey`, and `dbkey` argument will be
+ignored during construction.
+
+[bigrquery]: https://CRAN.R-project.org/package=bigrquery
+
+```{r bigquery, eval=FALSE}
+library(bigrquery)
+bigrquery::bq_auth()  ## use this to authorize bigrquery in the
+                      ## browser.
+bqConn <- DBI::dbConnect(dbDriver("bigquery"),
+                      project = "bigquery-public-data",
+                      dataset = "human_variant_annotation",
+                      billing = "") ## if not previous provided
+                                    ## authorization, must specify a
+                                    ## project name that was already
+                                    ## linked with Google Cloud with
+                                    ## billing info.
+sdf <- SQLDataFrame(conn = bqConn, dbtable = "ncbi_clinvar_hg38_20180701")
+sdf[1:5, 1:5]
+sdf %>% filter(GENEINFO == "PYGL:5836")
+sdf %>% filter(reference_name == "21")
+```
+
 
 # SessionInfo()
 
