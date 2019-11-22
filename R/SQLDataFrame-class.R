@@ -506,6 +506,7 @@ setMethod("show", "SQLDataFrame", function (object)
     out <- as.data.frame(collect(res_tblData))
     if (!is.null(ridx(x)))
         out <- out[ridx(x), ]
+    rownames(out) <- NULL
     return(out)
 }
 
