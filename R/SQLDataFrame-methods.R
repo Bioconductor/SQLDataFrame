@@ -64,9 +64,7 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 
 setMethod("dim", "SQLDataFrame", function(x)
 {
-    nr <- length(normalizeRowIndex(x))
-    nc <- length(colnames(x))
-    return(c(nr, nc))
+    x@dim
 })
 
 #' @rdname SQLDataFrame-methods
@@ -76,11 +74,7 @@ setMethod("dim", "SQLDataFrame", function(x)
 
 setMethod("dimnames", "SQLDataFrame", function(x)
 {
-    cns <- colnames(tblData(x))[-.wheredbkey(x)]
-    cidx <- x@indexes[[2]]
-    if (!is.null(cidx))
-        cns <- cns[cidx]
-    return(list(NULL, cns))
+    x@dimnames
 })
 
 #' @rdname SQLDataFrame-methods
@@ -98,40 +92,85 @@ setMethod("length", "SQLDataFrame", function(x) ncol(x) )
 setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
 
-
 ###--------------------
 ### "[,SQLDataFrame"
-###-------------------- 
+###--------------------
+
+.rids <- function(idx, rle) {
+    cuml <- c(0, cumsum(runLength(rle)))
+    sapply(idx, function(x) {
+        d <- x - cuml
+        d[sum(d>0)]
+    })
+}
+
+.keyidx <- function(idx, rle) {
+    list(pid = rle[idx],  
+         rid = .rids(idx, rle))
+}
+
+.filtexp <- function(keysdf, partitionID) {
+    vals <- runValue(keysdf$pid)
+    vals1 <- paste0(partitionID, "== '", vals, "'")
+    rids <- split(keysdf$rid, keysdf$pid)
+    rids1 <- sapply(rids, function(x) paste0("rid %in% c(", paste(x, collapse = ", "), ")"))
+    paste(paste(vals1, "&", rids1), collapse = " | ") 
+}
+
 .extractROWS_SQLDataFrame <- function(x, i)
 {
     i <- normalizeSingleBracketSubscript(i, x)
-    ridx <- x@indexes[[1]]
-    if (is.null(ridx)) {
-        if (! identical(i, seq_len(x@dbnrows)))
-            x@indexes[[1]] <- i
-    } else {
-        x@indexes[[1]] <- x@indexes[[1]][i]
+    if (!is.null(ridx(x))){
+        i <- ridx(x)[i]
     }
-    return(x)
+    if (!is.null(pidRle(x))) {
+        new_pidRle <- pidRle(x)[i]
+        res_keys <- .keyidx(i, pidRle(x))
+        new_keyData <- keyData(x) %>%
+            filter(rlang::parse_expr(.filtexp(res_keys, pid(x)))) %>%
+            mutate(rid = row_number(!!sym(dbkey(x)[dbkey(x) != pid(x)][1])))
+    } else {
+        new_pidRle <- NULL
+        new_keyData <- keyData(x) %>% filter(rid %in% i) %>%
+            mutate(rid = row_number(!!syms(dbkey(x)[1])))
+    }
+    new_tblData <- semi_join(tblData(x), new_keyData)
+    new_nr <- new_keyData %>% ungroup %>% summarize(n = n()) %>%
+        pull(n) %>% as.integer
+    ## add @ridx slot as rank(i) if i is not sequential. using rank(i)
+    ## instead of i here, because the @pidRle was updated with
+    ## runlength == length(i), and @keyData$rid was recalculated with
+    ## nrow == length(i). Printed results are sorted by dbkey, so
+    ## rank(i) will resume the order of initial i in subsetting. 
+    if (!identical(order(i), seq_along(i))) {
+        new_ridx <- as.integer(rank(i))
+    } else {
+        new_ridx <- ridx(x)
+    }
+    BiocGenerics:::replaceSlots(x, tblData = new_tblData,
+                                keyData = new_keyData,
+                                pidRle = new_pidRle,
+                                dim = c(new_nr, ncol(x)),
+                                ridx = new_ridx)
 }
 setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 
 #' @importFrom stats setNames
-.extractCOLS_SQLDataFrame <- function(x, j)
+.extractCOLS_SQLDataFrame <- function(x, i)
 {
     xstub <- setNames(seq_along(x), names(x))
-    if (is.character(j) & any(j %in% dbkey(x)))
-        j <- setdiff(j, dbkey(x))
-    j <- normalizeSingleBracketSubscript(j, xstub)
-    cidx <- x@indexes[[2]]
-    if (is.null(cidx)) {
-        if (!identical(j, seq_along(colnames(x))))
-            x@indexes[[2]] <- j
-    } else {
-            x@indexes[[2]] <- x@indexes[[2]][j]
-    }
-    return(x)
+     ## accommodates when subsetting key columns.
+    if (is.character(i) && any(i %in% dbkey(x)))
+        i <- i[!i %in% dbkey(x)] 
+    i <- normalizeSingleBracketSubscript(i, xstub)
+    new_tblData <- tblData(x) %>% select(dbkey(x), names(xstub)[i])
+    ## always retain the key columns!
+    new_dimnames <- list(NULL, names(xstub)[i])
+    new_dim <- c(nrow(x), length(i))
+    BiocGenerics:::replaceSlots(x, tblData = new_tblData, dim = new_dim,
+                                dimnames = new_dimnames)
 }
+setMethod("extractCOLS", "SQLDataFrame", .extractCOLS_SQLDataFrame)
 
 #' @description \code{[i, j]} supports subsetting by \code{i} (for
 #'     row) and \code{j} (for column) and respects ‘drop=FALSE’.
@@ -195,13 +234,14 @@ setMethod("extractROWS", "SQLDataFrame", .extractROWS_SQLDataFrame)
 #' obj[, c("state", "division")] ## col = 1, but do not realize.
 #' 
 
-
 setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 {
+    ## browser()
     if (!isTRUEorFALSE(drop)) 
         stop("'drop' must be TRUE or FALSE")
     if (length(list(...)) > 0L) 
         warning("parameters in '...' not supported")
+    nc <- ncol(x)
     list_style_subsetting <- (nargs() - !missing(drop)) < 3L
     if (list_style_subsetting || !missing(j)) {
         if (list_style_subsetting) {
@@ -212,9 +252,8 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
             j <- i  ## x[i]
         }
         if (!is(j, "IntegerRanges")) {
-            x <- .extractCOLS_SQLDataFrame(x, j) ## x["key"] returns
-                                                 ## SQLSataFrame with
-                                                 ## 0 cols.
+            x <- extractCOLS(x, j) ## x["key"] returns SQLSataFrame
+                                   ## with 0 cols.
         }
         if (list_style_subsetting) 
             return(x)
@@ -229,11 +268,10 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                                                  ## 0 rows and 1
                                                  ## column(s)
     if (drop) {
-        if (ncol(x) == 1L & length(j) == 1) ## x[, "col"] realize.
-                                            ## x[,c("key", "other")]
-                                            ## do not realize.
+        ## x[, "col"]: realize; x[,c("key", "other")]: do not realize??
+        if (ncol(x) == 1L & nc > 1)
             return(x[[1L]])
-        if (ncol(x) == 0 & !is.null(j) & length(j) == 1)
+        if (ncol(x) == 0 && !missing(j) && j %in% dbkey(x)) 
             return(x[[j]]) ## x[,"key"] returns realized value of that
                            ## key column.
         if (nrow(x) == 1L) 
@@ -242,19 +280,23 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
     x
 })
 
-#' @rdname SQLDataFrame-methods
-#' @importFrom methods is as callNextMethod
-#' @aliases [,SQLDataFrame,SQLDataFrame-method 
-#' @export
-setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
-          function(x, i, j, ..., drop = TRUE)
-{
-    if (!identical(dbkey(x), dbkey(i)))
-        stop("The dbkey() must be same between '", deparse(substitute(x)),
-             "' and '", deparse(substitute(i)), "'.", "\n")
-    i <- ROWNAMES(i)
-    callNextMethod()
-})
+## #' @rdname SQLDataFrame-methods
+## #' @importFrom methods is as callNextMethod
+## #' @aliases [,SQLDataFrame,SQLDataFrame-method 
+## #' @export
+## setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
+##           function(x, i, j, ..., drop = TRUE)
+## {
+##     browser()
+##     if (!identical(dbkey(x), dbkey(i)))
+##         stop("The dbkey() must be same between '", deparse(substitute(x)),
+##              "' and '", deparse(substitute(i)), "'.", "\n")
+##     new_keyData <- semi_join(keyData(x), keyData(i)) ## FIXME
+##     new_tblData <- semi_join(tblData(x), new_keyData)
+##     new_pidRle <- pidRle(i)
+##     BiocGenerics:::replaceSlots(x, tblData = new_tblData, keyData = new_keyData,
+##                                 pidRle = new_pidRle)
+## })
 
 #' @rdname SQLDataFrame-methods
 #' @aliases [,SQLDataFrame,list-method 
@@ -262,42 +304,45 @@ setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
 setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
           function(x, i, j, ..., drop = TRUE)
 {
+    browser()
     if (!identical(dbkey(x), union(dbkey(x), names(i))))
         stop("Please use: '", paste(dbkey(x), collapse=", "),
              "' as the query list name(s).")
-    i <- do.call(paste, c(i[dbkey(x)], sep=":"))
+    ## i <- do.call(paste, c(i[dbkey(x)], sep=":"))
+    tmp <- lapply(i, function(x) paste0("c(", paste(x, collapse=","), ")"))
+    exp <- paste(names(tmp), tmp, sep = " %in% ")
+    filter.SQLDataFrame(x, rlang::parse_expr(exp))
     callNextMethod()
 })
 
 ###--------------------
 ### "[[,SQLDataFrame" (do realization for single column only)
 ###--------------------
-
 #' @rdname SQLDataFrame-methods
 #' @export
 setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
 {
+## NOTE: will realize single column into R memory, will will be very
+## expensive for very large BigQuery tables. Not recommended!
+    ## browser()
     dotArgs <- list(...)
     if (length(dotArgs) > 0L) 
         dotArgs <- dotArgs[names(dotArgs) != "exact"]
     if (!missing(j) || length(dotArgs) > 0L) 
-        stop("incorrect number of subscripts")
-    ## extracting key col value 
-    if (is.character(i) && length(i) == 1 && i %in% dbkey(x)) {
-        res <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x) %>% select(i) %>% pull()
-        return(res)
+        stop("incorrect number of subscripts") 
+    xstub <- setNames(seq_along(x), names(x))
+    tryi <- try(normalizeSingleBracketSubscript(i, xstub), silent=TRUE)
+    if (is(tryi, "try-error")) {
+        if (i %in% dbkey(x)) {
+            res <- tblData(x) %>% arrange(!!!syms(dbkey(x))) %>% pull(!!sym(i))
+        } else {
+            stop(attr(tryi, "condition")$message)  ## FIXME: cleaner way for printing?
+        }
+    } else {
+    res <- tblData(x) %>% arrange(!!!syms(dbkey(x))) %>% pull(!!sym(names(xstub)[tryi]))
     }
-    i2 <- normalizeDoubleBracketSubscript(
-        i, x,
-        exact = TRUE,  ## default
-        allow.NA = TRUE,
-        allow.nomatch = TRUE)
-    ## "allow.NA" and "allow.nomatch" is consistent with
-    ## selectMethod("getListElement", "list") <- "simpleList"
-    if (is.na(i2))
-        return(NULL)
-    tblData <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x) %>% select(- !!dbkey(x))
-    res <- tblData %>% pull(i2)
+    if (!is.null(ridx(x)))
+        res <- res[ridx(x)]
     return(res)
 })
 
@@ -311,7 +356,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #############################
 
 #' @description Use \code{select()} function to select certain
-#'     columns.
+#'     columns. 
 #' @rdname SQLDataFrame-methods
 #' @aliases select select,SQLDataFrame-methods
 #' @return \code{select}: always returns a SQLDataFrame object no
@@ -319,27 +364,25 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #'     is(are) selected, it will return a \code{SQLDataFrame} object
 #'     with 0 col (only key columns are shown).
 #' @param .data A \code{SQLDataFrame} object.
-#' @param ... additional arguments to be passed.
-#' \itemize{
-#' \item \code{select()}: One or more unquoted expressions separated
-#'     by commas. You can treat variable names like they are
-#'     positions, so you can use expressions like ‘x:y’ to select
-#'     ranges of variables. Positive values select variables; negative
-#'     values drop variables. See \code{?dplyr::select} for more
-#'     details.
-#' \item \code{filter()}: Logical predicates defined in terms of the
-#'     variables in ‘.data’. Multiple conditions are combined with
+#' @param ... additional arguments to be passed.  \itemize{ \item
+#'     \code{select()}: One or more unquoted expressions separated by
+#'     commas. You can treat variable names like they are positions,
+#'     so you can use expressions like ‘x:y’ to select ranges of
+#'     variables. Positive values select variables; negative values
+#'     drop variables. See \code{?dplyr::select} for more details.
+#'     \item \code{filter()}: Logical predicates defined in terms of
+#'     the variables in ‘.data’. Multiple conditions are combined with
 #'     ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
-#'     kept. See \code{?dplyr::filter} for more details.
-#' \item \code{mutate()}: Name-value pairs of expressions, each with
+#'     kept. See \code{?dplyr::filter} for more details.  \item
+#'     \code{mutate()}: Name-value pairs of expressions, each with
 #'     length 1 or the same length as the number of rows in the group
 #'     (if using ‘group_by()’) or in the entire input (if not using
 #'     groups). The name of each argument will be the name of a new
 #'     variable, and the value will be its corresponding value. Use a
 #'     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
-#'     overwrite existing variables of the same name.
-#' }
+#'     overwrite existing variables of the same name.  }
 #' @export
+#' @importFrom tidyselect vars_select
 #' @examples
 #' 
 #' ###################
@@ -364,15 +407,17 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 
 select.SQLDataFrame <- function(.data, ...)
 {
-    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(.data), .data)
+    ## always return a SQLDataFrame object, never realize a single column.
     dots <- quos(...)
-    old_vars <- op_vars(tbl$ops)
-    new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tbl$ops))
-    .extractCOLS_SQLDataFrame(.data, new_vars)
+    old_vars <- op_vars(tblData(.data)$ops)
+    new_vars <- vars_select(old_vars, !!!dots, .include = op_grps(tblData(.data)$ops))
+    .extractCOLS_SQLDataFrame(.data, new_vars) 
 }
 
 #' @description Use \code{filter()} to choose rows/cases where
-#'     conditions are true.
+#'     conditions are true. Note that after filtering, the original
+#'     order of data will be dropped and data will be reordered by key
+#'     columns.
 #' @rdname SQLDataFrame-methods
 #' @aliases filter filter,SQLDataFrame-method
 #' @return \code{filter}: A \code{SQLDataFrame} object with subset
@@ -381,22 +426,21 @@ select.SQLDataFrame <- function(.data, ...)
 
 filter.SQLDataFrame <- function(.data, ...)
 {
-    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(.data), .data)
-    temp <- dplyr::filter(tbl, ...)
-
-    rnms <- temp %>%
-        transmute(concat = paste(!!!syms(dbkey(.data)), sep = ":")) %>%
-        pull(concat)
-    idx <- match(rnms, ROWNAMES(.data))
-
-    if (!identical(idx, normalizeRowIndex(.data))) {
-        if (!is.null(ridx(.data))) {
-            .data@indexes[[1]] <- ridx(.data)[idx]
-        } else {
-            .data@indexes[[1]] <- idx
-        }
-    }
-    return(.data)
+    new_tblData <- tblData(.data) %>% dplyr::filter(...)
+    ## @keyData
+    new_keyData <- .update_keyData(new_tblData, dbkey(.data), pid(.data))
+    ## @pidRle
+    new_pidRle <- .update_pidRle(new_keyData, pid(.data))
+    ## @dim, @dimnames
+    new_nr <- new_keyData %>% ungroup %>% summarize(n = n()) %>%
+        pull(n) %>% as.integer
+    ## for "filter", no need to honor the existing ridx(x), so will
+    ## reset as NULL.
+    BiocGenerics:::replaceSlots(.data, tblData = new_tblData,
+                                keyData = new_keyData,
+                                pidRle = new_pidRle,
+                                dim = c(new_nr, ncol(.data)),
+                                ridx = NULL)
 }
 
 #' @description \code{mutate()} adds new columns and preserves
@@ -410,36 +454,14 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(connSQLDataFrame(.data), "MySQLConnection")) {
-        con <- connSQLDataFrame(.data)
-        tbl <- tblData(.data)
-    } ## FIXME: generalize and remove duplicate code, check for SQLite
-      ## cases, any chance to avoid creating new local connections?
-    else {
-        if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
-            con <- connSQLDataFrame(.data)
-            tbl <- tblData(.data)
-        } else {
-            dbname <- tempfile(fileext = ".db")
-            con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-            aux <- .attach_database(con, connSQLDataFrame(.data)@dbname)
-            auxSchema <- in_schema(aux, ident(dbtable(.data)))
-        tbl <- tbl(con, auxSchema)
-        }
-    }
-    tbl_out <- dplyr::mutate(tbl, ...)
-    out <- BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
-
-    ## check if not-null for the existing @indexes, and update for mutate.
-    cidx <- .data@indexes[[2]]
-    if (!is.null(cidx)) {
-        cidx <- c(cidx,
-                  setdiff(seq_len(ncol(tbl_out)), seq_len(ncol(tbl))) - length(dbkey(.data)))
-        out <- BiocGenerics:::replaceSlots(out, indexes = list(ridx(.data), cidx))
-    }
-    return(out)
+    new_tblData <- tblData(.data) %>% dplyr::mutate(...)
+    cns <- setdiff(colnames(new_tblData), dbkey(.data))
+    new_dimnames <- list(NULL, cns)
+    new_dim <- c(nrow(.data), length(cns))
+    ## "mutate" will preserver previous @ridx
+    BiocGenerics:::replaceSlots(.data, tblData = new_tblData,
+                                dim = new_dim, dimnames = new_dimnames)
 }
-
 #' @description \code{connSQLDataFrame} returns the connection of a
 #'     SQLDataFrame object.
 #' @rdname SQLDataFrame-methods

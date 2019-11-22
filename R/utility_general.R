@@ -10,19 +10,6 @@
     match(dbkey(x), colnames(tblData(x)))
 }
 
-ridx <- function(x)
-{
-    x@indexes[[1]]
-}
-
-normalizeRowIndex <- function(x)
-{
-    ridx <- ridx(x)
-    if (is.null(ridx))
-        ridx <- seq_len(x@dbnrows)
-    return(ridx)
-}
-
 #########################################################
 ## MySQL connection & password in package environment
 #########################################################

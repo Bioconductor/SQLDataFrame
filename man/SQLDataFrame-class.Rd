@@ -7,6 +7,8 @@
 \alias{SQLDataFrame-class}
 \alias{tblData,SQLDataFrame-method}
 \alias{tblData}
+\alias{keyData,SQLDataFrame-method}
+\alias{keyData}
 \alias{dbtable,SQLDataFrame-method}
 \alias{dbtable}
 \alias{dbkey,SQLDataFrame-method}
@@ -14,16 +16,16 @@
 \alias{"dbkey<-"}
 \alias{dbkey<-}
 \alias{dbkey<-,SQLDataFrame-method}
-\alias{dbconcatKey,SQLDataFrame-method}
-\alias{dbconcatKey}
-\alias{dbnrows,SQLDataFrame-method}
-\alias{dbnrows}
-\alias{ROWNAMES,SQLDataFrame-method}
-\alias{ROWNAMES}
+\alias{ridx,SQLDataFrame-method}
+\alias{ridx}
+\alias{pid,SQLDataFrame-method}
+\alias{pid}
+\alias{pidRle,SQLDataFrame-method}
+\alias{pidRle}
 \alias{show,SQLDataFrame-method}
 \alias{coerce}
-\alias{coerce,SQLDataFrame,data.frame-method}
 \alias{as.data.frame,SQLDataFrame-method}
+\alias{coerce,SQLDataFrame,data.frame-method}
 \alias{coerce,SQLDataFrame,DataFrame-method}
 \alias{coerce,data.frame,SQLDataFrame-method}
 \alias{coerce,DataFrame,SQLDataFrame-method}
@@ -32,9 +34,12 @@
 \usage{
 SQLDataFrame(conn, host, user, dbname, password = NULL,
   billing = character(0), type = c("SQLite", "MySQL", "BigQuery"),
-  dbtable = character(0), dbkey = character(0), col.names = NULL)
+  dbtable = character(0), dbkey = character(0), partitionID = NULL,
+  col.names = NULL)
 
 \S4method{tblData}{SQLDataFrame}(x)
+
+\S4method{keyData}{SQLDataFrame}(x)
 
 \S4method{dbtable}{SQLDataFrame}(x)
 
@@ -42,11 +47,11 @@ SQLDataFrame(conn, host, user, dbname, password = NULL,
 
 \S4method{dbkey}{SQLDataFrame}(x) <- value
 
-\S4method{dbconcatKey}{SQLDataFrame}(x)
+\S4method{ridx}{SQLDataFrame}(x)
 
-\S4method{dbnrows}{SQLDataFrame}(x)
+\S4method{pid}{SQLDataFrame}(x)
 
-\S4method{ROWNAMES}{SQLDataFrame}(x)
+\S4method{pidRle}{SQLDataFrame}(x)
 
 \S4method{show}{SQLDataFrame}(object)
 
@@ -80,6 +85,10 @@ available, it will be read in by default.}
 \item{dbkey}{A character vector for the name of key columns that
 could uniquely identify each row of the database table. Will be
 ignored for \code{BigQueryConnection}.}
+
+\item{partitionID}{A character for the column name of very large
+BigQuery tables to be partitioned on before assigning row
+ids. Takes NULL by default.}
 
 \item{col.names}{A character vector specifying the column names you
 want to read into the \code{SQLDataFrame}.}

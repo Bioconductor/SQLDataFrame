@@ -15,11 +15,7 @@
 \alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
-\alias{[,SQLDataFrame,ANY,ANY,ANY-method}
 \alias{[,SQLDataFrame,ANY-method}
-\alias{[,SQLDataFrame,SQLDataFrame,ANY,ANY-method}
-\alias{[,SQLDataFrame,SQLDataFrame-method}
-\alias{[,SQLDataFrame,list,ANY,ANY-method}
 \alias{[,SQLDataFrame,list-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
@@ -47,12 +43,9 @@
 
 \S4method{names}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,ANY}(x, i, j, ..., drop = TRUE)
 
-\S4method{[}{SQLDataFrame,SQLDataFrame,ANY,ANY}(x, i, j, ...,
-  drop = TRUE)
-
-\S4method{[}{SQLDataFrame,list,ANY,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,list}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 
@@ -77,26 +70,23 @@ values, a named list of key values, and \code{SQLDataFrame},
 
 \item{j}{Column subscript.}
 
-\item{...}{additional arguments to be passed.
-\itemize{
-\item \code{select()}: One or more unquoted expressions separated
-    by commas. You can treat variable names like they are
-    positions, so you can use expressions like ‘x:y’ to select
-    ranges of variables. Positive values select variables; negative
-    values drop variables. See \code{?dplyr::select} for more
-    details.
-\item \code{filter()}: Logical predicates defined in terms of the
-    variables in ‘.data’. Multiple conditions are combined with
-    ‘&’. Only rows where the condition evaluates to ‘TRUE’ are
-    kept. See \code{?dplyr::filter} for more details.
-\item \code{mutate()}: Name-value pairs of expressions, each with
-    length 1 or the same length as the number of rows in the group
-    (if using ‘group_by()’) or in the entire input (if not using
-    groups). The name of each argument will be the name of a new
-    variable, and the value will be its corresponding value. Use a
-    ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
-    overwrite existing variables of the same name.
-}}
+\item{...}{additional arguments to be passed.  \itemize{ \item
+\code{select()}: One or more unquoted expressions separated by
+commas. You can treat variable names like they are positions,
+so you can use expressions like ‘x:y’ to select ranges of
+variables. Positive values select variables; negative values
+drop variables. See \code{?dplyr::select} for more details.
+\item \code{filter()}: Logical predicates defined in terms of
+the variables in ‘.data’. Multiple conditions are combined with
+‘&’. Only rows where the condition evaluates to ‘TRUE’ are
+kept. See \code{?dplyr::filter} for more details.  \item
+\code{mutate()}: Name-value pairs of expressions, each with
+length 1 or the same length as the number of rows in the group
+(if using ‘group_by()’) or in the entire input (if not using
+groups). The name of each argument will be the name of a new
+variable, and the value will be its corresponding value. Use a
+‘NULL’ value in ‘mutate’ to drop a variable.  New variables
+overwrite existing variables of the same name.  }}
 
 \item{drop}{Whether to drop with reduced dimension. Default is
 TRUE.}
@@ -144,7 +134,8 @@ TRUE.}
     row) and \code{j} (for column) and respects ‘drop=FALSE’.
 
 Use \code{select()} function to select certain
-    columns.
+    columns. Note that after \code{select()}, the previous order of
+    data will be dropped.
 
 Use \code{filter()} to choose rows/cases where
     conditions are true.

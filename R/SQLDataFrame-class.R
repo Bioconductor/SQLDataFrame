@@ -5,18 +5,32 @@
 #' @description NULL
 #' @exportClass SQLDataFrame
 #' @importFrom methods setOldClass new
+#' @importFrom S4Vectors Rle runLength runValue
 ## add other connections. 
 setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
               "tbl_BigQueryConnection",
               "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
+setClassUnion("Rle_or_null", c("Rle", "NULL"))
+setClassUnion("character_or_null", c("character", "NULL"))
+setClassUnion("integer_or_null", c("integer", "NULL"))
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
     slots = c(
-        dbkey = "character",
-        dbnrows = "integer",  
-        tblData = "tbl_dbi",
-        indexes = "list",
-        dbconcatKey = "ANY" 
+        tblData = "tbl_dbi", ## "lazy_tbl" from original sql database table.
+        keyData = "tbl_dbi", ## "lazy_tbl", rid, [pid], key1, key2, ...
+        dbkey = "character",  ## colnames(keyData) - rid [-pid]
+        ## dbnrows = "integer", ## maps to original data row
+        ## Dimension. ## FIXME: REMOVE?
+        dim = "integer",  ## calculate each time with row subsetting:
+                          ## '[', filter, etc
+        dimnames = "list",
+        partitionID = "character_or_null",  ## for "tbl_BigQueryConnection"
+        pidRle = "Rle_or_null", ## saves the "partionID + rid" for
+                                ## very large bigQuery tables, update
+                                ## with operations.
+        ridx = "integer_or_null"  ## saves the non-sequential numeric
+                                  ## indexs from '['
+                                  ## subsetting. e.g., sample(10)
     )
 )
 
@@ -43,6 +57,9 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' @param dbkey A character vector for the name of key columns that
 #'     could uniquely identify each row of the database table. Will be
 #'     ignored for \code{BigQueryConnection}.
+#' @param partitionID A character for the column name of very large
+#'     BigQuery tables to be partitioned on before assigning row
+#'     ids. Takes NULL by default.
 #' @param col.names A character vector specifying the column names you
 #'     want to read into the \code{SQLDataFrame}.
 #' @return A \code{SQLDataFrame} object.
@@ -139,6 +156,7 @@ SQLDataFrame <- function(conn,
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table exists!
                          dbkey = character(0),
+                         partitionID = NULL,
                          col.names = NULL
                          ){
 
@@ -198,78 +216,47 @@ SQLDataFrame <- function(conn,
     }        
     
     ## construction
-    ### ROW_NUMBER() only works here for "BigQueryConnection", not for
-    ### SQLiteConnection, and MySQLConnection
-    if (is(conn, "BigQueryConnection")) {
-        tbl <- tbl(conn, sql(paste0("SELECT ROW_NUMBER() OVER() AS SurrogateKey, * FROM ", dbtable)))
-        dbkey <- "SurrogateKey"
-    } else {
-        tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
-    }
-    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer
+    ## FIXME: ROW_NUMBER() only works here for "BigQueryConnection", not for
+    ### SQLiteConnection, and MySQLConnection. in ".update_keyData"
+    ### check for connection type, if "MySQLConnection", realize keyData...
+
+    ## @tblData
+    tblData <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
+    ## @keyData
+    keyData <- .update_keyData(tblData, dbkey, partitionID)
+    ## @pidRle
+    pidRle <- .update_pidRle(keyData, partitionID)
+    ## @dim, @dimnames
+    nr <- keyData %>% ungroup %>% summarize(n = n()) %>% pull(n) %>% as.integer
+    cns <- setdiff(colnames(tblData), dbkey)
+    nc <- length(cns)
+    ## @ridx 
+    ridx <- NULL  ## NULL for initial construction
     
-    ## col.names
-    cns <- colnames(tbl)
-    if (is.null(col.names)) {
-        col.names <- cns
-        cidx <- NULL
-    } else {
-        idx <- col.names %in% cns
-        wmsg <- paste0(
-            "The 'col.names' of '",
-            paste(col.names[!idx], collapse = ", "),
-            "' does not exist!")
-        if (!any(idx)) {
-            warning(
-                wmsg, " Will use 'col.names = colnames(dbtable)'",
-                " as default.")
-            col.names <- cns
-            cidx <- NULL
-        } else {
-            warning(wmsg, " Only '",
-                    paste(col.names[idx], collapse = ", "),
-                    "' will be used.")
-            col.names <- col.names[idx]
-            cidx <- match(col.names, cns)
-        }
-    }
-    
-    ## ridx
-    ridx <- NULL
-    ridxTableName <- paste0(dbtable, "_ridx")
-    if (ridxTableName %in% tbls) {
-        ridx <- dbReadTable(conn, ridxTableName)$ridx
-    }
-    
-    ## concatKey
-    if (is(conn, "BigQueryConnection")) {
-        concatKey <- seq_len(dbnrows)
-    } else {
-        concatKey <- tbl %>%
-            mutate(concatKey = paste(!!!syms(dbkey), sep=":")) %>%
-            pull(concatKey)
-    }
     .SQLDataFrame(
+        tblData = tblData,
+        keyData = keyData, 
         dbkey = dbkey,
-        dbnrows = dbnrows,
-        tblData = tbl,
-        indexes = list(ridx, cidx),
-        dbconcatKey = concatKey
+        dim = c(nr, nc),
+        dimnames = list(NULL, cns),
+        partitionID = partitionID,
+        pidRle = pidRle,
+        ridx = ridx
     )
 }
 
-.validity_SQLDataFrame <- function(object)
-{
-    idx <- object@indexes
-    if (length(idx) != 2) {
-        stop("The indexes for SQLDataFrame should have 'length == 2'")
-    }
-    if (any(duplicated(dbconcatKey(object)))) {
-        stop("The 'dbkey' column of SQLDataFrame '", dbkey(object),
-             "' must have unique values!")
-    }
-}
-setValidity("SQLDataFrame", .validity_SQLDataFrame)
+## .validity_SQLDataFrame <- function(object)
+## {
+##     idx <- object@indexes
+##     if (length(idx) != 2) {
+##         stop("The indexes for SQLDataFrame should have 'length == 2'")
+##     }
+##     if (any(duplicated(dbconcatKey(object)))) {
+##         stop("The 'dbkey' column of SQLDataFrame '", dbkey(object),
+##              "' must have unique values!")
+##     }
+## }
+## setValidity("SQLDataFrame", .validity_SQLDataFrame)
 
 ###-------------
 ## accessor
@@ -285,6 +272,18 @@ setGeneric("tblData", signature = "x", function(x)
 setMethod("tblData", "SQLDataFrame", function(x)
 {
     x@tblData
+})
+
+setGeneric("keyData", signature = "x", function(x)
+    standardGeneric("keyData"))
+
+#' @rdname SQLDataFrame-class
+#' @aliases keyData keyData,SQLDataFrame-method
+#' @export
+
+setMethod("keyData", "SQLDataFrame", function(x)
+{
+    x@keyData
 })
 
 setGeneric("dbtable", signature = "x", function(x)
@@ -337,103 +336,131 @@ setGeneric(
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
-    if (is(connSQLDataFrame(x), "BigQueryConnection"))
-        stop("Redefining of 'dbkey' for BigQueryConnection is not supported!")
+    ## browser()
     if (!all(value %in% colnames(tblData(x))))
         stop("Please choose 'dbkey' from the following: ",
              paste(colnames(tblData(x)), collapse = ", "))
-    concatKey <- tblData(x) %>%
-        mutate(concatKey = paste(!!!syms(value), sep=":")) %>%
-        pull(concatKey)
+    new_keyData <- .update_keyData(tblData(x), value, pid(x))
+    new_pidRle <- .update_pidRle(new_keyData, pid(x))
+    cns <- setdiff(colnames(tblData(x)), value)
+    nc <- length(cns)
     BiocGenerics:::replaceSlots(x, dbkey = value,
-                                dbconcatKey = concatKey,
+                                keyData = new_keyData,
+                                pidRle = new_pidRle,
+                                dim = c(nrow(x), nc),
+                                dimnames = list(NULL, cns),
                                 check=TRUE)
 })
 
-setGeneric("dbconcatKey", signature = "x", function(x)
-    standardGeneric("dbconcatKey"))
+.update_keyData <- function(tblData, dbkey, partitionID = NULL)
+{
+    ## here assuming the dbkey are all in colnames(tblData), no checking.
+    if (!is.null(partitionID)) { 
+        keyData <- tblData %>% group_by(!!!syms(partitionID)) %>%
+            mutate(rid = row_number(!!sym(dbkey[dbkey!=partitionID][1]))) %>%
+            select(!!!syms(partitionID), rid, !!!syms(dbkey))
+    } else { 
+        keyData <- tblData %>% 
+            mutate(rid = row_number(!!sym(dbkey[1]))) %>% 
+            select(rid, dbkey)
+    }
+    keyData
+}
+
+.update_pidRle <- function(keyData, partitionID = NULL)
+{
+    pidRle <- NULL
+    if (!is.null(partitionID)) {
+        pidprep <- keyData %>% summarize(n=n()) %>%
+            arrange(!!!syms(partitionID)) %>% as.data.frame()
+        pidRle <- Rle(values = pidprep[,1], lengths = pidprep[,2])    
+    }
+    pidRle
+}
+
+setGeneric("ridx", signature = "x", function(x)
+    standardGeneric("ridx"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases dbconcatKey dbconcatKey,SQLDataFrame-method
+#' @aliases ridx ridx,SQLDataFrame-method
 #' @export
-setMethod("dbconcatKey", "SQLDataFrame", function(x)
+setMethod("ridx", "SQLDataFrame", function(x)
 {
-    x@dbconcatKey
+    x@ridx
 })
 
-setGeneric("dbnrows", signature = "x", function(x)
-    standardGeneric("dbnrows"))
+setGeneric("pid", signature = "x", function(x)
+    standardGeneric("pid"))
 
 #' @rdname SQLDataFrame-class
-#' @aliases dbnrows dbnrows,SQLDataFrame-method
+#' @aliases pid pid,SQLDataFrame-method
 #' @export
-setMethod("dbnrows", "SQLDataFrame", function(x)
+setMethod("pid", "SQLDataFrame", function(x)
 {
-    x@dbnrows
+    x@partitionID
 })
 
+setGeneric("pidRle", signature = "x", function(x)
+    standardGeneric("pidRle"))
+
 #' @rdname SQLDataFrame-class
-#' @aliases ROWNAMES ROWNAMES,SQLDataFrame-method
+#' @aliases pidRle pidRle,SQLDataFrame-method
 #' @export
-setMethod("ROWNAMES", "SQLDataFrame", function(x)
+setMethod("pidRle", "SQLDataFrame", function(x)
 {
-    ridx <- ridx(x)
-    res <- dbconcatKey(x)
-    if (!is.null(ridx))
-        res <- dbconcatKey(x)[ridx]
-    return(res)
+    x@pidRle
 })
 
 ###--------------
 ### show method
 ###--------------
 
-## input "tbl_dbi" and output "tbl_dbi".
+## .printROWS is a utility function for printing smaller dataset,
+## mainly used in the show method, so index is mostly in length of
+## "get_showHeadLines()". BE CAREFUL when using "index=NULL" to print
+## all rows.
+## IMPORTANT: always order the tblData by dbkey(x) before printing.
 
-## filter() makes sure it returns table with unique rows, no duplicate rows allowed...
-.extract_tbl_rows_by_key <- function(x, key, concatKey, i)  ## "concatKey" must correspond to "x"
+#' @importFrom rlang parse_expr
+.printROWS <- function(x, index = NULL, colClass = FALSE)
 {
-    ## always require a dbkey(), and accommodate with multiple key columns. 
-    i <- sort(unique(i))
-    if (is(x$src$con, "BigQueryConnection")) {
-        out <- x %>% filter(SurrogateKey %in% i)
+    ## default as print all rows to avoid unnecessary expensive
+    ## operations. Be cautious of printing big dataset.
+    if (is.null(index)) {  ## similar to as.data.frame
+        res_tblData <- tblData(x) %>% arrange(!!!syms(dbkey(x)))
+        out_tbl <- collect(res_tblData)  ## collectm <- memoise(collect)
+        if (!is.null(ridx(x))) out_tbl <- out_tbl[ridx(x), ]
     } else {
-        x <- x %>% mutate(concatKeys = paste(!!!syms(key), sep=":"))
-        ## FIXME: possible to remove the ".0" trailing after numeric values?
-        ## see: https://github.com/tidyverse/dplyr/issues/3230 (deliberate...)
-        out <- x %>% filter(concatKeys %in% !!(concatKey[i])) %>% select(-concatKeys)
+        ## add @ridx here. new_index <- ridx(x)[index] is to get the
+        ## corresponding row indexes in "@tblData". But after
+        ## extracting corresponding rows, in the end will print:
+        ## out_tbl[rank(new_index), ]
+        if (!is.null(ridx(x))) {
+            index <- ridx(x)[index]
+        }
+        if (!is.null(pidRle(x))) {
+            res_keys <- .keyidx(index, pidRle(x))
+            res_keyData <- keyData(x) %>% filter(rlang::parse_expr(.filtexp(res_keys, pid(x))))
+        } else {
+            res_keyData <- keyData(x) %in% filter(rid %in% index)
+        }
+        res_tblData <- semi_join(tblData(x), res_keyData) %>% arrange(!!!syms(dbkey(x)))
+        out_tbl <- collect(res_tblData)[rank(index),]
     }
-    ## returns "tbl_dbi" object, no realization.
-    return(out)
-}
-
-## Nothing special, just queried the ridx, and ordered tbl by "key+otherCols"
-.extract_tbl_from_SQLDataFrame_indexes <- function(tbl, sdf, collect = FALSE)
-{
-    ridx <- ridx(sdf)
-    if (!is.null(ridx))
-        tbl <- .extract_tbl_rows_by_key(tbl, dbkey(sdf),
-                                        dbconcatKey(sdf), ridx)
-    if (collect)
-        tbl <- collect(tbl)
-    tbl.out <- tbl %>% select(dbkey(sdf), colnames(sdf))
-    ## columns ordered by "key + otherCols"
-    return(tbl.out)
-}
-
-## .printROWS realize all ridx(x), so be careful here to only use small x.
-.printROWS <- function(x, index){
-    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x, collect = TRUE)
-    ## already ordered by "key + otherCols".
-    out.tbl <- collect(tbl)
-    ridx <- normalizeRowIndex(x)
-    i <- match(index, sort(unique(ridx))) 
-    
-    out <- as.matrix(unname(cbind(
-        out.tbl[i, seq_along(dbkey(x))],
-        rep("|", length(i)),
-        out.tbl[i, -seq_along(dbkey(x))])))
-    return(out)
+    res <- as.matrix(unname(out_tbl))
+    res_nrow <- ifelse(is.null(index), nrow(x), length(index))
+    seps <- matrix("|", nrow = res_nrow, ncol = 1)
+    ## get the colClass for "out_tbl"
+    if (colClass) {  
+        colClasses <- matrix(unlist(lapply(as.data.frame(out_tbl),
+                                           function(x)
+                                               paste0("<", classNameForDisplay(x), ">")),
+                                    use.names=F), nrow=1, dimnames = list("", colnames(out_tbl)))
+        res <- rbind(colClasses, res)
+        seps <- matrix("|", nrow = res_nrow + 1, ncol = 1, dimnames = list(NULL, "|"))
+    }
+    ## return
+    cbind(res[, .wheredbkey(x), drop=FALSE], seps, res[, -.wheredbkey(x), drop=FALSE])
 }
 
 #' @rdname SQLDataFrame-class
@@ -444,6 +471,7 @@ setMethod("ROWNAMES", "SQLDataFrame", function(x)
 
 setMethod("show", "SQLDataFrame", function (object) 
 {
+    ## browser()
     nhead <- get_showHeadLines()
     ntail <- get_showTailLines()
     nr <- nrow(object)
@@ -453,31 +481,15 @@ setMethod("show", "SQLDataFrame", function (object)
         sep = "")
     if (nr > 0 && nc >= 0) {
         if (nr <= (nhead + ntail + 1L)) {
-            out <- .printROWS(object, normalizeRowIndex(object))
+            out <- .printROWS(object, colClass = T)
         }
         else {
-            sdf.head <- object[seq_len(nhead), , drop=FALSE]
-            sdf.tail <- object[tail(seq_len(nrow(object)), ntail), , drop=FALSE]
             out <- rbind(
-                .printROWS(sdf.head, ridx(sdf.head)),
+                .printROWS(object, seq_len(nhead), colClass = T),
                 c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
-                .printROWS(sdf.tail, ridx(sdf.tail)))
+                .printROWS(object, tail(seq_len(nr), ntail)))
         }
-        classinfoFun <- function(tbl, colnames) {
-            matrix(unlist(lapply(
-            as.data.frame(head(tbl %>% select(colnames))),  ## added a layer on lazy tbl. 
-            function(x)
-            { paste0("<", classNameForDisplay(x)[1], ">") }),
-            use.names = FALSE), nrow = 1,
-            dimnames = list("", colnames))}
-        classinfo_key <- classinfoFun(tblData(object), dbkey(object))
-        classinfo <- matrix(c(classinfo_key, "|"), nrow = 1,
-                            dimnames = list("", c(dbkey(object), "|")))
-        if (nc > 0) {
-            classinfo_other <- classinfoFun(tblData(object), colnames(object))
-            classinfo <- cbind(classinfo, classinfo_other)
-        }
-        out <- rbind(classinfo, out)
+        cat(class(object), " with ", nr, " rows and ", nc, " columns\n", sep = "")
         print(out, quote = FALSE, right = TRUE)
     }
 })
@@ -486,24 +498,15 @@ setMethod("show", "SQLDataFrame", function (object)
 ### coercion
 ###--------------
 
-#' @rdname SQLDataFrame-class
-#' @name coerce
-#' @aliases coerce,SQLDataFrame,data.frame-method
-#' @export
-
-setAs("SQLDataFrame", "data.frame", function(from)
-{
-    as.data.frame(from, optional = TRUE)
-})
-
 ## refer to: getAnywhere(as.data.frame.tbl_sql) defined in dbplyr
 .as.data.frame.SQLDataFrame <- function(x, row.names = NULL,
                                         optional = NULL, ...)
 {
-    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
-    ridx <- normalizeRowIndex(x)
-    i <- match(ridx, sort(unique(ridx))) 
-    as.data.frame(tbl, row.names = row.names, optional = optional)[i, ]
+    res_tblData <- tblData(x) %>% arrange(!!!syms(dbkey(x)))
+    out <- as.data.frame(collect(res_tblData))
+    if (!is.null(ridx(x)))
+        out <- out[ridx(x), ]
+    return(out)
 }
 
 #' @name coerce
@@ -523,6 +526,16 @@ setAs("SQLDataFrame", "data.frame", function(from)
 #' @param ... additional arguments to be passed.
 #' @export
 setMethod("as.data.frame", signature = "SQLDataFrame", .as.data.frame.SQLDataFrame)
+
+#' @rdname SQLDataFrame-class
+#' @name coerce
+#' @aliases coerce,SQLDataFrame,data.frame-method
+#' @export
+
+setAs("SQLDataFrame", "data.frame", function(from)
+{
+    as.data.frame(from, optional = TRUE)
+})
 
 #' @name coerce
 #' @rdname SQLDataFrame-class
