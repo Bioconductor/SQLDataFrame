@@ -367,13 +367,14 @@ setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
     keyData
 }
 
+#' @importFrom GenomeInfoDb sortSeqlevels
 .update_pidRle <- function(keyData, partitionID = NULL)
 {
     pidRle <- NULL
     if (!is.null(partitionID)) {
-        pidprep <- keyData %>% summarize(n=n()) %>%
-            arrange(!!!syms(partitionID)) %>% as.data.frame()
-        pidRle <- Rle(values = pidprep[,1], lengths = pidprep[,2])    
+        pidprep <- keyData %>% summarize(n=n()) %>% as.data.frame()
+        lvls <- sortSeqlevels(pidprep[[partitionID]])
+        pidRle <- Rle(values = lvls, lengths = pidprep[match(lvls, pidprep[[partitionID]]), "n"])
     }
     pidRle
 }
@@ -445,7 +446,8 @@ setMethod("pidRle", "SQLDataFrame", function(x)
             res_keyData <- keyData(x) %in% filter(rid %in% index)
         }
         res_tblData <- semi_join(tblData(x), res_keyData) %>% arrange(!!!syms(dbkey(x)))
-        out_tbl <- collect(res_tblData)[rank(index),]
+        res_idx <- rank(unique(index))[match(index, unique(index))]
+        out_tbl <- collect(res_tblData)[res_idx,]
     }
     res <- as.matrix(unname(out_tbl))
     res_nrow <- ifelse(is.null(index), nrow(x), length(index))

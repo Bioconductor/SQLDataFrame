@@ -41,6 +41,7 @@ import(S4Vectors)
 import(dbplyr)
 import(dplyr, except = c("first", "rename",
     "setequal", "setdiff", "intersect", "union", "ident", "sql"))
+importFrom(GenomeInfoDb,sortSeqlevels)
 importFrom(S4Vectors,Rle)
 importFrom(S4Vectors,runLength)
 importFrom(S4Vectors,runValue)

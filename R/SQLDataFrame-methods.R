@@ -135,17 +135,23 @@ setMethod("names", "SQLDataFrame", function(x) colnames(x))
             mutate(rid = row_number(!!syms(dbkey(x)[1])))
     }
     new_tblData <- semi_join(tblData(x), new_keyData)
-    new_nr <- new_keyData %>% ungroup %>% summarize(n = n()) %>%
-        pull(n) %>% as.integer
     ## add @ridx slot as rank(i) if i is not sequential. using rank(i)
     ## instead of i here, because the @pidRle was updated with
     ## runlength == length(i), and @keyData$rid was recalculated with
     ## nrow == length(i). Printed results are sorted by dbkey, so
     ## rank(i) will resume the order of initial i in subsetting. 
     if (!identical(order(i), seq_along(i))) {
-        new_ridx <- as.integer(rank(i))
+        new_ridx <- as.integer(rank(unique(i)))
+        new_ridx <- new_ridx[match(i, unique(i))]
+        ## now accommodates non-sequential and duplicate row indexes
     } else {
         new_ridx <- ridx(x)
+    }
+    if (is.null(new_ridx)) {
+        new_nr <- new_keyData %>% ungroup %>% summarize(n = n()) %>%
+            pull(n) %>% as.integer
+    } else {
+        new_nr <- length(new_ridx)
     }
     BiocGenerics:::replaceSlots(x, tblData = new_tblData,
                                 keyData = new_keyData,
