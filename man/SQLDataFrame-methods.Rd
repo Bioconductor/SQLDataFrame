@@ -134,11 +134,12 @@ TRUE.}
     row) and \code{j} (for column) and respects ‘drop=FALSE’.
 
 Use \code{select()} function to select certain
-    columns. Note that after \code{select()}, the previous order of
-    data will be dropped.
+    columns.
 
 Use \code{filter()} to choose rows/cases where
-    conditions are true.
+    conditions are true. Note that after filtering, the original
+    order of data will be dropped and data will be reordered by key
+    columns.
 
 \code{mutate()} adds new columns and preserves
     existing ones; It also preserves the number of rows of the
