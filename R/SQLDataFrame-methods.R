@@ -304,22 +304,22 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
 ##                                 pidRle = new_pidRle)
 ## })
 
-#' @rdname SQLDataFrame-methods
-#' @aliases [,SQLDataFrame,list-method 
-#' @export
-setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
-          function(x, i, j, ..., drop = TRUE)
-{
-    browser()
-    if (!identical(dbkey(x), union(dbkey(x), names(i))))
-        stop("Please use: '", paste(dbkey(x), collapse=", "),
-             "' as the query list name(s).")
-    ## i <- do.call(paste, c(i[dbkey(x)], sep=":"))
-    tmp <- lapply(i, function(x) paste0("c(", paste(x, collapse=","), ")"))
-    exp <- paste(names(tmp), tmp, sep = " %in% ")
-    filter.SQLDataFrame(x, rlang::parse_expr(exp))
-    callNextMethod()
-})
+## #' @rdname SQLDataFrame-methods
+## #' @aliases [,SQLDataFrame,list-method 
+## #' @export
+## setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
+##           function(x, i, j, ..., drop = TRUE)
+## {
+##     browser()
+##     if (!identical(dbkey(x), union(dbkey(x), names(i))))
+##         stop("Please use: '", paste(dbkey(x), collapse=", "),
+##              "' as the query list name(s).")
+##     ## i <- do.call(paste, c(i[dbkey(x)], sep=":"))
+##     tmp <- lapply(i, function(x) paste0("c(", paste(x, collapse=","), ")"))
+##     exp <- paste(names(tmp), tmp, sep = " %in% ")
+##     filter.SQLDataFrame(x, rlang::parse_expr(exp))
+##     callNextMethod()
+## })
 
 ###--------------------
 ### "[[,SQLDataFrame" (do realization for single column only)
