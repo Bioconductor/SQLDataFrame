@@ -21,11 +21,6 @@ test_that("SQLDataFrame constructor argument checking",
     expect_error(SQLDataFrame(
         conn = conn, dbtable = "colData", dbkey = "sampleID",
         row.names = letters), "unused argument")
-
-    ## non-matching "col.names"
-    expect_warning(SQLDataFrame(
-        conn = conn, dbtable = "colData", dbkey = "sampleID",
-        col.names = letters))
 })
 
 
@@ -33,7 +28,7 @@ test_that("SQLDataFrame constructor works",
 {
     ## check slot values / accessors
     expect_true(validObject(obj))
-    exp <- c("dbkey", "dbnrows", "tblData", "indexes", "dbconcatKey")
+    exp <- c("tblData", "keyData", "dbkey", "dim", "dimnames", "partitionID", "pidRle", "ridx")
     expect_identical(exp, slotNames(obj))
     expect_identical(normalizePath(test.db), normalizePath(connSQLDataFrame(obj)@dbname))
     expect_identical("colData", dbtable(obj))
@@ -59,39 +54,26 @@ test_that("SQLDataFrame constructor alternative arguments works!",
                    "These arguments are ignored: dbname")
 })
 
-test_that("validity,SQLDataFrame works",
-{
-    expect_error(initialize(obj, indexes = vector("list", 3)))
-    obj1 <- obj
-    expect_error(dbkey(obj1) <- "Ages")
-})
+## test_that("validity,SQLDataFrame works",
+## {
+##     expect_error(initialize(obj, indexes = vector("list", 3)))
+##     obj1 <- obj
+##     expect_error(dbkey(obj1) <- "Ages")
+## })
 
 ## utility functions
-test_that("'.extract_tbl_from_SQLDataFrame_indexes' works",
+test_that("'.update_keyData' works",
 {
-    obj1 <- obj[1:5, 2, drop=FALSE]
-
-    res <- .extract_tbl_from_SQLDataFrame_indexes(tblData(obj1), obj1)
-    expect_true(is(res, "tbl_dbi")) 
-    expect_true(is.na(nrow(res)))
-    expect_identical(ncol(res), 2L)
-    expect_identical(colnames(res), c("sampleID", "Ages"))
-
-    ## always keep key column in tblData
-    obj2 <- obj[, 1, drop=FALSE]
-    res <- .extract_tbl_from_SQLDataFrame_indexes(tblData(obj2), obj2)
-    expect_identical(ncol(res), 2L)
-    expect_identical(colnames(res), c("sampleID", "Treatment"))
+    new_tblData <- tblData(obj) %>% filter(Treatment == "ChIP")
+    new_keyData <- .update_keyData(new_tblData, dbkey(obj))
+    expect_identical(new_keyData %>% pull(rid), seq(13))
+    expect_identical(colnames(new_keyData), c("rid", "sampleID"))
 })
 
-test_that("'.extract_tbl_rows_by_key' works",
+test_that("'.update_pidRle' works",
 {
-    obj1 <- obj[, 2, drop=FALSE]
-    tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(obj1), obj1)
-    res <- .extract_tbl_rows_by_key(tbl, dbkey(obj), dbconcatKey(obj), 1:5)
-    nrow <- res %>% summarize(n=n()) %>% pull(n)
-    expect_identical(nrow, 5L)
-    expect_identical(colnames(res), c(dbkey(obj), colnames(obj)[2]))
+    new_pidRle <- .update_pidRle(keyData(obj), partitionID = NULL)
+    expect_null(new_pidRle)
 })
 
 ## coercion

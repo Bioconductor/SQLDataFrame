@@ -132,7 +132,7 @@ setMethod("names", "SQLDataFrame", function(x) colnames(x))
     } else {
         new_pidRle <- NULL
         new_keyData <- keyData(x) %>% filter(rid %in% i) %>%
-            mutate(rid = row_number(!!syms(dbkey(x)[1])))
+            mutate(rid = row_number(!!sym(dbkey(x)[1])))
     }
     new_tblData <- semi_join(tblData(x), new_keyData)
     ## add @ridx slot as rank(i) if i is not sequential. using rank(i)

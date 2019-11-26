@@ -156,9 +156,8 @@ SQLDataFrame <- function(conn,
                          dbtable = character(0), ## could be NULL if
                                                  ## only 1 table exists!
                          dbkey = character(0),
-                         partitionID = NULL,
-                         col.names = NULL
-                         ){
+                         partitionID = NULL)
+{
 
     type <- match.arg(type)
     if (missing(conn)) {
@@ -199,16 +198,11 @@ SQLDataFrame <- function(conn,
         }
     }
     ## check dbkey
-    if (is(conn, "BigQueryConnection")) {
-        if (!missing(dbkey))
-            cat("The argument: '", dbkey, "' is ignored for BigQueryConnection.")        
-    } else {
-        flds <- dbListFields(conn, dbtable)
-        if (!all(dbkey %in% flds)){
-            stop("Please specify the 'dbkey' argument, ",
-                 "which must be one of: '",
-                 paste(flds, collapse = ", "), "'")
-        }
+    flds <- dbListFields(conn, dbtable)
+    if (!all(dbkey %in% flds)){
+        stop("Please specify the 'dbkey' argument, ",
+             "which must be one of: '",
+             paste(flds, collapse = ", "), "'")
     }
     
     if (is(conn, "MySQLConnection")) {
@@ -443,7 +437,7 @@ setMethod("pidRle", "SQLDataFrame", function(x)
             res_keys <- .keyidx(index, pidRle(x))
             res_keyData <- keyData(x) %>% filter(rlang::parse_expr(.filtexp(res_keys, pid(x))))
         } else {
-            res_keyData <- keyData(x) %in% filter(rid %in% index)
+            res_keyData <- keyData(x) %>% filter(rid %in% index)
         }
         res_tblData <- semi_join(tblData(x), res_keyData) %>% arrange(!!!syms(dbkey(x)))
         res_idx <- rank(unique(index))[match(index, unique(index))]
