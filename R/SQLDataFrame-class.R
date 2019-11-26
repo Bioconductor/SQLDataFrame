@@ -48,20 +48,21 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #' @param dbname database name for SQL connection.
 #' @param password password for SQL database connection.
 #' @param billing the Google Cloud project name with authorized
-#'     billing information.
+#'     billing information. Will be required if user does not have write
+#'     permission to the provided \code{BigQueryConnection} in
+#'     \code{conn}. e.g., when the connection is a public data set.
 #' @param type The SQL database type, supports "SQLite", "MySQL" and
 #'     "BigQuery".
 #' @param dbtable A character string for the table name in that
 #'     database. If not provided and there is only one table
 #'     available, it will be read in by default.
 #' @param dbkey A character vector for the name of key columns that
-#'     could uniquely identify each row of the database table. Will be
-#'     ignored for \code{BigQueryConnection}.
+#'     could uniquely identify each row of the database table. 
 #' @param partitionID A character for the column name of very large
 #'     BigQuery tables to be partitioned on before assigning row
 #'     ids. Takes NULL by default.
-#' @param col.names A character vector specifying the column names you
-#'     want to read into the \code{SQLDataFrame}.
+## #' @param col.names A character vector specifying the column names you
+## #'     want to read into the \code{SQLDataFrame}.
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @importFrom tools file_path_as_absolute
@@ -178,8 +179,7 @@ SQLDataFrame <- function(conn,
                        )
     } else {
         ifcred <- c(host = !missing(host), user = !missing(user),
-                    dbname = !missing(dbname), password = !missing(password),
-                    billing = !missing(billing))
+                    dbname = !missing(dbname), password = !missing(password))
         if (any(ifcred))
             message("These arguments are ignored: ",
                     paste(names(ifcred[ifcred]), collapse = ", "))

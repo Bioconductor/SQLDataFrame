@@ -15,6 +15,7 @@
 \alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
+\alias{[,SQLDataFrame-method}
 \alias{[,SQLDataFrame,ANY-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
@@ -42,7 +43,7 @@
 
 \S4method{names}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 

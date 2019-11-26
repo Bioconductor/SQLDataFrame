@@ -34,8 +34,7 @@
 \usage{
 SQLDataFrame(conn, host, user, dbname, password = NULL,
   billing = character(0), type = c("SQLite", "MySQL", "BigQuery"),
-  dbtable = character(0), dbkey = character(0), partitionID = NULL,
-  col.names = NULL)
+  dbtable = character(0), dbkey = character(0), partitionID = NULL)
 
 \S4method{tblData}{SQLDataFrame}(x)
 
@@ -73,7 +72,9 @@ BigQuery.}
 \item{password}{password for SQL database connection.}
 
 \item{billing}{the Google Cloud project name with authorized
-billing information.}
+billing information. Will be required if user does not have write
+permission to the provided \code{BigQueryConnection} in
+\code{conn}. e.g., when the connection is a public data set.}
 
 \item{type}{The SQL database type, supports "SQLite", "MySQL" and
 "BigQuery".}
@@ -83,15 +84,11 @@ database. If not provided and there is only one table
 available, it will be read in by default.}
 
 \item{dbkey}{A character vector for the name of key columns that
-could uniquely identify each row of the database table. Will be
-ignored for \code{BigQueryConnection}.}
+could uniquely identify each row of the database table.}
 
 \item{partitionID}{A character for the column name of very large
 BigQuery tables to be partitioned on before assigning row
 ids. Takes NULL by default.}
-
-\item{col.names}{A character vector specifying the column names you
-want to read into the \code{SQLDataFrame}.}
 
 \item{x}{An \code{SQLDataFrame} object}
 

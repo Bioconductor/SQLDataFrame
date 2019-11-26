@@ -145,14 +145,10 @@ setMethod("names", "SQLDataFrame", function(x) colnames(x))
         new_ridx <- new_ridx[match(i, unique(i))]
         ## now accommodates non-sequential and duplicate row indexes
     } else {
-        new_ridx <- ridx(x)
+        new_ridx <- NULL
     }
-    if (is.null(new_ridx)) {
-        new_nr <- new_keyData %>% ungroup %>% summarize(n = n()) %>%
-            pull(n) %>% as.integer
-    } else {
-        new_nr <- length(new_ridx)
-    }
+    new_nr <- length(i)
+
     BiocGenerics:::replaceSlots(x, tblData = new_tblData,
                                 keyData = new_keyData,
                                 pidRle = new_pidRle,
@@ -247,7 +243,6 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
         stop("'drop' must be TRUE or FALSE")
     if (length(list(...)) > 0L) 
         warning("parameters in '...' not supported")
-    nc <- ncol(x)
     list_style_subsetting <- (nargs() - !missing(drop)) < 3L
     if (list_style_subsetting || !missing(j)) {
         if (list_style_subsetting) {
@@ -274,13 +269,21 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                                                  ## 0 rows and 1
                                                  ## column(s)
     if (drop) {
-        ## x[, "col"]: realize; x[,c("key", "other")]: do not realize??
-        if (ncol(x) == 1L & nc > 1)
-            return(x[[1L]])
-        if (ncol(x) == 0 && !missing(j) && j %in% dbkey(x)) 
-            return(x[[j]]) ## x[,"key"] returns realized value of that
-                           ## key column.
-        if (nrow(x) == 1L) 
+        if (missing(j)) {
+            return(x)  ## preserve the SQLDataFrame as before
+                       ## subsetting
+        } else {
+            if (length(j) > 1) {
+                return(x)  ## if subsetting c(key, col, ...), return
+                           ## SQLDataFrame
+            } else if (ncol(x) == 1L) {
+                return(x[[1L]]) ## subsetting 1 column (could be a key
+                          ## column), realize
+            } else if (ncol(x) == 0L) {
+                return(x[[j]])
+            }
+        }
+        if (nrow(x) == 1L)
             return(as(x, "list"))
     }
     x
@@ -337,9 +340,9 @@ setMethod("[[", "SQLDataFrame", function(x, i, j, ...)
     if (!missing(j) || length(dotArgs) > 0L) 
         stop("incorrect number of subscripts") 
     xstub <- setNames(seq_along(x), names(x))
-    tryi <- try(normalizeSingleBracketSubscript(i, xstub), silent=TRUE)
+    tryi <- try(normalizeDoubleBracketSubscript(i, xstub), silent=TRUE)
     if (is(tryi, "try-error")) {
-        if (i %in% dbkey(x)) {
+        if (length(i) == 1 && i %in% dbkey(x)) {
             res <- tblData(x) %>% arrange(!!!syms(dbkey(x))) %>% pull(!!sym(i))
         } else {
             stop(attr(tryi, "condition")$message)  ## FIXME: cleaner way for printing?
