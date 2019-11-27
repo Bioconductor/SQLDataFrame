@@ -144,7 +144,8 @@ saveSQLDataFrame <- function(x,
     type <- class(con)
     switch(type,
            MySQLConnection = .msg_save_mysql(x, con, dbtable),
-           SQLiteConnection = .msg_save_sqlite(x, con, dbtable)
+           SQLiteConnection = .msg_save_sqlite(x, con, dbtable),
+           BigQueryConnection = .msg_save_bigquery(x, con, dbtable)
            ) 
 }
 
@@ -182,6 +183,26 @@ saveSQLDataFrame <- function(x,
                   "## sdf <- SQLDataFrame(\n",
                   "##   dbname = '", con@dbname, "',\n",
                   "##   type = 'SQLite',\n",
+                  "##   dbtable = '", dbtable, "',\n",
+                  "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
+                  paste(paste0("'", dbkey(x), "'"), collapse=", "),
+                  ifelse(length(dbkey(x)) == 1, "", ")"), ")", "\n")
+    message(msg)
+}
+
+.msg_save_bigquery <- function(x, con, dbtable) {
+    databaseLine <- paste0("BigQuery", " [", con@project, ".",
+                           con@dataset, ".", dbtable, "] \n")
+    msg <- paste0("## A new database table is saved! \n",
+                  "## Source: table<", dbtable, "> [",
+                  paste(dim(x), collapse = " X "), "] \n",
+                  "## Database: ", databaseLine, 
+                  "## Use the following command to reload into R: \n",
+                  "## sdf <- SQLDataFrame(\n",
+                  "##   host = '", con@project, "',\n",
+                  "##   dbname = '", con@dataset, "',\n",
+                  "##   type = 'BigQuery',\n",
+                  "##   billing = '", con@project, "',\n", 
                   "##   dbtable = '", dbtable, "',\n",
                   "##   dbkey = ", ifelse(length(dbkey(x)) == 1, "", "c("),
                   paste(paste0("'", dbkey(x), "'"), collapse=", "),

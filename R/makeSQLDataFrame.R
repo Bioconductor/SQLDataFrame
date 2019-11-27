@@ -1,4 +1,4 @@
-#' Construct SQLDataFrame from file.
+#' Construct SQLDataFrame from in-memory data frame or on-disk file.
 #' @description Given a file name, \code{makeSQLDataFrame} will write
 #'     the file contents into SQL database, and open the database
 #'     table as SQLDataFrame.
@@ -6,24 +6,12 @@
 #'     a character string of the filepath to the text file that to be
 #'     saved as SQL database table. For filepath, the data columns
 #'     should not be quoted on disk.
-#' @param dbtable A character string for the to be saved database
+#' @param dbtable A character string for the to-be-saved database
 #'     table name. If not provided, will use the name of the input
 #'     \code{data.frame} or \code{DataFrame} object, or the
 #'     \code{basename(filename)} without extension if \code{filename}
 #'     is a character string.
-#' @param dbkey A character vector of column name(s) that could
-#'     uniquely identify each row of the filename. Must be provided in
-#'     order to construct a SQLDataFrame.
-#' @param conn a valid \code{DBIConnection} from \code{SQLite} or
-#'     \code{MySQL}. If provided, arguments of `user`, `host`,
-#'     `dbname`, `password` will be ignored.
-#' @param host host name for SQL database.
-#' @param user user name for SQL database.
-#' @param password password for SQL database connection.
-#' @param dbname database name for SQL connection. For SQLite
-#'     connection, it uses a \code{tempfile(fileext = ".db")} if not
-#'     provided.
-#' @param type The SQL database type, supports "SQLite" and "MySQL".
+#' @inheritParams SQLDataFrame
 #' @param overwrite Whether to overwrite the \code{dbtable} if already
 #'     exists. Default is FALSE.
 #' @param sep a character string to separate the terms.  Not
@@ -68,7 +56,8 @@ makeSQLDataFrame <- function(filename,
                              conn, 
                              host, user, dbname = NULL,
                              password = NULL, ## required for certain MySQL connection.
-                             type = c("SQLite", "MySQL"),
+                             billing = character(0),  ## BigQuery connection.
+                             type = c("SQLite", "MySQL", "BigQuery"),
                              overwrite = FALSE, sep = ",",
                              index = FALSE,
                              ...)
@@ -96,14 +85,19 @@ makeSQLDataFrame <- function(filename,
             } else {
                 file.create(dbname)
             }
-            conn <- DBI::dbConnect(dbDriver("SQLite"),
-                                   dbname = dbname)
-        } else if (type == "MySQL") {
-            conn <- DBI::dbConnect(dbDriver("MySQL"),
-                                   host = host,
-                                   user = user,
-                                   password = password,
-                                   dbname = dbname)
+        conn <- switch(type,
+                       SQLite = DBI::dbConnect(dbDriver("SQLite"),
+                                               dbname = dbname),
+                       MySQL = DBI::dbConnect(dbDriver("MySQL"),
+                                              host = host,
+                                              user = user,
+                                              password = password,
+                                              dbname = dbname),
+                       BigQuery = DBI::dbConnect(dbDriver("bigquery"),
+                                                 project = host,
+                                                 dataset = dbname,
+                                                 billing = billing)
+                       )
         }
     } else {
         ifcred <- c(host = !missing(host), user = !missing(user),
@@ -112,16 +106,24 @@ makeSQLDataFrame <- function(filename,
             message("These arguments are ignored: ",
                     paste(names(ifcred[ifcred]), collapse = ", "))
     }
-    
-    dbWriteTable(conn, dbtable, value = filename,
-                 overwrite = overwrite, sep = sep, ...)
-    
-    if (index) ## FIXME: default is FALSE, which is different from
-               ## saveSQLDataFrame.
+    if (is(conn, "BigQueryConnection")) {
+        if (isSingleString(filename))
+            filename <- read.table(filename, header = TRUE, sep = sep)
+        dbWriteTable(conn, dbtable, value = filename, fields = as_bq_fields(filename),
+                     overwrite = overwrite, ...)
+    } else {
+        dbWriteTable(conn, dbtable, value = filename,
+                     overwrite = overwrite, sep = sep, ...)
+    }
+    ## internal methods(db_create_indexes) not existing for
+    ## "BigQueryConnection"
+    if (index && is(conn, "MySQLConnection") |
+        is(conn, "SQLiteConnection")) ## FIXME: default is FALSE,
+                                      ## which is different from
+                                      ## saveSQLDataFrame.
         dbplyr:::db_create_indexes.DBIConnection(conn, dbtable,
                                                  indexes = list(dbkey),
                                                  unique = TRUE)
-    
     out <- SQLDataFrame(conn = conn, dbtable = dbtable,
                         dbkey = dbkey)
     msg <- .msg_saveSQLDataFrame(out, conn, dbtable)

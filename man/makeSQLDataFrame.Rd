@@ -2,11 +2,12 @@
 % Please edit documentation in R/makeSQLDataFrame.R
 \name{makeSQLDataFrame}
 \alias{makeSQLDataFrame}
-\title{Construct SQLDataFrame from file.}
+\title{Construct SQLDataFrame from in-memory data frame or on-disk file.}
 \usage{
 makeSQLDataFrame(filename, dbtable = NULL, dbkey = character(), conn,
-  host, user, dbname = NULL, password = NULL, type = c("SQLite",
-  "MySQL"), overwrite = FALSE, sep = ",", index = FALSE, ...)
+  host, user, dbname = NULL, password = NULL, billing = character(0),
+  type = c("SQLite", "MySQL", "BigQuery"), overwrite = FALSE,
+  sep = ",", index = FALSE, ...)
 }
 \arguments{
 \item{filename}{A \code{data.frame} or \code{DataFrame} object, or
@@ -14,31 +15,35 @@ a character string of the filepath to the text file that to be
 saved as SQL database table. For filepath, the data columns
 should not be quoted on disk.}
 
-\item{dbtable}{A character string for the to be saved database
+\item{dbtable}{A character string for the to-be-saved database
 table name. If not provided, will use the name of the input
 \code{data.frame} or \code{DataFrame} object, or the
 \code{basename(filename)} without extension if \code{filename}
 is a character string.}
 
-\item{dbkey}{A character vector of column name(s) that could
-uniquely identify each row of the filename. Must be provided in
-order to construct a SQLDataFrame.}
+\item{dbkey}{A character vector for the name of key columns that
+could uniquely identify each row of the database table.}
 
-\item{conn}{a valid \code{DBIConnection} from \code{SQLite} or
-\code{MySQL}. If provided, arguments of `user`, `host`,
-`dbname`, `password` will be ignored.}
+\item{conn}{a valid \code{DBIConnection} from \code{SQLite},
+\code{MySQL} or \code{BigQuery}. If provided, arguments of
+`user`, `host`, `dbname`, `password` will be ignored.}
 
-\item{host}{host name for SQL database.}
+\item{host}{host name for MySQL database or project name for
+BigQuery.}
 
 \item{user}{user name for SQL database.}
 
-\item{dbname}{database name for SQL connection. For SQLite
-connection, it uses a \code{tempfile(fileext = ".db")} if not
-provided.}
+\item{dbname}{database name for SQL connection.}
 
 \item{password}{password for SQL database connection.}
 
-\item{type}{The SQL database type, supports "SQLite" and "MySQL".}
+\item{billing}{the Google Cloud project name with authorized
+billing information. Will be required if user does not have write
+permission to the provided \code{BigQueryConnection} in
+\code{conn}. e.g., when the connection is a public data set.}
+
+\item{type}{The SQL database type, supports "SQLite", "MySQL" and
+"BigQuery".}
 
 \item{overwrite}{Whether to overwrite the \code{dbtable} if already
 exists. Default is FALSE.}
