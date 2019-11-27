@@ -11,7 +11,10 @@ test_that("makeSQLDataFrame works!", {
     expect_identical(normalizePath(dirname(connSQLDataFrame(obj)@dbname)),
                      normalizePath(tempdir()))
     expect_identical(dbtable(obj), "mtc")
-    expect_identical(as.data.frame(obj), as.data.frame(mtc))
+    df <- as.data.frame(obj)
+    exp <- as.data.frame(mtc)[order(mtc$rowname), ]
+    rownames(exp) <- NULL
+    expect_identical(df, exp)
     
     ## character input (csv, ... unquoted data)
     filename <- file.path(tempdir(), "mtc.csv")
@@ -23,5 +26,8 @@ test_that("makeSQLDataFrame works!", {
     expect_identical(normalizePath(dirname(connSQLDataFrame(obj)@dbname)),
                      normalizePath(tempdir()))
     expect_identical(dbtable(obj), "mtc")
-    expect_equal(as.data.frame(obj), as.data.frame(mtc))
+    df <- as.data.frame(obj)
+    exp <- as.data.frame(mtc)[order(mtc$rowname), ]
+    rownames(exp) <- NULL
+    expect_equal(df, exp)
 })
