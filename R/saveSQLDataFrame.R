@@ -5,7 +5,7 @@
 #'     returns a \code{SQLDataFrame} object constructed from the
 #'     user-supplied \code{dbname}, \code{dbtable}, and \code{dbkey}.
 #' @param x The \code{SQLDataFrame} object to be saved.
-#' @param localConn A MySQL connection with write permission. Will be
+#' @param myconn A MySQL connection with write permission. Will be
 #'     used only when the input SQLDataFrame objects connects to MySQL
 #'     connections without write permission. A new MySQL table will be
 #'     written in the the database this argument provides.
@@ -44,16 +44,24 @@
 saveSQLDataFrame <- function(x,
                              dbname = tempfile(fileext = ".db"),  ## only used for SQLiteConnection
                              dbtable = deparse(substitute(x)), 
-                             localConn = connSQLDataFrame(x),  ## only used for MySQLConnection
+                             myconn = connSQLDataFrame(x),  ## only used for MySQLConnection
                              overwrite = FALSE,  ## only used for SQLiteConnection
                              index = TRUE, ...)
 {
-    if (is(connSQLDataFrame(x), "MySQLConnection")) {
+    if (is(connSQLDataFrame(x), "BigQueryConnection")) {
+        sql_x <- db_sql_render(connSQLDataFrame(x), tblData(x))
+        destbl <- bq_table(myconn@project, myconn@dataset, myconn@table)
+        sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
+                             sql_x, con = myconn)
+        job <- bq_perform_query(sql_cmd, billing = my_billing, destination_table = destbl)
+        ... ## todo: try bigquery command: CREATE TABLE xx AS ...
+        
+    } else if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
-        if (identical(con, localConn)) {
+        if (identical(con, myconn)) {
             if (!.mysql_has_write_perm(con))
                 stop("Please provide a MySQL connection ",
-                     "with write permission in argument: localConn")
+                     "with write permission in argument: myconn")
             tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
                                  db_sql_render(con, tbl), con = con) 
@@ -62,17 +70,17 @@ saveSQLDataFrame <- function(x,
             if (is(tblData(x)$ops, "op_double")) ## from "*_join" or "union", etc
                 stop("Saving SQLDataFrame with lazy join / union queries ",
                      "from same non-writable MySQL database is not supported!")
-            if (!.mysql_has_write_perm(localConn))
+            if (!.mysql_has_write_perm(myconn))
                 stop("Please provide a MySQL connection ",
-                     "with write permission in argument: localConn")
+                     "with write permission in argument: myconn")
             fedtable <- dplyr:::random_table_name()
             ## a temporary federated table will be generated, and then
             ## removed if "create table" is successful. 
             tbl <- .createFedTable_and_reopen_tbl(x,
-                                                  localConn,
+                                                  myconn,
                                                   fedtable,
                                                   remotePswd = .get_mysql_var(con))
-            con <- localConn
+            con <- myconn
             sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable)," AS ",
                                  db_sql_render(con, tbl), con = con) 
             trycreate <- try(dbExecute(con, sql_cmd))
