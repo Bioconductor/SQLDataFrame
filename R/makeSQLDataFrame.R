@@ -85,6 +85,7 @@ makeSQLDataFrame <- function(filename,
             } else {
                 file.create(dbname)
             }
+        }
         conn <- switch(type,
                        SQLite = DBI::dbConnect(dbDriver("SQLite"),
                                                dbname = dbname),
@@ -98,7 +99,6 @@ makeSQLDataFrame <- function(filename,
                                                  dataset = dbname,
                                                  billing = billing)
                        )
-        }
     } else {
         ifcred <- c(host = !missing(host), user = !missing(user),
                     dbname = !missing(dbname), password = !missing(password))
@@ -108,6 +108,8 @@ makeSQLDataFrame <- function(filename,
     }
     if (is(conn, "BigQueryConnection")) {
         if (isSingleString(filename))
+            ## read table before passing into dbWriteTable for
+            ## BigQueryConnection.
             filename <- read.table(filename, header = TRUE, sep = sep)
         dbWriteTable(conn, dbtable, value = filename, fields = as_bq_fields(filename),
                      overwrite = overwrite, ...)
