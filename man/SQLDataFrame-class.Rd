@@ -72,8 +72,8 @@ BigQuery.}
 \item{password}{password for SQL database connection.}
 
 \item{billing}{the Google Cloud project name with authorized
-billing information. Will be required if user does not have write
-permission to the provided \code{BigQueryConnection} in
+billing information. Will be required if user does not have
+write permission to the provided \code{BigQueryConnection} in
 \code{conn}. e.g., when the connection is a public data set.}
 
 \item{type}{The SQL database type, supports "SQLite", "MySQL" and
@@ -118,6 +118,13 @@ A \code{SQLDataFrame} object.
     method and coercion methods to \code{DataFrame} and
     \code{data.frame} objects.
 }
+\details{
+for Coercion an in-memory \code{data.frame} or
+    \code{DataFrame} into \code{SQLDataFrame}, a temporary SQLite
+    database table will be generated, and return as
+    SQLDataFrame. \code{makeSQLDataFrame()} is encouraged to use
+    for coercion into \code{SQLDataFrame} with more options.
+}
 \examples{
 
 ## SQLDataFrame construction
@@ -155,6 +162,8 @@ ROWNAMES(obj1[sample(10, 5), ])
 as.data.frame(obj)
 as(obj, "DataFrame")
 
+mtc <- tibble::rownames_to_column(mtcars)
+as(mtc, "SQLDataFrame")
 
 ## dbkey replacement
 dbkey(obj) <- c("region", "population")

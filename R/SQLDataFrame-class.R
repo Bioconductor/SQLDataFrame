@@ -48,8 +48,8 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #' @param dbname database name for SQL connection.
 #' @param password password for SQL database connection.
 #' @param billing the Google Cloud project name with authorized
-#'     billing information. Will be required if user does not have write
-#'     permission to the provided \code{BigQueryConnection} in
+#'     billing information. Will be required if user does not have
+#'     write permission to the provided \code{BigQueryConnection} in
 #'     \code{conn}. e.g., when the connection is a public data set.
 #' @param type The SQL database type, supports "SQLite", "MySQL" and
 #'     "BigQuery".
@@ -57,13 +57,17 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #'     database. If not provided and there is only one table
 #'     available, it will be read in by default.
 #' @param dbkey A character vector for the name of key columns that
-#'     could uniquely identify each row of the database table. 
+#'     could uniquely identify each row of the database table.
 #' @param partitionID A character for the column name of very large
 #'     BigQuery tables to be partitioned on before assigning row
 #'     ids. Takes NULL by default.
-## #' @param col.names A character vector specifying the column names you
-## #'     want to read into the \code{SQLDataFrame}.
 #' @return A \code{SQLDataFrame} object.
+#' @details for Coercion an in-memory \code{data.frame} or
+#'     \code{DataFrame} into \code{SQLDataFrame}, a temporary SQLite
+#'     database table will be generated, and return as
+#'     SQLDataFrame. \code{makeSQLDataFrame()} is encouraged to use
+#'     for coercion into \code{SQLDataFrame} with more options.
+#'
 #' @export
 #' @importFrom tools file_path_as_absolute
 #' @import RSQLite
@@ -104,7 +108,9 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #' ## coercion
 #' as.data.frame(obj)
 #' as(obj, "DataFrame")
-#' 
+#'
+#' mtc <- tibble::rownames_to_column(mtcars)
+#' as(mtc, "SQLDataFrame")
 #' 
 #' ## dbkey replacement
 #' dbkey(obj) <- c("region", "population")
@@ -554,7 +560,7 @@ setAs("SQLDataFrame", "DataFrame", function(from)
 setAs("data.frame", "SQLDataFrame", function(from)
 {
     ## check if unique for columns (from left to right)
-    for (i in seq_len(ncol(from))) {
+    for (i in seq_along(from)) {
         ifunique <- !any(duplicated(from[,i]))
         if (ifunique) break
     }
