@@ -417,13 +417,14 @@ setMethod("pidRle", "SQLDataFrame", function(x)
 ## IMPORTANT: always order the tblData by dbkey(x) before printing.
 
 #' @importFrom rlang parse_expr
+collectm <- memoise::memoise(collect)
 .printROWS <- function(x, index = NULL, colClass = FALSE)
 {
     ## default as print all rows to avoid unnecessary expensive
     ## operations. Be cautious of printing big dataset.
     if (is.null(index)) {  ## similar to as.data.frame
         res_tblData <- tblData(x) %>% arrange(!!!syms(dbkey(x)))
-        out_tbl <- collect(res_tblData)  ## collectm <- memoise(collect)
+        out_tbl <- collectm(res_tblData)
         if (!is.null(ridx(x))) out_tbl <- out_tbl[ridx(x), ]
     } else {
         ## add @ridx here. new_index <- ridx(x)[index] is to get the
@@ -441,7 +442,7 @@ setMethod("pidRle", "SQLDataFrame", function(x)
         }
         res_tblData <- semi_join(tblData(x), res_keyData) %>% arrange(!!!syms(dbkey(x)))
         res_idx <- rank(unique(index))[match(index, unique(index))]
-        out_tbl <- collect(res_tblData)[res_idx,]
+        out_tbl <- collectm(res_tblData)[res_idx,]
     }
     res <- as.matrix(unname(out_tbl))
     res_nrow <- ifelse(is.null(index), nrow(x), length(index))
@@ -472,9 +473,6 @@ setMethod("show", "SQLDataFrame", function (object)
     ntail <- get_showTailLines()
     nr <- nrow(object)
     nc <- ncol(object)
-    cat(class(object), " with ", nr, ifelse(nr == 1, " row and ", 
-        " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
-        sep = "")
     if (nr > 0 && nc >= 0) {
         if (nr <= (nhead + ntail + 1L)) {
             out <- .printROWS(object, colClass = T)
@@ -485,7 +483,11 @@ setMethod("show", "SQLDataFrame", function (object)
                 c(rep.int("...", length(dbkey(object))),".", rep.int("...", nc)),
                 .printROWS(object, tail(seq_len(nr), ntail)))
         }
-        cat(class(object), " with ", nr, " rows and ", nc, " columns\n", sep = "")
+    }
+    cat(class(object), " with ", nr, ifelse(nr == 1, " row and ", 
+        " rows and "), nc, ifelse(nc == 1, " column\n", " columns\n"), 
+        sep = "")
+    if (nr > 0 && nc >= 0) {
         print(out, quote = FALSE, right = TRUE)
     }
 })
@@ -499,7 +501,7 @@ setMethod("show", "SQLDataFrame", function (object)
                                         optional = NULL, ...)
 {
     res_tblData <- tblData(x) %>% arrange(!!!syms(dbkey(x)))
-    out <- as.data.frame(collect(res_tblData))
+    out <- as.data.frame(collectm(res_tblData))
     if (!is.null(ridx(x)))
         out <- out[ridx(x), ]
     rownames(out) <- NULL
