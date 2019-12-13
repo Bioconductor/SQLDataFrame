@@ -48,13 +48,16 @@ saveSQLDataFrame <- function(x,
                              overwrite = FALSE,  ## only used for SQLiteConnection
                              index = TRUE, ...)
 {
+    browser()
     if (is(connSQLDataFrame(x), "BigQueryConnection")) {
         sql_x <- db_sql_render(connSQLDataFrame(x), tblData(x))
-        destbl <- bq_table(myconn@project, myconn@dataset, myconn@table)
+        destbl <- bq_table(myconn@project, myconn@dataset, dbtable)
         sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
                              sql_x, con = myconn)
         job <- bq_perform_query(sql_cmd, billing = my_billing, destination_table = destbl)
         ... ## todo: try bigquery command: CREATE TABLE xx AS ...
+        res <- as.data.frame(x)
+        makeSQLDataFrame(res, dbtable = dbtable, dbkey = dbkey(x), ...)  ## myconn? 
         
     } else if (is(connSQLDataFrame(x), "MySQLConnection")) {
         con <- connSQLDataFrame(x)
