@@ -92,22 +92,15 @@ The \code{*_join} functions support aggregation of
     connection. Look for MySQL database manual for more details.
 }
 \examples{
-test.db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
-test.db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
-con1 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db1)
-con2 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db2)
-obj1 <- SQLDataFrame(conn = con1,
-                     dbtable = "state",
-                     dbkey = c("region", "population"))
-obj2 <- SQLDataFrame(conn = con2,
-                     dbtable = "state1",
-                     dbkey = c("region", "population"))
-
-obj1_sub <- obj1[1:10, 1:2]
-obj2_sub <- obj2[8:15, 2:3]
-
-left_join(obj1_sub, obj2_sub)
-inner_join(obj1_sub, obj2_sub)
-semi_join(obj1_sub, obj2_sub)
-anti_join(obj1_sub, obj2_sub)
+test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
+con <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+obj <- SQLDataFrame(conn = con,
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+obj1 <- obj[1:10, 1:2]
+obj2 <- obj[8:15, 2:3]
+left_join(obj1, obj2)
+inner_join(obj1, obj2)
+semi_join(obj1, obj2)
+anti_join(obj1, obj2)
 }
