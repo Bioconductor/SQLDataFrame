@@ -1,4 +1,4 @@
-.rbind_SQLDataFrame <- function(..., deparse.level = 1)
+.union_multi_SQLDataFrame <- function(..., deparse.level = 1)
 {
     objects <- list(...)
     ## check consistency of dbkey(), colnames()
@@ -8,56 +8,72 @@
     cnms <- lapply(objects, colnames)
     if (length(unique(cnms)) != 1 )
         stop("Input SQLDataFrame objects must have identical columns!")
-    dbkey <- keys[[1]]
-    cnm <- cnms[[1]]
-    rnms_final <- do.call(c, lapply(objects, ROWNAMES))
+    pids <- lapply(objects, pid)
+    if (length(unique(pids)) != 1)
+        stop("Input SQLDataFrame objects must have identical partitionID if exists!")
 
+    new_dbkey <- keys[[1]]
+    new_pid <- unique(pids)[[1]]
+    
+    ## 1. union(x, y) recursively for all tblData()
     ## pairwise "union" with multiple input. 
-    out <- union(objects[[1]], objects[[2]])
-    objects <- objects[-seq_len(2)]
+    new_tblData <- dbplyr:::union.tbl_lazy(tblData(objects[[1]]), tblData(objects[[2]]))
+    objects_rep <- objects[-seq_len(2)]
     repeat{
-        if(length(objects) == 0) break
-        out <- union(out, objects[[1]])
-        objects <- objects[-1]
+        if(length(objects_rep) == 0) break
+        new_tblData <- dbplyr:::union.tbl_lazy(new_tblData, tblData(objects_rep[[1]]))
+        objects_rep <- objects_rep[-1]
     }
 
-    idx <- match(rnms_final, out@dbconcatKey)
-    out@indexes[[1]] <- idx
-    return(out)
+    ## @keyData
+    new_keyData <- .update_keyData(new_tblData, new_dbkey, new_pid)
+    ## @pidRle
+    new_pidRle <- .update_pidRle(new_keyData, new_pid)
+    ## @dim, @dimnames
+    new_nr <- new_keyData %>% ungroup %>% summarize(n = n())
+    new_nr <- collectm(new_nr) %>% pull(n) %>% as.integer
+    new_nc <- ncol(new_tblData) - length(new_dbkey)
+    new_cns <- setdiff(colnames(new_tblData), new_dbkey)
+    ## for "filter", no need to honor the existing ridx(x), so will
+    ## reset as NULL.
+    BiocGenerics:::replaceSlots(objects[[1]], tblData = new_tblData,
+                                keyData = new_keyData,
+                                pidRle = new_pidRle,
+                                dim = c(new_nr, new_nc),
+                                dimnames = list(NULL, new_cns),
+                                ridx = NULL)
 }
 
-#' rbind of \code{SQLDataFrame} objects
-#' @name rbind
+
+setGeneric("rbindUniq", signature = "...", function(..., deparse.level = 1)
+    standardGeneric("rbindUniq"))
+
+#' unique rbind of \code{SQLDataFrame} objects
+#' @name rbindUniq
 #' @rdname rbindSQLDataFrame
-#' @aliases rbind rbind,SQLDataFrame-method
-#' @description Performs rbind on \code{SQLDataFrame} objects.
+#' @aliases rbindUniq rbindUniq,SQLDataFrame-method
+#' @description Performs unique rbind on \code{SQLDataFrame}
+#'     objects. The result will be sorted by the \code{dbkey} columns.
 #' @param ... One or more \code{SQLDataFrame} objects. These can be
 #'     given as named arguments.
 #' @param deparse.level See ‘?base::cbind’ for a description of this
 #'     argument.
-#' @details \code{rbind} supports aggregation of SQLDataFrame
-#'     objects. For representation of SQLite tables, same or different
-#'     connections are supported. For representation of MySQL tables,
-#'     at least one SQLDataFrame must have write permission.
+#' @details \code{rbindUnique} supports aggregation of SQLDataFrame
+#'     objects.
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @examples
-#' test.db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
-#' test.db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
-#' con1 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db1)
-#' con2 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db2)
-#' obj1 <- SQLDataFrame(conn = con1,
-#'                      dbtable = "state",
-#'                      dbkey = c("region", "population"))
-#' obj2 <- SQLDataFrame(conn = con2,
-#'                      dbtable = "state1",
-#'                      dbkey = c("region", "population"))
-#' obj1_sub <- obj1[1:10, 2:3]
-#' obj2_sub <- obj2[8:15,2:3]
+#' test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+#' con <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
+#' obj <- SQLDataFrame(conn = con,
+#'                     dbtable = "state",
+#'                     dbkey = c("region", "population"))
+#' obj_sub1 <- obj[1:10, 2:3]
+#' obj_sub2 <- obj[8:15, 2:3]
 #'
-#' ## rbind
-#' res_rbind <- rbind(obj1_sub, obj2_sub)
+#' ## union
+#' res_rbind <- rbindUniq(obj_sub1, obj_sub2)  ## sorted
 #' res_rbind
 #' dim(res_rbind)
 
-setMethod("rbind", signature = "SQLDataFrame", .rbind_SQLDataFrame)
+setMethod("rbindUniq", signature = "SQLDataFrame", .union_multi_SQLDataFrame)

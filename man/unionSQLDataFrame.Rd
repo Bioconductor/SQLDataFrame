@@ -6,18 +6,12 @@
 \alias{union,SQLDataFrame,SQLDataFrame-method}
 \title{Union of \code{SQLDataFrame} objects}
 \usage{
-\S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, localConn, ...)
+\S4method{union}{SQLDataFrame,SQLDataFrame}(x, y, copy = FALSE, ...)
 }
 \arguments{
 \item{x}{A \code{SQLDataFrame} object.}
 
 \item{y}{A \code{SQLDataFrame} object.}
-
-\item{localConn}{A MySQL connection with write permission. Will be
-used only when \code{union}-ing two SQLDataFrame objects from
-different MySQL connections (to different MySQL databases), and
-neither has write permission. The situation is rare and
-operation is expensive. See Details for suggestions.}
 
 \item{...}{Other arguments passed on to methods.}
 }
@@ -30,61 +24,27 @@ Performs union operations on \code{SQLDataFrame}
 }
 \details{
 The \code{union} function supports aggregation of
-    SQLDataFrame objects from same or different connection (e.g.,
-    cross databases), either with or without write permission.
+    SQLDataFrame objects from same connections. 
 
-    SQLite database tables are supported by SQLDataFrame package,
-    in the same/cross-database aggregation, and saving.
+    For SQLite and MySQL connections, \code{union} drops all
+    duplicate and return only distinct rows.
 
-    For MySQL databases, There are different situations:
-
-    When the input SQLDataFrame objects connects to same remote
-    MySQL database without write permission (e.g., ensembl), the
-    functions work like \code{dbplyr} with the lazy operations and
-    a \code{DataFrame} interface. Note that the unioned
-    SQLDataFrame can not be saved using \code{saveSQLDataFrame}.
-
-    When the input SQLDataFrame objects connects to different MySQL
-    databases, and neither has write permission, the \code{union}
-    function is supported but will be quite expensive. To avoid
-    this situation, a more efficient way is to save the database
-    table in local MySQL server (with write permission) using
-    \code{saveSQLDataFrame}, and then call the \code{union}
-    function again.
-
-    More frequent situation will be the \code{union} operation on
-    two SQLDataFrame objects, of which at least one has write
-    permission. Then the cross-database aggregation through
-    SQLDataFrame package will be supported by generating federated
-    table from the non-writable connection in the writable
-    connection. Look for MySQL database manual for more details.
-
-    NOTE also, that the \code{union} operation on SQLDataFrame
-    objects will perform differently on database table from SQLite
-    or MySQL. For SQLite tables, the \code{union} will sort the
-    data using the key columns, and write the sorted data into a
-    provided SQLite dbname when \code{saveSQLDataFrame} was
-    called. For MySQL tables, \code{union} preserves the orders,
-    but will be sorted with key columns and saved into a user
-    provided MySQL database (with write permission) when
-    \code{saveSQLdataFrame} was called.
+    For BigQuery connections, \code{union} only drops duplicate
+    rows inside the to-be-joined SQLDataFrame objects, but
+    preserves the overlapping rows between the input SQLDataFrame
+    objects.
 }
 \examples{
-test.db1 <- system.file("extdata/test.db", package = "SQLDataFrame")
-test.db2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
-con1 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db1)
-con2 <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db2)
-obj1 <- SQLDataFrame(conn = con1,
-                     dbtable = "state",
-                     dbkey = c("region", "population"))
-obj2 <- SQLDataFrame(conn = con2,
-                     dbtable = "state1",
-                     dbkey = c("region", "population"))
-obj1_sub <- obj1[1:10, 2:3]
-obj2_sub <- obj2[8:15,2:3]
+test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
+con <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
+obj <- SQLDataFrame(conn = con,
+                    dbtable = "state",
+                    dbkey = c("region", "population"))
+obj_sub1 <- obj[1:10, 2:3]
+obj_sub2 <- obj[8:15, 2:3]
 
 ## union
-res_union <- union(obj1_sub, obj2_sub)  ## sorted
+res_union <- union(obj_sub1, obj_sub1)  ## sorted
+res_union
 dim(res_union)
-
 }

@@ -2,12 +2,17 @@
 {
     ## browser()
     new_tblData <- FUN(tblData(x), tblData(y), ...)
+
     if (!identical(dbkey(x), dbkey(y))) {
         new_dbkey <- c(dbkey(x), dbkey(y))
     } else {
         new_dbkey <- dbkey(x)
     }
 
+    ## if (identical(FUN, dbplyr:::union_all.tbl_lazy))
+    ##     new_tblData <- new_tblData %>% distinct(!!!syms(new_dbkey), .keep_all=TRUE)
+    ## FIXME: Error: Can only find distinct value of specified columns if .keep_all is FALSE
+    
     if (!is.null(pid(x))) {
         new_pid <- pid(x)
     } else if (!is.null(pid(y))) {
