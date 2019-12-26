@@ -357,11 +357,15 @@ setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
     ## here assuming the dbkey are all in colnames(tblData), no checking.
     if (!is.null(partitionID)) { 
         keyData <- tblData %>% group_by(!!!syms(partitionID)) %>%
-            mutate(rid = row_number(!!sym(dbkey[dbkey!=partitionID][1]))) %>%
+            arrange(!!!syms(dbkey)) %>%
+            select(!!!syms(partitionID), !!!syms(dbkey)) %>% 
+            mutate(rid = row_number()) %>%
             select(!!!syms(partitionID), rid, !!!syms(dbkey))
+            ## mutate(rid = row_number(!!sym(dbkey[dbkey!=partitionID][1]))) %>%            
     } else { 
-        keyData <- tblData %>% 
-            mutate(rid = row_number(!!sym(dbkey[1]))) %>% 
+        keyData <- tblData %>% arrange(!!!syms(dbkey)) %>%
+            select(dbkey) %>% 
+            mutate(rid = row_number()) %>% 
             select(rid, dbkey)
     }
     keyData
@@ -373,7 +377,10 @@ setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
     pidRle <- NULL
     if (!is.null(partitionID)) {
         pidprep <- keyData %>% summarize(n=n()) %>% as.data.frame()
-        lvls <- sortSeqlevels(pidprep[[partitionID]])
+        lvls <- pidprep[[partitionID]]
+        lvls_lower <- sortSeqlevels(tolower(pidprep[[partitionID]]))
+        lvls <- lvls[match(lvls_lower, tolower(lvls))]
+        ## use above trick to sort character vectors with capitalization. 
         pidRle <- Rle(values = lvls, lengths = pidprep[match(lvls, pidprep[[partitionID]]), "n"])
     }
     pidRle
