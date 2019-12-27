@@ -1,3 +1,8 @@
+#' @import DBI
+#' @import dbplyr
+#' @rawNamespace import(dplyr, except = c("first", "rename",
+#'     "setequal", "setdiff", "intersect", "union", "ident", "sql"))
+
 .available_tbls <- function(x)
 {
     con <- DBI::dbConnect(RSQLite::SQLite(), dbname = x)
