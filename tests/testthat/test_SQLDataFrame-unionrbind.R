@@ -25,35 +25,18 @@ test_that("union SQLDataFrame with same source works!", {
 #########
 
 ## different sources
-test_that("rbind SQLDataFrame works!", {
-    r1 <- rbind(obj01, obj11)
+test_that("rbindUniq SQLDataFrame works!", {
+    r1 <- rbindUniq(obj01, obj02)
     expect_true(validObject(r1))
-    expect_identical(dim(r1), c(18L, 2L))
-    expect_identical(ridx(r1), match(ROWNAMES(r1), dbconcatKey(r1)))
-    expect_identical(normalizePath(dirname(connSQLDataFrame(r1)@dbname)),
-                     normalizePath(tempdir()))
+    expect_identical(dim(r1), c(15L, 2L))
     expect_warning(dbtable(r1))
-
-    r2 <- rbind(r1, obj21)
-    expect_true(validObject(r2))
-    expect_identical(dim(r2), c(22L, 2L))
-    expect_identical(ridx(r2), match(ROWNAMES(r2), dbconcatKey(r2)))
-    expect_identical(connSQLDataFrame(r1)@dbname, connSQLDataFrame(r2)@dbname)
-
-    r3 <- rbind(obj21, r1)
-    expect_identical(dim(r3), dim(r2))
-    expect_identical(connSQLDataFrame(r2)@dbname, connSQLDataFrame(r3)@dbname) 
+    expect_equal(as.data.frame(r1), as.data.frame(u1))
 
     ## multiple inputs
-    r4 <- rbind(obj01, obj11, obj12, obj21)
-    expect_identical(dim(r4), c(26L, 2L))
-    expect_identical(ridx(r4), match(ROWNAMES(r4), dbconcatKey(r4)))
-})
-
-test_that("saveSQLDataFrame after rbind preserves row index!", {
-    r1 <- rbind(obj01, obj11)
-    r11 <- saveSQLDataFrame(r1)
-    expect_identical(ridx(r1), ridx(r11))
-    expect_identical(as.data.frame(r1), as.data.frame(r11))
+    obj03 <- obj[14:18, 2:3]
+    r2 <- rbindUniq(obj01, obj02, obj03)
+    expect_true(validObject(r2))
+    expect_identical(dim(r2), c(18L, 2L))
+    expect_warning(dbtable(r2))
 })
 

@@ -38,8 +38,8 @@ BigQuery.}
 \item{password}{password for SQL database connection.}
 
 \item{billing}{the Google Cloud project name with authorized
-billing information. Will be required if user does not have write
-permission to the provided \code{BigQueryConnection} in
+billing information. Will be required if user does not have
+write permission to the provided \code{BigQueryConnection} in
 \code{conn}. e.g., when the connection is a public data set.}
 
 \item{type}{The SQL database type, supports "SQLite", "MySQL" and
