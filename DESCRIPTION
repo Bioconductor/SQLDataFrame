@@ -29,13 +29,13 @@ Imports:
     stats,
     BiocGenerics,
     RSQLite,
+    RMySQL,
+    bigrquery,
     tibble
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 6.1.1
 Suggests:
-    RMySQL,
-    bigrquery,
     testthat,
     knitr,
     rmarkdown,

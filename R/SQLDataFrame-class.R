@@ -70,7 +70,8 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #'
 #' @export
 #' @importFrom tools file_path_as_absolute
-#' @import RSQLite
+#' @import RSQLite bigrquery
+#' @rawNamespace import(RMySQL, except=c("isIdCurrent"))
 #' @import dbplyr
 #' @examples
 #' 

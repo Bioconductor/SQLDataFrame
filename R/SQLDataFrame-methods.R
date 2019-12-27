@@ -419,9 +419,14 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 select.SQLDataFrame <- function(.data, ...)
 {
     ## always return a SQLDataFrame object, never realize a single column.
+    ## browser()
     dots <- quos(...)
     old_vars <- op_vars(tblData(.data)$ops)
-    new_vars <- vars_select(old_vars, !!!dots, .include = op_grps(tblData(.data)$ops))
+    old_vars <- c(dbkey(.data), setdiff(old_vars, dbkey(.data)))
+    tryerrors <- lapply(dots, function(x) try(rlang:::eval_tidy(x), silent = T))
+    if (any(vapply(tryerrors, is.numeric, logical(1))))
+        old_vars <- setdiff(old_vars, dbkey(.data))
+    new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tblData(.data)$ops))
     .extractCOLS_SQLDataFrame(.data, new_vars) 
 }
 
