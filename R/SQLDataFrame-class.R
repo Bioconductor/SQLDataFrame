@@ -2,7 +2,6 @@
 #' @name SQLDataFrame
 #' @aliases class:SQLDataFrame SQLDataFrame-class
 #' @rdname SQLDataFrame-class
-#' @description NULL
 #' @exportClass SQLDataFrame
 #' @importFrom methods setOldClass new
 #' @importFrom S4Vectors Rle runLength runValue

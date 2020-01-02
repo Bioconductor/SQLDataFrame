@@ -109,6 +109,7 @@ setMethod("names", "SQLDataFrame", function(x) colnames(x))
          rid = .rids(idx, rle))
 }
 
+#' @rawNamespace import(IRanges, except = c("collapse", "slice", "desc"))
 .filtexp <- function(keysdf, partitionID) {
     vals <- runValue(keysdf$pid)
     vals1 <- paste0(partitionID, "== '", vals, "'")

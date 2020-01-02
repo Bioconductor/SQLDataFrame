@@ -31,10 +31,11 @@ Imports:
     RSQLite,
     RMySQL,
     bigrquery,
-    tibble
+    tibble,
+    IRanges
 License: GPL-3
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 Suggests:
     testthat,
     knitr,

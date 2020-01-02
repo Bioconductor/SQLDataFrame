@@ -4,10 +4,22 @@
 \alias{makeSQLDataFrame}
 \title{Construct SQLDataFrame from in-memory data frame or on-disk file.}
 \usage{
-makeSQLDataFrame(filename, dbtable = NULL, dbkey = character(), conn,
-  host, user, dbname = NULL, password = NULL, billing = character(0),
-  type = c("SQLite", "MySQL", "BigQuery"), overwrite = FALSE,
-  sep = ",", index = FALSE, ...)
+makeSQLDataFrame(
+  filename,
+  dbtable = NULL,
+  dbkey = character(),
+  conn,
+  host,
+  user,
+  dbname = NULL,
+  password = NULL,
+  billing = character(0),
+  type = c("SQLite", "MySQL", "BigQuery"),
+  overwrite = FALSE,
+  sep = ",",
+  index = FALSE,
+  ...
+)
 }
 \arguments{
 \item{filename}{A \code{data.frame} or \code{DataFrame} object, or
