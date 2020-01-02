@@ -1,4 +1,4 @@
-.doCompatibleFunction <- function(x, y, ..., FUN)
+.doCompatibleFunction <- function(x, y, FUN, ...)
 {
     ## browser()
     new_tblData <- FUN(tblData(x), tblData(y), ...)

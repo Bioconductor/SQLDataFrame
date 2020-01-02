@@ -11,9 +11,12 @@
 #' @param x \code{SQLDataFrame} objects to join.
 #' @param y \code{SQLDataFrame} objects to join.
 #' @param by A character vector of variables to join by.  If ‘NULL’,
-#'     the default, ‘*_join()’ will do a natural join, using all
-#'     variables with common names across the two tables. See
-#'     \code{?dplyr::join} for details.
+#'     the default for \code{left_join} and \code{inner_join},
+#'     ‘*_join()’ will do a natural join, using all variables with
+#'     common names across the two tables. For the filtering joins
+#'     \code{semi_join} ad \code{anti_join}, by default, it uses
+#'     \code{dbkey(x)} as common variables for joining. See
+#'     \code{?dplyr::join} for more details.
 #' @param copy Only kept for S3 generic/method consistency. Used as
 #'     "copy = FALSE" internally and not modifiable.
 #' @param suffix A character vector of length 2 specify the suffixes
@@ -27,35 +30,6 @@
 #'     connections (to different MySQL databases), and neither has
 #'     write permission. The situation is rare and should be
 #'     avoided. See Details.
-#' @details The \code{*_join} functions support aggregation of
-#'     SQLDataFrame objects from same or different connection (e.g.,
-#'     cross databases), either with or without write permission.
-#'
-#'     SQLite database tables are supported by SQLDataFrame package,
-#'     in the same/cross-database aggregation, and saving.
-#'
-#'     For MySQL databases, There are different situations:
-#'
-#'     When the input SQLDataFrame objects connects to same remote
-#'     MySQL database without write permission (e.g., ensembl), the
-#'     functions work like \code{dbplyr} with the lazy operations and
-#'     a \code{DataFrame} interface. Note that the aggregated
-#'     SQLDataFrame can not be saved using \code{saveSQLDataFrame}.
-#'
-#'     When the input SQLDataFrame objects connects to different MySQL
-#'     databases, and neither has write permission, the \code{*_join}
-#'     functions are supported but will be quite time consuming. To
-#'     avoid this situation, a more efficient way is to save the
-#'     database table in local MySQL server using
-#'     \code{saveSQLDataFrame}, and then call the \code{*_join}
-#'     functions again.
-#'
-#'     More frequent situation will be the \code{*_join} operation on
-#'     two SQLDataFrame objects, of which at least one has write
-#'     permission. Then the cross-database aggregation through
-#'     SQLDataFrame package will be supported by generating federated
-#'     table from the non-writable connection in the writable
-#'     connection. Look for MySQL database manual for more details.
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @examples
@@ -72,11 +46,10 @@
 #' anti_join(obj1, obj2)
 
 left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c(".x", ".y"),
-                                   ...) 
+                                   suffix = c("_x", "_y"))
 {
-    .doCompatibleFunction(x = x, y = y, ..., 
-                          FUN = dplyr::left_join)
+    .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE,
+                          suffix = suffix, FUN = dplyr::left_join)
 }
 
 #' @name inner_join
@@ -84,11 +57,10 @@ left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @aliases inner_join inner_join,SQLDataFrame-method
 #' @export
 inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c(".x", ".y"),
-                                   ...) 
+                                   suffix = c("_x", "_y"))
 {
-    .doCompatibleFunction(x = x, y = y, ..., 
-                          FUN = dplyr::inner_join)
+    .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE,
+                          suffix = suffix, FUN = dplyr::inner_join)
 }
 
 #########################
@@ -101,12 +73,12 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @aliases semi_join semi_join,SQLDataFrame-method
 #' @export
 
-semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c(".x", ".y"),
+semi_join.SQLDataFrame <- function(x, y, by = dbkey(x), copy = FALSE,
+                                   suffix = c("_x", "_y"),
                                    ...) 
 {
-    .doCompatibleFunction(x = x, y = y, ..., 
-                          FUN = dplyr::semi_join)
+    .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE,
+                          suffix = suffix, FUN = dplyr::semi_join)
 }
 
 #' @name anti_join
@@ -114,11 +86,11 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @aliases anti_join anti_join,SQLDataFrame-method
 #' @export
 
-anti_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
+anti_join.SQLDataFrame <- function(x, y, by = dbkey(x), copy = FALSE,
                                    suffix = c(".x", ".y"),
                                    ...) 
 {
-    .doCompatibleFunction(x = x, y = y, ..., 
-                          FUN = dplyr::anti_join)
+    .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE, 
+                          suffix = suffix, FUN = dplyr::anti_join)
 }
 

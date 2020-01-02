@@ -15,17 +15,13 @@
 \alias{anti_join,SQLDataFrame-method}
 \title{join \code{SQLDataFrame} together}
 \usage{
-\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c("_x", "_y"))
 
-\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c("_x", "_y"))
 
-\method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{semi_join}{SQLDataFrame}(x, y, by = dbkey(x), copy = FALSE, suffix = c("_x", "_y"), ...)
 
-\method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{anti_join}{SQLDataFrame}(x, y, by = dbkey(x), copy = FALSE, suffix = c(".x", ".y"), ...)
 }
 \arguments{
 \item{x}{\code{SQLDataFrame} objects to join.}
@@ -33,9 +29,12 @@
 \item{y}{\code{SQLDataFrame} objects to join.}
 
 \item{by}{A character vector of variables to join by.  If ‘NULL’,
-the default, ‘*_join()’ will do a natural join, using all
-variables with common names across the two tables. See
-\code{?dplyr::join} for details.}
+the default for \code{left_join} and \code{inner_join},
+‘*_join()’ will do a natural join, using all variables with
+common names across the two tables. For the filtering joins
+\code{semi_join} ad \code{anti_join}, by default, it uses
+\code{dbkey(x)} as common variables for joining. See
+\code{?dplyr::join} for more details.}
 
 \item{copy}{Only kept for S3 generic/method consistency. Used as
 "copy = FALSE" internally and not modifiable.}
@@ -59,37 +58,6 @@ A \code{SQLDataFrame} object.
 \description{
 *_join functions for \code{SQLDataFrame} objects. Will
     preserve the duplicate rows for the input argument `x`.
-}
-\details{
-The \code{*_join} functions support aggregation of
-    SQLDataFrame objects from same or different connection (e.g.,
-    cross databases), either with or without write permission.
-
-    SQLite database tables are supported by SQLDataFrame package,
-    in the same/cross-database aggregation, and saving.
-
-    For MySQL databases, There are different situations:
-
-    When the input SQLDataFrame objects connects to same remote
-    MySQL database without write permission (e.g., ensembl), the
-    functions work like \code{dbplyr} with the lazy operations and
-    a \code{DataFrame} interface. Note that the aggregated
-    SQLDataFrame can not be saved using \code{saveSQLDataFrame}.
-
-    When the input SQLDataFrame objects connects to different MySQL
-    databases, and neither has write permission, the \code{*_join}
-    functions are supported but will be quite time consuming. To
-    avoid this situation, a more efficient way is to save the
-    database table in local MySQL server using
-    \code{saveSQLDataFrame}, and then call the \code{*_join}
-    functions again.
-
-    More frequent situation will be the \code{*_join} operation on
-    two SQLDataFrame objects, of which at least one has write
-    permission. Then the cross-database aggregation through
-    SQLDataFrame package will be supported by generating federated
-    table from the non-writable connection in the writable
-    connection. Look for MySQL database manual for more details.
 }
 \examples{
 test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")

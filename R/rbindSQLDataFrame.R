@@ -16,12 +16,19 @@
     new_pid <- unique(pids)[[1]]
     
     ## 1. union(x, y) recursively for all tblData()
-    ## pairwise "union" with multiple input. 
-    new_tblData <- dbplyr:::union.tbl_lazy(tblData(objects[[1]]), tblData(objects[[2]]))
+    ## pairwise "union" with multiple input.
+
+    if (is(connSQLDataFrame(objects[[1]]), "BigQueryConnection")) {
+        stop("Union is not supported for the SQLDataFrame with BigQueryConenction")
+        ## FUN <- dbplyr:::union_all.tbl_lazy
+    } else {
+        FUN <- dbplyr:::union.tbl_lazy
+    }
+    new_tblData <- FUN(tblData(objects[[1]]), tblData(objects[[2]]))
     objects_rep <- objects[-seq_len(2)]
     repeat{
         if(length(objects_rep) == 0) break
-        new_tblData <- dbplyr:::union.tbl_lazy(new_tblData, tblData(objects_rep[[1]]))
+        new_tblData <- FUN(new_tblData, tblData(objects_rep[[1]]))
         objects_rep <- objects_rep[-1]
     }
 
@@ -52,7 +59,7 @@ setGeneric("rbindUniq", signature = "...", function(..., deparse.level = 1)
 #' @name rbindUniq
 #' @rdname rbindSQLDataFrame
 #' @aliases rbindUniq rbindUniq,SQLDataFrame-method
-#' @description Performs unique rbind on \code{SQLDataFrame}
+#' @description Performs multiple union on \code{SQLDataFrame}
 #'     objects. The result will be sorted by the \code{dbkey} columns.
 #' @param ... One or more \code{SQLDataFrame} objects. These can be
 #'     given as named arguments.
