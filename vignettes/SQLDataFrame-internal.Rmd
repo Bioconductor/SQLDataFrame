@@ -23,10 +23,9 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 9/30/2019"
+date: "last edit: 01/06/2020"
 
 [dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
-
 
 Load packages into R session. It will automatically load the package
 of `dplyr` and `dbplyr`.
@@ -35,27 +34,60 @@ library(SQLDataFrame)
 library(DBI)
 ```
 
-# SQLDataFrame slots
+# SQLDataFrame constructor
 
 ```{r constructor}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
-conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile)
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
 obj <- SQLDataFrame(
     conn = conn, dbtable = "state", dbkey = "state")
 obj
 ```
 
-## Slot accessors
+# SQLDataFrame slots and accessors
 
-To make the `SQLDataFrame` object as light and compact as possible,
-there are only 5 slots contained in the object: `tblData`, `dbkey`,
-`dbnrows`, `dbconcatKey`, `indexes`. Metadata information could be
-returned through these 5 slots using slot accessors or other utility
-functions. 
+To make the `SQLDataFrame` object and operations as light as possible,
+there are 8 slots contained in the object as shown by `slotNames()`.
+
 ```{r}
 slotNames(obj)
-dbtable(obj)
+```
+
+The major slots are `tblData`, which represents the whole database
+table, `keyData`, which represents the key columns and row id that
+together to uniquely identify each row record of the original table,
+and `dbkey`, which indicates the column names that could uniquely
+identify each record in the table.
+
+`dim` and `dimnames` are calculated upon construction or
+operations such as subsetting, and saved as slots in the SQLDataFrame
+object, in order to avoid unnecessary queries each time printing the
+object. `ridx` was used to save positions of records corresponding to
+the `tblData` slot, in cases of non-sequential subsetting (a
+user-specific order) or an SQLDataFrame object with duplicate rows,
+since the `tblData` was always in a fixed order that is usually
+different from the show method of SQLDataFrame object.
+
+There is a slot called `partitionID`, which is user-specific (usually
+a categorical) column that is used as partition ID when constructing a
+SQLDataFrame from a very large SQL table (e.g., a BigQuery table). If
+the `partitionID` is present, the slot`pidRle` will be an Rle object
+that saves the partitionID level values and the number of tables rows
+in that levels. The `pidRle` slot if present will be used internally
+as indication of positions for each row.
+
+Slot accessors are defined to quickly extract information from the
+SQLDataFrame objects.
+
+```{r}
+tblData(obj)
+keyData(obj)
 dbkey(obj)
+pid(obj)  ## for partitionID slot
+pidRle(obj)
+ridx(obj)
+dim(obj)
+dimnames(obj)
 ```
 
 ## `tblData` slot
@@ -64,77 +96,95 @@ The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
 table, which is a light-weight representation of the database table in
 _R_. Of note is that this lazy tbl only contains unique rows. It could
 also be sorted by the `dbkey(obj)` if the `SQLDataFrame` object was
-generated from `union` or `rbind`. So when the `saveSQLDataFrame()`
-function was called, a database table will be written into a physical
-disk space and have the unique records.
+generated from `union` or `*_join`. 
 
-Accessor function is made avaible for this slot: 
+## `keyData` slot
+
+The `keyData` slot saves the key columns of the SQL table and the row
+id for each specific row. The 'rid' column is based on the sorting of
+whole table or partitioned tables if partition ID is specified. In the
+later case, the 'rid' together with the key columns uniquely identify
+each row of the represented SQL table.
+
+## `pid` and `pidRle` slots
+
+When trying to represent very large SQL tables, such as the BigQuery
+tables in the size of couple gigabites, it is recommended to use the
+`pid = ` argument in SQLDataFrame construction to define the partition ID of
+that table (e.g., the chromosome ID), so that the sorting of table
+rows gets faster and the compability of larger tables gets easier.
+
+In cases of representing a medium to small sized SQL tables, the `pid`
+and `pidRle` slots takes NULL as default. 
+
 ```{r}
-tblData(obj)
+pid(obj) 
+pidRle(obj)
 ```
 
-## `dbnrows` and `dbconcatKey`
-The `dbnrows` slot saves the number of rows corresponding to the
-`tblData`, and `dbconcatKey` saves the realized (concatenated if
-multiple) key columns corresponding to the `tblData`. Accessor
-functions are also available for these 2 slots: 
+## `ridx` slot
+
+The `indexes` slots is numeric vector representing the position of
+rows in SQLDataFrame object that is corresponding to the `tblData`
+slot, so that the `SQLDataFrame` could possibly have duplicate rows or
+arbitrary row orders, which is usually different from the data orders
+in `tblData`. 
 
 ```{r}
-dbnrows(obj)
-dbconcatKey(obj)
-```
-
-## `indexes` slot
-The `indexes` slots is an unnamed list saving the row and column
-indexes respectively corresponding to the `tblData` slot, so that the
-`SQLDataFrame` could possibly have duplicate rows or only a subset of
-data records from the `tblData`, while the `tblData` slot doesn't need
-to be changed. To be consistent, the slots of `dbnrows` and
-`dbconcatKey` will also remain unchanged.
-
-```{r}
-obj@indexes
-obj_sub <- obj[sample(5, 3, replace = TRUE), 2:3]
+ridx(obj)
+set.seed(123)
+ridx <- sample(5, 10, replace = TRUE)
+obj_sub <- obj[ridx, ]
 obj_sub
-obj_sub@indexes
-identical(tblData(obj), tblData(obj_sub))
+ridx(obj_sub)
+tblData(obj_sub)
 ```
 
-With a `filter` or `select` function (which is similar to `[i, ]`
-subsetting), only the `indexes` slot will be updated for the row or
-column index pointing to the `tblData`.
+# SQLDataFrame slot interactivity
+
+When applying `dplyr` functions on SQLDataFrame objects, such as
+`select`, `filter`, `mutate`, and `*_join`, the functions will be
+passed to the `tblData` slot directly, and then other slots, e.g.,
+`keyData`, `pidRle` (if `partitionID` is not NULL) will be updated
+corresponding to the newly updated `tblData`. `dim` and `dimnames`
+will also be recalculated and updated.
+
+When square bracket `[` subsetting was operated, the normalized
+numeric indexes will be matched to the `pidRle` (if `partitionID` is
+not NULL) and then `keyData` slots, and have these 2 slots
+updated. Then the `tblData` will be updated by `left_join` -ing the
+newly updated `keyData` slot. Other slots (e.g., `dim`, `dimnames`)
+will be correspondingly updated.
+
+In case of non-sequential or duplicate row indexes introduced from
+square bracket subsetting, the `ridx` slot will also be updated to
+reflect the position of rows of the returned SQLDataFrame object, that
+corresponds to the `tblData` slot.
+
+Please also note, the `filter` `union` and `*_join` functions will
+reset any non-NULL `ridx` as NULL, which means that the previous order
+of data records will not be preserved. `ridx` will be preserved with
+`[` subsetting, `filter` and `mutate`.
 
 ```{r}
-obj_filter <- obj %>% filter(division == "South Atlantic" & size == "medium")
-obj_filter@indexes
-identical(tblData(obj), tblData(obj_filter))
+ridx(obj_sub)
+obj_filter <- obj_sub %>% filter(size == "medium")
+ridx(obj_filter)
 
-obj_select <- obj %>% select(division, size)
-obj_select@indexes
-identical(tblData(obj), tblData(obj_select))
+obj_mutate <- obj_sub %>% mutate(p1 = population / 1000)
+ridx(obj_mutate)
+
+obj_select <- obj_sub %>% select(division, size)
+ridx(obj_select)
 ```
 
-# SQLDataFrame methods
+# Memoisation
 
-## ROWNAMES
-
-The `ROWNAMES,SQLDataFrame` method was defined to return the
-(concatenated if multiple) key column(s) value, so that the row
-subsetting with character vector works for the `SQLDataFrame` objects.
-
-```{r}
-rnms <- ROWNAMES(obj)
-obj[sample(rnms, 3), ]
-```
-
-For `SQLDataFrame` object with composite keys: 
-
-```{r}
-obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
-                     dbkey = c("region", "population"))
-ROWNAMES(obj1[1:10,])
-obj1[c("South:3615.0", "West:365.0"), ]
-```
+Memoisation strategy was implemented through the use of _R_ package
+`memoise`. So that it becomes significantly more efficient in printing
+the SQLDataFrame object, and in other operations that requires
+expensive queries, especially in presenting very large, for example,
+BigQuery tables in gigabites.
 
 # SessionInfo()
 

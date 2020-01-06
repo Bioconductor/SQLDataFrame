@@ -96,7 +96,7 @@ obj
 
 ## save as MySQL database
 \dontrun{
-localConn <- DBI::dbConnect(dbDriver("MySQL"),
+localConn <- DBI::dbConnect(DBI::dbDriver("MySQL"),
                             host = "",
                             user = "",
                             password = "",

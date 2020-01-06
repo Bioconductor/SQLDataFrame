@@ -180,17 +180,18 @@ setMethod("extractCOLS", "SQLDataFrame", .extractCOLS_SQLDataFrame)
 #' @description \code{[i, j]} supports subsetting by \code{i} (for
 #'     row) and \code{j} (for column) and respects ‘drop=FALSE’.
 #' @rdname SQLDataFrame-methods
-#' @param i Row subscript. Could be numeric / character / logical
-#'     values, a named list of key values, and \code{SQLDataFrame},
-#'     \code{data.frame}, \code{tibble} objects.
+#' @param i Row subscript. Could be numeric / logical values, a named
+#'     list of key values, and \code{SQLDataFrame}, \code{data.frame},
+#'     \code{tibble} objects.
 #' @param j Column subscript.
 #' @param drop Whether to drop with reduced dimension. Default is
 #'     TRUE.
 #' @return \code{[i, j]}: A \code{SQLDataFrame} object or vector with
 #'     realized column values (with single column subsetting and
 #'     default \code{drop=TRUE}. )
-#' @aliases [,SQLDataFrame,ANY-method
+#' @aliases [,SQLDataFrame,ANY,ANY,ANY-method
 #' @importFrom tibble tibble
+#' @importFrom methods as is
 #' @export
 #' @examples
 #'
@@ -209,27 +210,9 @@ setMethod("extractCOLS", "SQLDataFrame", .extractCOLS_SQLDataFrame)
 #' obj[NULL, ]
 #' obj[, NULL]
 #'
-#' ## by numeric / logical / character vectors
+#' ## by numeric / logical vectors
 #' obj[1:5, 2:3]
 #' obj[c(TRUE, FALSE), c(TRUE, FALSE)]
-#' obj[c("Alabama", "South Dakota"), ]
-#' obj1[c("South:3615.0", "West:3559.0"), ]
-#' ### Remeber to add `.0` trailing for numeric values. If not sure,
-#' ### check `ROWNAMES()`.
-#'
-#' ## by SQLDataFrame
-#' obj_sub <- obj[sample(10), ]
-#' obj[obj_sub, ]
-#'
-#' ## by a named list of key column values (or equivalently data.frame /
-#' ## tibble)
-#' obj[data.frame(state = c("Colorado", "Arizona")), ]
-#' obj[tibble::tibble(state = c("Colorado", "Arizona")), ]
-#' obj[list(state = c("Colorado", "Arizona")), ]
-#' obj1[list(region = c("South", "West"),
-#'           population = c("3615.0", "365.0")), ]
-#' ### remember to add the '.0' trailing for numeric values. If not sure,
-#' ### check `ROWNAMES()`.
 #'
 #' ## Subsetting with key columns
 #'
@@ -272,7 +255,7 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
                                                  ## 0 rows and 1
                                                  ## column(s)
     if (drop) {
-        if (missing(j)) {
+        if (missing(j) | is.null(j)) {
             return(x)  ## preserve the SQLDataFrame as before
                        ## subsetting
         } else {
@@ -291,41 +274,6 @@ setMethod("[", "SQLDataFrame", function(x, i, j, ..., drop = TRUE)
     }
     x
 })
-
-## #' @rdname SQLDataFrame-methods
-## #' @importFrom methods is as callNextMethod
-## #' @aliases [,SQLDataFrame,SQLDataFrame-method 
-## #' @export
-## setMethod("[", signature = c("SQLDataFrame", "SQLDataFrame", "ANY"),
-##           function(x, i, j, ..., drop = TRUE)
-## {
-##     browser()
-##     if (!identical(dbkey(x), dbkey(i)))
-##         stop("The dbkey() must be same between '", deparse(substitute(x)),
-##              "' and '", deparse(substitute(i)), "'.", "\n")
-##     new_keyData <- semi_join(keyData(x), keyData(i)) ## FIXME
-##     new_tblData <- semi_join(tblData(x), new_keyData)
-##     new_pidRle <- pidRle(i)
-##     BiocGenerics:::replaceSlots(x, tblData = new_tblData, keyData = new_keyData,
-##                                 pidRle = new_pidRle)
-## })
-
-## #' @rdname SQLDataFrame-methods
-## #' @aliases [,SQLDataFrame,list-method 
-## #' @export
-## setMethod("[", signature = c("SQLDataFrame", "list", "ANY"),
-##           function(x, i, j, ..., drop = TRUE)
-## {
-##     browser()
-##     if (!identical(dbkey(x), union(dbkey(x), names(i))))
-##         stop("Please use: '", paste(dbkey(x), collapse=", "),
-##              "' as the query list name(s).")
-##     ## i <- do.call(paste, c(i[dbkey(x)], sep=":"))
-##     tmp <- lapply(i, function(x) paste0("c(", paste(x, collapse=","), ")"))
-##     exp <- paste(names(tmp), tmp, sep = " %in% ")
-##     filter.SQLDataFrame(x, rlang::parse_expr(exp))
-##     callNextMethod()
-## })
 
 ###--------------------
 ### "[[,SQLDataFrame" (do realization for single column only)
@@ -368,7 +316,7 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #############################
 
 #' @description Use \code{select()} function to select certain
-#'     columns. 
+#'     columns.
 #' @rdname SQLDataFrame-methods
 #' @aliases select select,SQLDataFrame-methods
 #' @return \code{select}: always returns a SQLDataFrame object no
@@ -393,6 +341,11 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #'     variable, and the value will be its corresponding value. Use a
 #'     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
 #'     overwrite existing variables of the same name.  }
+#' @details Please note that \code{filter()} will reset the
+#'     \code{ridx} slot of the returned SQLDataFrame, so that any
+#'     arbitrary orders (or duplicate rows) of the input SQLDataFrame
+#'     will not be preserved. \code{select()} and \code{mutate()}
+#'     could preserve the original orders or duplicate rows.
 #' @export
 #' @importFrom tidyselect vars_select
 #' @examples
@@ -424,7 +377,7 @@ select.SQLDataFrame <- function(.data, ...)
     dots <- quos(...)
     old_vars <- op_vars(tblData(.data)$ops)
     old_vars <- c(dbkey(.data), setdiff(old_vars, dbkey(.data)))
-    tryerrors <- lapply(dots, function(x) try(rlang:::eval_tidy(x), silent = T))
+    tryerrors <- lapply(dots, function(x) try(rlang::eval_tidy(x), silent = T))
     if (any(vapply(tryerrors, is.numeric, logical(1))))
         old_vars <- setdiff(old_vars, dbkey(.data))
     new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tblData(.data)$ops))

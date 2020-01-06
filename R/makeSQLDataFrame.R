@@ -21,6 +21,7 @@
 #' @return A \code{SQLDataFrame} object.
 #' @importFrom tools file_path_as_absolute file_path_sans_ext
 #' @importFrom tibble rownames_to_column
+#' @importFrom utils read.table
 #' @import DBI
 #' @details The provided file must has one or more columns to unique
 #'     identify each row (no duplicate rows allowed). The file must be
@@ -41,7 +42,7 @@
 #'
 #' ## save as MySQL database
 #' \dontrun{
-#' localConn <- DBI::dbConnect(dbDriver("MySQL"),
+#' localConn <- DBI::dbConnect(DBI::dbDriver("MySQL"),
 #'                             host = "",
 #'                             user = "",
 #'                             password = "",
@@ -87,14 +88,14 @@ makeSQLDataFrame <- function(filename,
             }
         }
         conn <- switch(type,
-                       SQLite = DBI::dbConnect(dbDriver("SQLite"),
+                       SQLite = DBI::dbConnect(DBI::dbDriver("SQLite"),
                                                dbname = dbname),
-                       MySQL = DBI::dbConnect(dbDriver("MySQL"),
+                       MySQL = DBI::dbConnect(DBI::dbDriver("MySQL"),
                                               host = host,
                                               user = user,
                                               password = password,
                                               dbname = dbname),
-                       BigQuery = DBI::dbConnect(dbDriver("bigquery"),
+                       BigQuery = DBI::dbConnect(DBI::dbDriver("bigquery"),
                                                  project = host,
                                                  dataset = dbname,
                                                  billing = billing)

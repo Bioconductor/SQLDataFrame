@@ -15,13 +15,13 @@
 \alias{anti_join,SQLDataFrame-method}
 \title{join \code{SQLDataFrame} together}
 \usage{
-\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c("_x", "_y"))
+\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c("_x", "_y"), ...)
 
-\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c("_x", "_y"))
+\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c("_x", "_y"), ...)
 
-\method{semi_join}{SQLDataFrame}(x, y, by = dbkey(x), copy = FALSE, suffix = c("_x", "_y"), ...)
+\method{semi_join}{SQLDataFrame}(x, y, by = dbkey(x), copy = FALSE, ...)
 
-\method{anti_join}{SQLDataFrame}(x, y, by = dbkey(x), copy = FALSE, suffix = c(".x", ".y"), ...)
+\method{anti_join}{SQLDataFrame}(x, y, by = dbkey(x), copy = FALSE, ...)
 }
 \arguments{
 \item{x}{\code{SQLDataFrame} objects to join.}
@@ -45,23 +45,19 @@ and ‘y’. Default values are ".x" and ".y".See
 \code{?dplyr::join} for details.}
 
 \item{...}{Other arguments passed on to \code{*_join}
-methods. \code{localConn} can be passed here for one MySQL
-connection with write permission. Will be used only when
-\code{join}-ing two SQLDataFrame objects from different MySQL
-connections (to different MySQL databases), and neither has
-write permission. The situation is rare and should be
-avoided. See Details.}
+methods.}
 }
 \value{
 A \code{SQLDataFrame} object.
 }
 \description{
 *_join functions for \code{SQLDataFrame} objects. Will
-    preserve the duplicate rows for the input argument `x`.
+    not preserve the arbitrary orders or duplicate rows for the
+    input SQLDataFrame.
 }
 \examples{
 test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-con <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+con <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 obj <- SQLDataFrame(conn = con,
                     dbtable = "state",
                     dbkey = c("region", "population"))

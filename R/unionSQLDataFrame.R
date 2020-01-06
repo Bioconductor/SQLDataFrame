@@ -18,9 +18,11 @@
 #'     objects.
 #' @param x A \code{SQLDataFrame} object.
 #' @param y A \code{SQLDataFrame} object.
+#' @param copy Only kept for S3 generic/method consistency. Used as
+#'     "copy = FALSE" internally and not modifiable.
 #' @param ... Other arguments passed on to methods.
 #' @details The \code{union} function supports aggregation of
-#'     SQLDataFrame objects from same connections. 
+#'     SQLDataFrame objects from same connections.
 #'
 #'     For SQLite and MySQL connections, \code{union} drops all
 #'     duplicate and return only distinct rows.

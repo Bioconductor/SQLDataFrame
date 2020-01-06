@@ -6,7 +6,8 @@
 #' @name left_join
 #' @rdname joinSQLDataFrame
 #' @description *_join functions for \code{SQLDataFrame} objects. Will
-#'     preserve the duplicate rows for the input argument `x`.
+#'     not preserve the arbitrary orders or duplicate rows for the
+#'     input SQLDataFrame.
 #' @aliases left_join left_join,SQLDataFrame-method
 #' @param x \code{SQLDataFrame} objects to join.
 #' @param y \code{SQLDataFrame} objects to join.
@@ -24,17 +25,12 @@
 #'     and ‘y’. Default values are ".x" and ".y".See
 #'     \code{?dplyr::join} for details.
 #' @param ... Other arguments passed on to \code{*_join}
-#'     methods. \code{localConn} can be passed here for one MySQL
-#'     connection with write permission. Will be used only when
-#'     \code{join}-ing two SQLDataFrame objects from different MySQL
-#'     connections (to different MySQL databases), and neither has
-#'     write permission. The situation is rare and should be
-#'     avoided. See Details.
+#'     methods. 
 #' @return A \code{SQLDataFrame} object.
 #' @export
 #' @examples
 #' test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-#' con <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+#' con <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 #' obj <- SQLDataFrame(conn = con,
 #'                     dbtable = "state",
 #'                     dbkey = c("region", "population"))
@@ -46,7 +42,7 @@
 #' anti_join(obj1, obj2)
 
 left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c("_x", "_y"))
+                                   suffix = c("_x", "_y"), ...)
 {
     .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE,
                           suffix = suffix, FUN = dplyr::left_join)
@@ -57,7 +53,7 @@ left_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @aliases inner_join inner_join,SQLDataFrame-method
 #' @export
 inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c("_x", "_y"))
+                                   suffix = c("_x", "_y"), ...)
 {
     .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE,
                           suffix = suffix, FUN = dplyr::inner_join)
@@ -74,7 +70,6 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @export
 
 semi_join.SQLDataFrame <- function(x, y, by = dbkey(x), copy = FALSE,
-                                   suffix = c("_x", "_y"),
                                    ...) 
 {
     .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE,
@@ -87,7 +82,6 @@ semi_join.SQLDataFrame <- function(x, y, by = dbkey(x), copy = FALSE,
 #' @export
 
 anti_join.SQLDataFrame <- function(x, y, by = dbkey(x), copy = FALSE,
-                                   suffix = c(".x", ".y"),
                                    ...) 
 {
     .doCompatibleFunction(x = x, y = y, by = by, copy = FALSE, 

@@ -154,16 +154,11 @@ dbtable(obj)
 dbkey(obj)
 dbkey(obj1)
 
-dbconcatKey(obj)
-dbconcatKey(obj1)
-
 ## slot accessors (for internal use only)
 tblData(obj)
-dbnrows(obj)
-
-## ROWNAMES
-ROWNAMES(obj[sample(10, 5), ])
-ROWNAMES(obj1[sample(10, 5), ])
+keyData(obj)
+pid(obj)
+pidRle(obj)
 
 ## coercion
 as.data.frame(obj)
@@ -178,12 +173,12 @@ obj
 
 ## construction from MySQL 
 \dontrun{
-mysqlConn <- DBI::dbConnect(dbDriver("MySQL"),
+mysqlConn <- DBI::dbConnect(DBI::dbDriver("MySQL"),
                             host = "",
                             user = "",
                             password = "",  ## required if need further
                                             ## aggregation operations such as
-                                            ## join, union, rbind, etc. 
+                                            ## join, union, etc. 
                             dbname = "")
 sdf <- SQLDataFrame(conn = mysqlConn, dbtable = "", dbkey = "")
 
@@ -193,8 +188,7 @@ objensb <- SQLDataFrame(user = "genome",
                         dbname = "xenTro9",
                         type = "MySQL",
                         dbtable = "xenoRefGene",
-                        dbkey = c("name", "txStart"))
-
+                        dbkey = c("name", "txStart")) 
 }
 
 ## construction from BigQuery
@@ -204,14 +198,16 @@ con <- DBI::dbConnect(bigquery(),  ## equivalent dbDriver("bigquery")
                       dataset = "human_variant_annotation",
                       billing = "")  ## your project name that linked to
                                      ## Google Cloud with billing information.
-sdf <- SQLDataFrame(conn = con, dbtable = "ncbi_clinvar_hg38_20180701")
+sdf <- SQLDataFrame(conn = con,
+                    dbtable = "ncbi_clinvar_hg38_20180701",
+                    dbkey = c("reference_name", "start_position", "end_position"))
 
 ## Or pass credentials directly into constructor
 sdf1 <- SQLDataFrame(host = "bigquery-public-data",
                      dbname = "human_variant_annotation",
-                     billing = "",
+                     billing = "", 
                      type = "BigQuery",
-                     dbtable = "ncbi_clinvar_hg38_20180701")
-
+                     dbtable = "ncbi_clinvar_hg38_20180701",
+                     dbkey = c("reference_name", "start_position", "end_position"))
 }
 }

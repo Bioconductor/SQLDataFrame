@@ -1,7 +1,7 @@
 context("SQLDataFrame-methods")
 
 test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 obj <- SQLDataFrame(conn = conn, dbtable = "colData",
                     dbkey = "sampleID")
 

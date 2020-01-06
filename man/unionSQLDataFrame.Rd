@@ -12,6 +12,9 @@
 
 \item{y}{A \code{SQLDataFrame} object.}
 
+\item{copy}{Only kept for S3 generic/method consistency. Used as
+"copy = FALSE" internally and not modifiable.}
+
 \item{...}{Other arguments passed on to methods.}
 }
 \value{
@@ -23,7 +26,7 @@ Performs union operations on \code{SQLDataFrame}
 }
 \details{
 The \code{union} function supports aggregation of
-    SQLDataFrame objects from same connections. 
+    SQLDataFrame objects from same connections.
 
     For SQLite and MySQL connections, \code{union} drops all
     duplicate and return only distinct rows.

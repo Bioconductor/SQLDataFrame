@@ -1,7 +1,7 @@
 context("SQLDataFrame-class")
 
 test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
-conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = test.db)
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 obj <- SQLDataFrame(conn = conn, dbtable = "colData",
                     dbkey = "sampleID")
 
@@ -28,7 +28,7 @@ test_that("SQLDataFrame constructor works",
 {
     ## check slot values / accessors
     expect_true(validObject(obj))
-    exp <- c("tblData", "keyData", "dbkey", "dim", "dimnames", "partitionID", "pidRle", "ridx")
+    exp <- c("tblData", "keyData", "dbkey", "partitionID", "pidRle", "ridx", "dim", "dimnames")
     expect_identical(exp, slotNames(obj))
     expect_identical(normalizePath(test.db), normalizePath(connSQLDataFrame(obj)@dbname))
     expect_identical("colData", dbtable(obj))

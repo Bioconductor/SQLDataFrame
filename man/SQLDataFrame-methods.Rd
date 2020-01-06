@@ -14,8 +14,7 @@
 \alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
-\alias{[,SQLDataFrame-method}
-\alias{[,SQLDataFrame,ANY-method}
+\alias{[,SQLDataFrame,ANY,ANY,ANY-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
 \alias{select.SQLDataFrame}
@@ -42,7 +41,7 @@
 
 \S4method{names}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 
@@ -61,9 +60,9 @@ connSQLDataFrame(x)
 
 \item{n}{Number of rows.}
 
-\item{i}{Row subscript. Could be numeric / character / logical
-values, a named list of key values, and \code{SQLDataFrame},
-\code{data.frame}, \code{tibble} objects.}
+\item{i}{Row subscript. Could be numeric / logical values, a named
+list of key values, and \code{SQLDataFrame}, \code{data.frame},
+\code{tibble} objects.}
 
 \item{j}{Column subscript.}
 
@@ -146,6 +145,13 @@ Use \code{filter()} to choose rows/cases where
 \code{connSQLDataFrame} returns the connection of a
     SQLDataFrame object.
 }
+\details{
+Please note that \code{filter()} will reset the
+    \code{ridx} slot of the returned SQLDataFrame, so that any
+    arbitrary orders (or duplicate rows) of the input SQLDataFrame
+    will not be preserved. \code{select()} and \code{mutate()}
+    could preserve the original orders or duplicate rows.
+}
 \examples{
 
 ##################
@@ -174,27 +180,9 @@ obj[,]
 obj[NULL, ]
 obj[, NULL]
 
-## by numeric / logical / character vectors
+## by numeric / logical vectors
 obj[1:5, 2:3]
 obj[c(TRUE, FALSE), c(TRUE, FALSE)]
-obj[c("Alabama", "South Dakota"), ]
-obj1[c("South:3615.0", "West:3559.0"), ]
-### Remeber to add `.0` trailing for numeric values. If not sure,
-### check `ROWNAMES()`.
-
-## by SQLDataFrame
-obj_sub <- obj[sample(10), ]
-obj[obj_sub, ]
-
-## by a named list of key column values (or equivalently data.frame /
-## tibble)
-obj[data.frame(state = c("Colorado", "Arizona")), ]
-obj[tibble::tibble(state = c("Colorado", "Arizona")), ]
-obj[list(state = c("Colorado", "Arizona")), ]
-obj1[list(region = c("South", "West"),
-          population = c("3615.0", "365.0")), ]
-### remember to add the '.0' trailing for numeric values. If not sure,
-### check `ROWNAMES()`.
 
 ## Subsetting with key columns
 

@@ -32,7 +32,11 @@ Imports:
     RMySQL,
     bigrquery,
     tibble,
-    IRanges
+    IRanges,
+    memoise,
+    GenomeInfoDb,
+    rlang,
+    tidyselect
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 7.0.2

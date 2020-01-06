@@ -18,18 +18,16 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
         tblData = "tbl_dbi", ## "lazy_tbl" from original sql database table.
         keyData = "tbl_dbi", ## "lazy_tbl", rid, [pid], key1, key2, ...
         dbkey = "character",  ## colnames(keyData) - rid [-pid]
-        ## dbnrows = "integer", ## maps to original data row
-        ## Dimension. ## FIXME: REMOVE?
-        dim = "integer",  ## calculate each time with row subsetting:
-                          ## '[', filter, etc
-        dimnames = "list",
         partitionID = "character_or_null",  ## for "tbl_BigQueryConnection"
         pidRle = "Rle_or_null", ## saves the "partionID + rid" for
                                 ## very large bigQuery tables, update
                                 ## with operations.
-        ridx = "integer_or_null"  ## saves the non-sequential numeric
+        ridx = "integer_or_null",  ## saves the non-sequential numeric
                                   ## indexs from '['
                                   ## subsetting. e.g., sample(10)
+        dim = "integer",  ## calculate each time with row subsetting:
+                          ## '[', filter, etc
+        dimnames = "list"
     )
 )
 
@@ -93,18 +91,13 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #' dbtable(obj)
 #' dbkey(obj)
 #' dbkey(obj1)
-#'
-#' dbconcatKey(obj)
-#' dbconcatKey(obj1)
-#'
+#' 
 #' ## slot accessors (for internal use only)
 #' tblData(obj)
-#' dbnrows(obj)
+#' keyData(obj)
+#' pid(obj)
+#' pidRle(obj)
 #' 
-#' ## ROWNAMES
-#' ROWNAMES(obj[sample(10, 5), ])
-#' ROWNAMES(obj1[sample(10, 5), ])
-#'
 #' ## coercion
 #' as.data.frame(obj)
 #' as(obj, "DataFrame")
@@ -118,12 +111,12 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #'
 #' ## construction from MySQL 
 #' \dontrun{
-#' mysqlConn <- DBI::dbConnect(dbDriver("MySQL"),
+#' mysqlConn <- DBI::dbConnect(DBI::dbDriver("MySQL"),
 #'                             host = "",
 #'                             user = "",
 #'                             password = "",  ## required if need further
 #'                                             ## aggregation operations such as
-#'                                             ## join, union, rbind, etc. 
+#'                                             ## join, union, etc. 
 #'                             dbname = "")
 #' sdf <- SQLDataFrame(conn = mysqlConn, dbtable = "", dbkey = "")
 #'
@@ -133,8 +126,7 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #'                         dbname = "xenTro9",
 #'                         type = "MySQL",
 #'                         dbtable = "xenoRefGene",
-#'                         dbkey = c("name", "txStart"))
-#' 
+#'                         dbkey = c("name", "txStart")) 
 #' }
 #' 
 #' ## construction from BigQuery
@@ -144,15 +136,17 @@ setClassUnion("integer_or_null", c("integer", "NULL"))
 #'                       dataset = "human_variant_annotation",
 #'                       billing = "")  ## your project name that linked to
 #'                                      ## Google Cloud with billing information.
-#' sdf <- SQLDataFrame(conn = con, dbtable = "ncbi_clinvar_hg38_20180701")
+#' sdf <- SQLDataFrame(conn = con,
+#'                     dbtable = "ncbi_clinvar_hg38_20180701",
+#'                     dbkey = c("reference_name", "start_position", "end_position"))
 #'
 #' ## Or pass credentials directly into constructor
 #' sdf1 <- SQLDataFrame(host = "bigquery-public-data",
 #'                      dbname = "human_variant_annotation",
-#'                      billing = "",
+#'                      billing = "", 
 #'                      type = "BigQuery",
-#'                      dbtable = "ncbi_clinvar_hg38_20180701")
-#'
+#'                      dbtable = "ncbi_clinvar_hg38_20180701",
+#'                      dbkey = c("reference_name", "start_position", "end_position"))
 #' }
 
 SQLDataFrame <- function(conn,
@@ -171,14 +165,14 @@ SQLDataFrame <- function(conn,
         ## FIXME: Error in .local(drv, ...) : Cannot allocate a new
         ## connection: 16 connections already opened
         conn <- switch(type,
-                       MySQL = DBI::dbConnect(dbDriver("MySQL"),
+                       MySQL = DBI::dbConnect(DBI::dbDriver("MySQL"),
                                               host = host,
                                               user = user,
                                               password = password,
                                               dbname = dbname),
-                       SQLite = DBI::dbConnect(dbDriver("SQLite"),
+                       SQLite = DBI::dbConnect(DBI::dbDriver("SQLite"),
                                                dbname = dbname),
-                       BigQuery = DBI::dbConnect(dbDriver("bigquery"),
+                       BigQuery = DBI::dbConnect(DBI::dbDriver("bigquery"),
                                                  project = host,
                                                  dataset = dbname,
                                                  billing = billing)
@@ -310,9 +304,7 @@ setMethod("dbtable", "SQLDataFrame", function(x)
     }
 })
 .msg_dbtable <- paste0("## not available for SQLDataFrame with lazy queries ",
-                       "of 'union', 'join', or 'rbind'. \n",
-                       "## call 'saveSQLDataFrame()' to save the data as ",
-                       "database table and call 'dbtable()' again! \n")
+                       "of 'union' or 'join'. \n")
 
 setGeneric("dbkey", signature = "x", function(x)
     standardGeneric("dbkey"))
@@ -430,6 +422,8 @@ setMethod("pidRle", "SQLDataFrame", function(x)
 ## IMPORTANT: always order the tblData by dbkey(x) before printing.
 
 #' @importFrom rlang parse_expr
+#' @importFrom memoise memoise
+
 collectm <- memoise::memoise(collect)
 .printROWS <- function(x, index = NULL, colClass = FALSE)
 {

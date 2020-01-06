@@ -1,6 +1,7 @@
 context("rbind SQLDataFrame")
 
 test.db <- system.file("extdata", "test.db", package = "SQLDataFrame")
+con <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 obj <- SQLDataFrame(conn = con,
                     dbtable = "state",
                     dbkey = c("region", "population"))
@@ -30,6 +31,7 @@ test_that("rbindUniq SQLDataFrame works!", {
     expect_true(validObject(r1))
     expect_identical(dim(r1), c(15L, 2L))
     expect_warning(dbtable(r1))
+    u1 <- union(obj01, obj02)
     expect_equal(as.data.frame(r1), as.data.frame(u1))
 
     ## multiple inputs
