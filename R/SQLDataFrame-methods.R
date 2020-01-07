@@ -189,7 +189,8 @@ setMethod("extractCOLS", "SQLDataFrame", .extractCOLS_SQLDataFrame)
 #' @return \code{[i, j]}: A \code{SQLDataFrame} object or vector with
 #'     realized column values (with single column subsetting and
 #'     default \code{drop=TRUE}. )
-#' @aliases [,SQLDataFrame,ANY,ANY,ANY-method
+## #' @aliases [,SQLDataFrame,ANY,ANY,ANY-method
+#' @aliases [,SQLDataFrame-method
 #' @importFrom tibble tibble
 #' @importFrom methods as is
 #' @export

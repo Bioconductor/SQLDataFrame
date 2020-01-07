@@ -1,6 +1,6 @@
 Package: SQLDataFrame
 Title: Representation of SQL database in DataFrame metaphor
-Version: 0.99.27
+Version: 0.99.0
 Authors@R: c(
     person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"),
     comment = c(ORCID = "0000-0003-1456-5099")),
@@ -8,11 +8,12 @@ Authors@R: c(
 Description: SQLDataFrame is developed to lazily represent and
     efficiently analyze SQL-based tables in _R_. SQLDataFrame supports
     common and familiar 'DataFrame' operations such as '[' subsetting,
-    rbind, cbind, etc.. The internal implementation is based on the
-    widely adopted dplyr grammar and SQL commands. In-memory datasets
-    or plain text files (.txt, .csv, etc.) could also be easily
-    converted into SQLDataFrames objects (which generates a new
-    database on-disk).
+    and tidy grammar such as '%>%', 'select', etc.  The internal
+    implementation is based on the widely adopted dplyr grammar and
+    SQL commands. In-memory datasets or plain text files (.txt, .csv,
+    etc.) could also be easily converted into SQLDataFrames objects
+    (which generates a new database on-disk). Supported SQL types are
+    SQLite, MySQL, and Google BigQuery.
 biocViews: Infrastructure, DataRepresentation
 URL: https://github.com/Bioconductor/SQLDataFrame
 BugReports: https://github.com/Bioconductor/SQLDataFrame/issues  

@@ -15,6 +15,7 @@
 \alias{names,SQLDataFrame-method}
 \alias{names}
 \alias{[,SQLDataFrame,ANY,ANY,ANY-method}
+\alias{[,SQLDataFrame-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
 \alias{select.SQLDataFrame}
