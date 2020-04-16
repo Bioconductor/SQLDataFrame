@@ -1,6 +1,6 @@
 Package: SQLDataFrame
 Title: Representation of SQL database in DataFrame metaphor
-Version: 1.1.0
+Version: 1.1.1
 Authors@R: c(
     person("Qian", "Liu", email = "qliu7@buffalo.edu", role = c("aut", "cre"),
     comment = c(ORCID = "0000-0003-1456-5099")),
@@ -32,7 +32,7 @@ Imports:
     tibble
 License: GPL-3
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Suggests:
     RMySQL,
     bigrquery,

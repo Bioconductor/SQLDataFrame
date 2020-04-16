@@ -15,17 +15,13 @@
 \alias{anti_join,SQLDataFrame-method}
 \title{join \code{SQLDataFrame} together}
 \usage{
-\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{left_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
 
-\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
 
-\method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
 
-\method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE,
-  suffix = c(".x", ".y"), ...)
+\method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
 }
 \arguments{
 \item{x}{\code{SQLDataFrame} objects to join.}

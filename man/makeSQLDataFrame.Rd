@@ -4,9 +4,21 @@
 \alias{makeSQLDataFrame}
 \title{Construct SQLDataFrame from file.}
 \usage{
-makeSQLDataFrame(filename, dbtable = NULL, dbkey = character(), conn,
-  host, user, dbname = NULL, password = NULL, type = c("SQLite",
-  "MySQL"), overwrite = FALSE, sep = ",", index = FALSE, ...)
+makeSQLDataFrame(
+  filename,
+  dbtable = NULL,
+  dbkey = character(),
+  conn,
+  host,
+  user,
+  dbname = NULL,
+  password = NULL,
+  type = c("SQLite", "MySQL"),
+  overwrite = FALSE,
+  sep = ",",
+  index = FALSE,
+  ...
+)
 }
 \arguments{
 \item{filename}{A \code{data.frame} or \code{DataFrame} object, or

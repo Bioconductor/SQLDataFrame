@@ -335,9 +335,13 @@ setMethod("$", "SQLDataFrame", function(x, name) x[[name]] )
 #'     length 1 or the same length as the number of rows in the group
 #'     (if using ‘group_by()’) or in the entire input (if not using
 #'     groups). The name of each argument will be the name of a new
-#'     variable, and the value will be its corresponding value. Use a
-#'     ‘NULL’ value in ‘mutate’ to drop a variable.  New variables
-#'     overwrite existing variables of the same name.
+#'     variable, and the value will be its corresponding value.
+#'      New variables
+#'     overwrite existing variables of the same name. NOTE that the new
+#'     value could only be of length 1 or the operation of existing columns.
+#'     If a new vector of values are given, error will return. This is due
+#'     to the internal method of 'mutate.tbl_lazy' not being able to take
+#'     new arbitrary values. 
 #' }
 #' @export
 #' @examples
@@ -427,7 +431,8 @@ mutate.SQLDataFrame <- function(.data, ...)
         tbl <- tbl(con, auxSchema)
         }
     }
-    tbl_out <- dplyr::mutate(tbl, ...)
+    tbl_out <- dplyr::mutate(tbl, ...) ## FIXME: use mutate(xx = NULL) to remove column?
+    ## once done, add to @param ...: Use ‘NULL’ value in ‘mutate’ to drop a variable.
     out <- BiocGenerics:::replaceSlots(.data, tblData = tbl_out)
 
     ## check if not-null for the existing @indexes, and update for mutate.
