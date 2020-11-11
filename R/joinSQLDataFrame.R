@@ -147,11 +147,10 @@ inner_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @aliases semi_join semi_join,SQLDataFrame-method
 #' @export
 semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c(".x", ".y"),
+                                   ## suffix = c(".x", ".y"),
                                    ...) 
 {
         out <- .doCompatibleFunction(x, y, by = by, copy = FALSE,
-                                     suffix = suffix,
                                      auto_index = FALSE,
                                      FUN = dbplyr:::semi_join.tbl_lazy,
                                      ...)
@@ -180,10 +179,11 @@ semi_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
 #' @aliases anti_join anti_join,SQLDataFrame-method
 #' @export
 anti_join.SQLDataFrame <- function(x, y, by = NULL, copy = FALSE,
-                                   suffix = c(".x", ".y"),
+                                   ## suffix = c(".x", ".y"),
                                    ...) 
 {
     out <- .doCompatibleFunction(x, y, copy = FALSE,
+                                 auto_index = FALSE,
                                  FUN = dbplyr:::anti_join.tbl_lazy,
                                  ...)
     if (!identical(dbkey(x), dbkey(y))) {

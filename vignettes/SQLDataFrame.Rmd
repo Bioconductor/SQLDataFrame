@@ -192,7 +192,7 @@ aa <- rbind(obj[1:5, ], obj[6:10, ])
 aa
 dbtable(aa)  ## message
 bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
-                       dbtable = "aa", overwrite = TRUE)
+                       dbtable = "aa")
 connSQLDataFrame(bb)
 dbtable(bb)
 ```
