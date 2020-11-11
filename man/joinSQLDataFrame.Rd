@@ -19,9 +19,9 @@
 
 \method{inner_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
 
-\method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+\method{semi_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, ...)
 
-\method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+\method{anti_join}{SQLDataFrame}(x, y, by = NULL, copy = FALSE, ...)
 }
 \arguments{
 \item{x}{\code{SQLDataFrame} objects to join.}

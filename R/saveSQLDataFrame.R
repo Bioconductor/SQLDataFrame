@@ -110,9 +110,9 @@ saveSQLDataFrame <- function(x,
     }
     ## add unique index file with dbkey(x)
     if (index)
-        dbplyr:::db_create_indexes.DBIConnection(con, dbtable,
-                                                 indexes = list(dbkey(x)),
-                                                 unique = TRUE)
+        dbplyr:::db_create_index.DBIConnection(con, dbtable,
+                                               columns = dbkey(x),
+                                               unique = TRUE)
     ## FIXME: implement "overwrite" argument here for the index
     ## doesn't work.
     ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
