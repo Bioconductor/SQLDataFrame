@@ -388,9 +388,13 @@ filter.SQLDataFrame <- function(.data, ...)
     tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(.data), .data)
     temp <- dplyr::filter(tbl, ...)
 
-    rnms <- temp %>%
-        transmute(concat = paste(!!!syms(dbkey(.data)), sep = ":")) %>%
-        pull(concat)
+    if (is(tbl$src$con, "BigQueryConnection")) {
+        rnms <- temp %>% pull(SurrogateKey)
+    } else {
+        rnms <- temp %>%
+            transmute(concat = paste(!!!syms(dbkey(.data)), sep = ":")) %>%
+            pull(concat)
+    }
     idx <- match(rnms, ROWNAMES(.data))
 
     if (!identical(idx, normalizeRowIndex(.data))) {

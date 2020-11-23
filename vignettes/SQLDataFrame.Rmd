@@ -427,10 +427,10 @@ bqConn <- DBI::dbConnect(dbDriver("bigquery"),
                                     ## billing info.
 sdf <- SQLDataFrame(conn = bqConn, dbtable = "ncbi_clinvar_hg38_20180701")
 sdf[1:5, 1:5]
+sdf %>% select(GENEINFO)
 sdf %>% filter(GENEINFO == "PYGL:5836")
 sdf %>% filter(reference_name == "21")
 ```
-
 
 # SessionInfo()
 

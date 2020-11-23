@@ -206,8 +206,8 @@ SQLDataFrame <- function(conn,
     } else {
         tbl <- conn %>% tbl(dbtable)   ## ERROR if "dbtable" does not exist!
     }
-    dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer
-    
+    ## dbnrows <- tbl %>% summarize(n = n()) %>% pull(n) %>% as.integer  ## FIXME 
+    dbnrows <- tbl %>% transmute(cons = 1.0) %>% count(cons) %>% pull(n) %>% as.integer
     ## col.names
     cns <- colnames(tbl)
     if (is.null(col.names)) {

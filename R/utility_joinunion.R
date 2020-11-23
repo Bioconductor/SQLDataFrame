@@ -5,7 +5,8 @@
 .doCompatibleFunction <- function(x, y, localConn, ..., FUN) {
     tbls <- .join_union_prepare(x, y, localConn)
     tbl.out <- FUN(tbls[[1]], tbls[[2]], ...)
-    dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer
+    ## dbnrows <- tbl.out %>% summarize(n=n()) %>% pull(n) %>% as.integer ## FIXME
+    dbnrows <- tbl.out %>% transmute(cons = 1.0) %>% count(cons) %>% pull(n) %>% as.integer
 
     out <- BiocGenerics:::replaceSlots(x, tblData = tbl.out,
                                        dbnrows = dbnrows,
