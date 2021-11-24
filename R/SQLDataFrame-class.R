@@ -11,6 +11,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
               "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
 .SQLDataFrame <- setClass(
     "SQLDataFrame",
+    contains = "DataFrame",
     slots = c(
         dbkey = "character",
         dbnrows = "integer",  
