@@ -38,11 +38,11 @@
 
 .join_union_prepare_sqlite <- function(x, y)
 {
-    if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
-        ## may change: !is(tblData(x)$ops, "op_base")
+    if (is(tblData(x)$lazy_query, "lazy_set_op_query")) {
+        ## may change: !is(tblData(x)$lazy_query, "lazy_base_query")
         con <- connSQLDataFrame(x)
         tblx <- .open_tbl_from_connection(con, "main", x)
-        if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {
+        if (is(tblData(x)$lazy_query, "lazy_set_op_query")) {
                 ## attach all databases from y except "main", which is
                 ## temporary connection from "union" or "join"
                 dbs <- .dblist(con)
@@ -63,7 +63,7 @@
         } else {
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         }
-    } else if (is(tblData(y)$ops, "op_double") | is(tblData(y)$ops, "op_single")) {
+    } else if (is(tblData(x)$lazy_query, "lazy_set_op_query")) {
         con <- connSQLDataFrame(y)
         tbly <- .open_tbl_from_connection(con, "main", y)
         tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)

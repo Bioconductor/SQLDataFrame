@@ -296,11 +296,11 @@ setGeneric("dbtable", signature = "x", function(x)
 
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
-    op <- tblData(x)$ops
-    if (! is(op, "op_double")) {
+    op <- tblData(x)$lazy_query
+    if (! is(op, "lazy_set_op_query")) {
         out1 <- op$x
         repeat {
-            if (is(out1, "op_double")) {
+            if (is(out1, "lazy_set_op_query")) {
                 return(message(.msg_dbtable))
             } else if (is.ident(out1)) break
             out1 <- out1$x
