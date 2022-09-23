@@ -370,8 +370,8 @@ select.SQLDataFrame <- function(.data, ...)
 {
     tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(.data), .data)
     dots <- quos(...)
-    old_vars <- op_vars(tbl$ops)
-    new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tbl$ops))
+    old_vars <- op_vars(tbl$lazy_query)
+    new_vars <- tidyselect::vars_select(old_vars, !!!dots, .include = op_grps(tbl$lazy_query))
     .extractCOLS_SQLDataFrame(.data, new_vars)
 }
 

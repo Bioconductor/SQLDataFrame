@@ -7,7 +7,7 @@ author:
   affiliation: Roswell Park Comprehensive Cancer Center, Buffalo, NY
 date: "last compiled: `r Sys.Date()`"
 output:
-    BiocStyle::html_document:
+    rmarkdown::html_document:
         toc: true
         toc_float: true
 package: SQLDataFrame
@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-date: "last edit: 9/30/2019"
+date: "last edit: 9/21/2022"
 
 [dbplyr]: https://cran.r-project.org/web/packages/dbplyr/index.html
 

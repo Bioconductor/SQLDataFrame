@@ -59,7 +59,7 @@ saveSQLDataFrame <- function(x,
                                  db_sql_render(con, tbl), con = con) 
             dbExecute(con, sql_cmd)
         } else {
-            if (is(tblData(x)$ops, "op_double")) ## from "*_join" or "union", etc
+            if (is(tblData(x)$lazy_query, "op_double")) ## from "*_join" or "union", etc
                 stop("Saving SQLDataFrame with lazy join / union queries ",
                      "from same non-writable MySQL database is not supported!")
             if (!.mysql_has_write_perm(localConn))
@@ -88,14 +88,14 @@ saveSQLDataFrame <- function(x,
                 stop("The 'dbname' already exists! Please provide a new value ",
                      "OR change 'overwrite = TRUE'. ")
         }
-        if (is(tblData(x)$ops, "op_base") ) {  
+        if (is(tblData(x)$lazy_query, "lazy_base_query")) {  
             con <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
             aux <- .attach_database(con, connSQLDataFrame(x)@dbname)
             tbl <- .open_tbl_from_connection(con, aux, x)  ## already
                                                             ## evaluated
                                                             ## ridx
                                                             ## here.
-        } else if (is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) { 
+        } else if (is(tblData(x)$lazy_query, "lazy_set_op_query")) { 
             con <- connSQLDataFrame(x)
             tbl <- tblData(x)
             ## Since the "*_join", "union" function returns @indexes
@@ -120,7 +120,7 @@ saveSQLDataFrame <- function(x,
 
     ## This chunk applies to an input SQLDataFrame from "rbind"
     if (is(con, "SQLiteConnection")) {
-        if(is(tblData(x)$ops, "op_double") | is(tblData(x)$ops, "op_single")) {
+        if(is(tblData(x)$lazy_query, "lazy_set_op_query")) {
             file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
             sql_drop <- build_sql("DROP TABLE ", sql(dbtable), con = con)
             dbExecute(con, sql_drop)
