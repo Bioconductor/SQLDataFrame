@@ -6,8 +6,9 @@
 \alias{head,SQLDataFrame-method}
 \alias{tail,SQLDataFrame-method}
 \alias{tail}
-\alias{dim,SQLDataFrame-method}
+\alias{nrow,SQLDataFrame-method}
 \alias{dim}
+\alias{dim,SQLDataFrame-method}
 \alias{dimnames,SQLDataFrame-method}
 \alias{dimnames}
 \alias{length,SQLDataFrame-method}
@@ -35,7 +36,7 @@
 
 \S4method{tail}{SQLDataFrame}(x, n = 6L)
 
-\S4method{dim}{SQLDataFrame}(x)
+\S4method{nrow}{SQLDataFrame}(x)
 
 \S4method{dimnames}{SQLDataFrame}(x)
 

@@ -62,12 +62,7 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 #' length(obj)
 #' names(obj)
 
-setMethod("dim", "SQLDataFrame", function(x)
-{
-    nr <- length(normalizeRowIndex(x))
-    nc <- length(colnames(x))
-    return(c(nr, nc))
-})
+setMethod("nrow", "SQLDataFrame", function(x) length(normalizeRowIndex(x)))
 
 #' @rdname SQLDataFrame-methods
 #' @aliases dimnames dimnames,SQLDataFrame-method
@@ -88,7 +83,7 @@ setMethod("dimnames", "SQLDataFrame", function(x)
 #' @return \code{length}: An integer
 #' @export
 
-setMethod("length", "SQLDataFrame", function(x) ncol(x) )
+setMethod("length", "SQLDataFrame", function(x) length(colnames(x)))
 
 #' @rdname SQLDataFrame-methods
 #' @aliases names length,SQLDataFrame-method
@@ -97,6 +92,12 @@ setMethod("length", "SQLDataFrame", function(x) ncol(x) )
 
 setMethod("names", "SQLDataFrame", function(x) colnames(x))
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
+
+setReplaceMethod("dimnames", "SQLDataFrame", function(x, value)
+{
+    stop("invalid to use dimnames()<- on an ",
+         "S4 object of class '", class(x), "'")
+})
 
 
 ###--------------------
