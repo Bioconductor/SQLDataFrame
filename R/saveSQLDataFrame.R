@@ -59,7 +59,7 @@ saveSQLDataFrame <- function(x,
                                  db_sql_render(con, tbl), con = con) 
             dbExecute(con, sql_cmd)
         } else {
-            if (is(tblData(x)$lazy_query, "op_double")) ## from "*_join" or "union", etc
+            if (is(tblData(x)$lazy_query, "lazy_set_op_query")) ## from "*_join" or "union", etc
                 stop("Saving SQLDataFrame with lazy join / union queries ",
                      "from same non-writable MySQL database is not supported!")
             if (!.mysql_has_write_perm(localConn))
@@ -95,7 +95,7 @@ saveSQLDataFrame <- function(x,
                                                             ## evaluated
                                                             ## ridx
                                                             ## here.
-        } else if (is(tblData(x)$lazy_query, "lazy_set_op_query")) { 
+        } else if (is(tblData(x)$lazy_query, "lazy_set_op_query") | is(tblData(x)$lazy_query, "lazy_select_query")) { 
             con <- connSQLDataFrame(x)
             tbl <- tblData(x)
             ## Since the "*_join", "union" function returns @indexes
