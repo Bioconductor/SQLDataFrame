@@ -90,7 +90,7 @@ setMethod("length", "SQLDataFrame", function(x) length(colnames(x)))
 #' @return \code{names}: A character vector
 #' @export
 
-setMethod("names", "SQLDataFrame", function(x) colnames(x))
+setMethod("names", "SQLDataFrame", function(x) dimnames(x)[[2]])
 ## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
 
 setReplaceMethod("dimnames", "SQLDataFrame", function(x, value)
