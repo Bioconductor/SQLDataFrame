@@ -156,7 +156,7 @@ setMethod("length", "SQLDataFrame", function(x) length(colnames(x)))
 setMethod("dimnames", "SQLDataFrame", function(x)
 {
     ans <- list(rownames(x), colnames(x))
-    simplify_NULL_dimnames(ans)
+    DelayedArray:::simplify_NULL_dimnames(ans)
 })
 
 #' @rdname SQLDataFrame-methods
