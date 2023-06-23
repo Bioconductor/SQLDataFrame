@@ -297,19 +297,14 @@ setGeneric("dbtable", signature = "x", function(x)
 
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
-    op <- tblData(x)$lazy_query
-    if (! is(op, "lazy_set_op_query")) {
-        out1 <- op$x
-        repeat {
-            if (is(out1, "lazy_set_op_query")) {
-                return(message(.msg_dbtable))
-            } else if (is.ident(out1)) break
-            out1 <- out1$x
-        }
-           return(as.character(out1))
-    } else {
+    res <- dbplyr::remote_name(tblData(x))
+    if (is.null(res))
         warning(.msg_dbtable)
-    }
+    as.character(res)
+
+    ## } else {
+    ##     warning(.msg_dbtable)
+    ## }
 })
 .msg_dbtable <- paste0("## not available for SQLDataFrame with lazy queries ",
                        "of 'union', 'join', or 'rbind'. \n",
