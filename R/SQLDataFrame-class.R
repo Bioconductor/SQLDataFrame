@@ -68,7 +68,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' all.equal(obj, obj2)  ## [1] TRUE
 #' 
 #' ## slot accessors
-#' connSQLDataFrame(obj)
+#' dbcon(obj)
 #' dbtable(obj)
 #' dbkey(obj)
 #' dbkey(obj1)
@@ -333,7 +333,7 @@ setGeneric(
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
-    if (is(connSQLDataFrame(x), "BigQueryConnection"))
+    if (is(dbcon(x), "BigQueryConnection"))
         stop("Redefining of 'dbkey' for BigQueryConnection is not supported!")
     if (!all(value %in% colnames(tblData(x))))
         stop("Please choose 'dbkey' from the following: ",

@@ -47,7 +47,7 @@
 \alias{mutate.SQLDataFrame}
 \alias{mutate}
 \alias{mutate,SQLDataFrame-methods}
-\alias{connSQLDataFrame}
+\alias{dbcon}
 \title{SQLDataFrame methods}
 \usage{
 \S4method{head}{SQLDataFrame}(x, n = 6L)
@@ -90,7 +90,7 @@
 
 \method{mutate}{SQLDataFrame}(.data, ...)
 
-connSQLDataFrame(x)
+dbcon(x)
 }
 \arguments{
 \item{x}{An \code{SQLDataFrame} object.}
@@ -208,7 +208,7 @@ Use \code{filter()} to choose rows/cases where
     input. New variables overwrite existing variables of the same
     name.
 
-\code{connSQLDataFrame} returns the connection of a
+\code{dbcon} returns the connection of a
     SQLDataFrame object.
 }
 \examples{
@@ -297,5 +297,5 @@ obj1 \%>\% select(region, size, population) \%>\%
 ## connection info
 ###################
 
-connSQLDataFrame(obj)
+dbcon(obj)
 }

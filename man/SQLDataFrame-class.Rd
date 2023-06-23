@@ -136,7 +136,7 @@ obj2 <- SQLDataFrame(dbname = dbname, type = "SQLite",
 all.equal(obj, obj2)  ## [1] TRUE
 
 ## slot accessors
-connSQLDataFrame(obj)
+dbcon(obj)
 dbtable(obj)
 dbkey(obj)
 dbkey(obj1)

@@ -157,7 +157,7 @@ functions.
 slotNames(obj)
 dbtable(obj)
 dbkey(obj)
-connSQLDataFrame(obj)
+dbcon(obj)
 dbnrows(obj)
 ```
 
@@ -194,7 +194,7 @@ aa
 dbtable(aa)  ## message
 bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
                        dbtable = "aa")
-connSQLDataFrame(bb)
+dbcon(bb)
 dbtable(bb)
 ```
 
@@ -221,7 +221,7 @@ write.csv(mtc, file= filename, row.names = FALSE)
 aa <- makeSQLDataFrame(filename, dbkey = "rowname", sep = ",",
                        overwrite = TRUE)
 aa
-connSQLDataFrame(aa)
+dbcon(aa)
 dbtable(aa)
 ```
 
@@ -238,11 +238,11 @@ It's also recommended that users call `saveSQLDataFrame` frequently to
 avoid too many lazy layers which slows down the data processing. 
 
 ```{r}
-connSQLDataFrame(obj)
+dbcon(obj)
 dbtable(obj)
 obj1 <- saveSQLDataFrame(obj, dbname = tempfile(fileext = ".db"),
                         dbtable = "obj_copy")
-connSQLDataFrame(obj1)
+dbcon(obj1)
 dbtable(obj1)
 ```
 

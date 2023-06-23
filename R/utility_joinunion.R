@@ -23,8 +23,8 @@
 {
     ## X and Y must built from same SQL database (e.g., SQLite, MySQL,
     ## etc.)
-    connTypeX <- class(connSQLDataFrame(x))
-    connTypeY <- class(connSQLDataFrame(y))
+    connTypeX <- class(dbcon(x))
+    connTypeY <- class(dbcon(y))
     stopifnot(identical(connTypeY, connTypeY))
     switch(connTypeX,
            "SQLiteConnection" = .join_union_prepare_sqlite(x, y),
@@ -40,13 +40,13 @@
 {
     if (is(tblData(x)$lazy_query, "lazy_set_op_query")) {
         ## may change: !is(tblData(x)$lazy_query, "lazy_base_query")
-        con <- connSQLDataFrame(x)
+        con <- dbcon(x)
         tblx <- .open_tbl_from_connection(con, "main", x)
         if (is(tblData(y)$lazy_query, "lazy_set_op_query")) {
                 ## attach all databases from y except "main", which is
                 ## temporary connection from "union" or "join"
                 dbs <- .dblist(con)
-                cony <- connSQLDataFrame(y)
+                cony <- dbcon(y)
                 tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
                 dbsy <- .dblist(cony)[-1,]
                 
@@ -64,7 +64,7 @@
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         }
     } else if (is(tblData(y)$lazy_query, "lazy_set_op_query")) {
-        con <- connSQLDataFrame(y)
+        con <- dbcon(y)
         tbly <- .open_tbl_from_connection(con, "main", y)
         tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
     } else { 
@@ -78,7 +78,7 @@
 
 .attachMaybe_and_open_tbl_in_new_connection <- function(con, sdf) {
     dbs <- .dblist(con)
-    dbname <- connSQLDataFrame(sdf)@dbname
+    dbname <- dbcon(sdf)@dbname
     aux <- dbs[match(dbname, dbs$file), "name"]
     if (is.na(aux))
         aux <- .attach_database(con, dbname)
@@ -90,7 +90,7 @@
     return(res)
 }
 .dblist_SQLDataFrame <- function(sdf) {
-    con <- connSQLDataFrame(sdf)
+    con <- dbcon(sdf)
     .dblist(con)
 }
 .attach_database <- function(con, dbname, aux = NULL) {
@@ -120,8 +120,8 @@
     fedtablex <- dplyr:::random_table_name()
     fedtabley <- dplyr:::random_table_name()
     
-    conx <- connSQLDataFrame(x)
-    cony <- connSQLDataFrame(y)
+    conx <- dbcon(x)
+    cony <- dbcon(y)
     tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
     tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
 
@@ -149,11 +149,11 @@
         fedx <- .createFedTable_and_reopen_tbl(x,
                                                localConn,
                                                fedtablex,
-                                               remotePswd = .get_mysql_var(connSQLDataFrame(x)))
+                                               remotePswd = .get_mysql_var(dbcon(x)))
         fedy <- .createFedTable_and_reopen_tbl(y,
                                                localConn,
                                                fedtabley,
-                                               remotePswd = .get_mysql_var(connSQLDataFrame(y)))
+                                               remotePswd = .get_mysql_var(dbcon(y)))
     }
     return(list(tblx, tbly))
 }    
@@ -165,7 +165,7 @@
                                            localConn,
                                            ldbtableName,
                                            remotePswd = NULL) {
-    .create_federated_table(remoteConn = connSQLDataFrame(sdf),
+    .create_federated_table(remoteConn = dbcon(sdf),
                             dbtableName = dbtable(sdf),
                             localConn = localConn, 
                             ldbtableName = ldbtableName,

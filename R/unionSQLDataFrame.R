@@ -1,6 +1,6 @@
 .union_SQLDataFrame <- function(x, y, localConn, ...)
 {
-    type <- class(connSQLDataFrame(x))
+    type <- class(dbcon(x))
     switch(type,
            SQLiteConnection = .union_SQLDataFrame_sqlite(x, y),
            MySQLConnection = .union_SQLDataFrame_mysql(x, y, localConn))

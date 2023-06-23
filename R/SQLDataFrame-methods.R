@@ -491,19 +491,19 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(connSQLDataFrame(.data), "MySQLConnection")) {
-        con <- connSQLDataFrame(.data)
+    if (is(dbcon(.data), "MySQLConnection")) {
+        con <- dbcon(.data)
         tbl <- tblData(.data)
     } ## FIXME: generalize and remove duplicate code, check for SQLite
       ## cases, any chance to avoid creating new local connections?
     else {
         if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
-            con <- connSQLDataFrame(.data)
+            con <- dbcon(.data)
             tbl <- tblData(.data)
         } else {
             dbname <- tempfile(fileext = ".db")
             con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-            aux <- .attach_database(con, connSQLDataFrame(.data)@dbname)
+            aux <- .attach_database(con, dbcon(.data)@dbname)
             auxSchema <- in_schema(aux, ident(dbtable(.data)))
         tbl <- tbl(con, auxSchema)
         }
@@ -522,7 +522,7 @@ mutate.SQLDataFrame <- function(.data, ...)
     return(out)
 }
 
-#' @description \code{connSQLDataFrame} returns the connection of a
+#' @description \code{dbcon} returns the connection of a
 #'     SQLDataFrame object.
 #' @rdname SQLDataFrame-methods
 #' @export
@@ -532,8 +532,8 @@ mutate.SQLDataFrame <- function(.data, ...)
 #' ## connection info
 #' ###################
 #'
-#' connSQLDataFrame(obj)
-connSQLDataFrame <- function(x)
+#' dbcon(obj)
+dbcon <- function(x)
 {
-    tblData(x)$src$con
+    dbplyr::remote_con(tblData(x))
 }
