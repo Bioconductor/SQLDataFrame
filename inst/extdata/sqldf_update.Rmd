@@ -1,0 +1,78 @@
+## todo: rownames(sqldf) issue by Herve
+
+Now SQLDataFrame can be embedded into SE. 
+
+Anything else to try? 
+
+- add "rownames()" method so that mcols() works for GRanges and SE objects with SQLDataFrame. 
+
+- Derive a better SE example. bigger data (variant/transcripts?), with bigger annotation data (geneid, txid, txstart, etc, from orgDB, EnsDB?). use makeSQLDataFrame for rowData() and colData(). 
+2. 
+
+```{r}
+library(SQLDataFrame)
+library(DBI)
+dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
+obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
+dim(obj)
+is(obj) ## now extend "DataFrame" virtual class. 
+
+library(GenomicRanges)
+gr <- GRanges("chr1", IRanges(1:50, 60))
+mcols(gr) <- obj
+gr
+rownames(gr)  ## FIXME
+```
+
+
+```{r}
+library(SummarizedExperiment)
+assay <- array(1:10, dim = c(50, 2))
+cdata <- obj[1:2, ]
+
+se <- SummarizedExperiment(assays = assay,
+                           rowRanges = gr,
+                           colData = cdata)
+colData(se)  ## FIXME 6/26/23, print method shows "DataFrame" not "SQLDataFrame"... 
+
+```
+
+## `use.names = TRUE` why fixed? 
+
+```
+> selectMethod(mcols, "GRanges")
+Method Definition:
+
+function (x, use.names = TRUE, ...) 
+elementMetadata(x, use.names = use.names, ...)
+<bytecode: 0x556e53c14968>
+<environment: namespace:S4Vectors>
+
+Signatures:
+        x        
+target  "GRanges"
+defined "Vector" 
+
+
+> selectMethod(elementMetadata, "GRanges")
+Method Definition:
+
+function (x, use.names = TRUE, ...) 
+{
+    if (!isTRUEorFALSE(use.names)) 
+        stop("'use.names' must be TRUE or FALSE")
+    ans <- updateObject(x@elementMetadata, check = FALSE)
+    if (use.names && !is.null(ans)) 
+        rownames(ans) <- names(x)
+    ans
+}
+<bytecode: 0x556e52195b60>
+<environment: namespace:S4Vectors>
+
+Signatures:
+        x        
+target  "GRanges"
+defined "Vector" 
+
+```

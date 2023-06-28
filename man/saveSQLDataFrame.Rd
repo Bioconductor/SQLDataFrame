@@ -8,7 +8,7 @@ saveSQLDataFrame(
   x,
   dbname = tempfile(fileext = ".db"),
   dbtable = deparse(substitute(x)),
-  localConn = connSQLDataFrame(x),
+  localConn = dbcon(x),
   overwrite = FALSE,
   index = TRUE,
   ...
@@ -60,6 +60,6 @@ conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 obj1 <- obj[1:10, 2:3]
 obj1 <- saveSQLDataFrame(obj1, dbtable = "obj_subset")
-connSQLDataFrame(obj1)
+dbcon(obj1)
 dbtable(obj1)
 }

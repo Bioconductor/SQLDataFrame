@@ -68,7 +68,7 @@ setOldClass(c("tbl_MySQLConnection", "tbl_SQLiteConnection",
 #' all.equal(obj, obj2)  ## [1] TRUE
 #' 
 #' ## slot accessors
-#' connSQLDataFrame(obj)
+#' dbcon(obj)
 #' dbtable(obj)
 #' dbkey(obj)
 #' dbkey(obj1)
@@ -297,19 +297,14 @@ setGeneric("dbtable", signature = "x", function(x)
 
 setMethod("dbtable", "SQLDataFrame", function(x)
 {
-    op <- tblData(x)$lazy_query
-    if (! is(op, "lazy_set_op_query")) {
-        out1 <- op$x
-        repeat {
-            if (is(out1, "lazy_set_op_query")) {
-                return(message(.msg_dbtable))
-            } else if (is.ident(out1)) break
-            out1 <- out1$x
-        }
-           return(as.character(out1))
-    } else {
+    res <- dbplyr::remote_name(tblData(x))
+    if (is.null(res))
         warning(.msg_dbtable)
-    }
+    as.character(res)
+
+    ## } else {
+    ##     warning(.msg_dbtable)
+    ## }
 })
 .msg_dbtable <- paste0("## not available for SQLDataFrame with lazy queries ",
                        "of 'union', 'join', or 'rbind'. \n",
@@ -338,7 +333,7 @@ setGeneric(
 #' @rawNamespace import(BiocGenerics, except=c("combine"))
 #' @export
 setReplaceMethod( "dbkey", "SQLDataFrame", function(x, value) {
-    if (is(connSQLDataFrame(x), "BigQueryConnection"))
+    if (is(dbcon(x), "BigQueryConnection"))
         stop("Redefining of 'dbkey' for BigQueryConnection is not supported!")
     if (!all(value %in% colnames(tblData(x))))
         stop("Please choose 'dbkey' from the following: ",

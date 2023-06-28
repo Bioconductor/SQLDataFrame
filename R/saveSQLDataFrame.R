@@ -36,7 +36,7 @@
 #' obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 #' obj1 <- obj[1:10, 2:3]
 #' obj1 <- saveSQLDataFrame(obj1, dbtable = "obj_subset")
-#' connSQLDataFrame(obj1)
+#' dbcon(obj1)
 #' dbtable(obj1)
 #' @export
 
@@ -44,12 +44,12 @@
 saveSQLDataFrame <- function(x,
                              dbname = tempfile(fileext = ".db"),  ## only used for SQLiteConnection
                              dbtable = deparse(substitute(x)), 
-                             localConn = connSQLDataFrame(x),  ## only used for MySQLConnection
+                             localConn = dbcon(x),  ## only used for MySQLConnection
                              overwrite = FALSE,  ## only used for SQLiteConnection
                              index = TRUE, ...)
 {
-    if (is(connSQLDataFrame(x), "MySQLConnection")) {
-        con <- connSQLDataFrame(x)
+    if (is(dbcon(x), "MySQLConnection")) {
+        con <- dbcon(x)
         if (identical(con, localConn)) {
             if (!.mysql_has_write_perm(con))
                 stop("Please provide a MySQL connection ",
@@ -59,7 +59,9 @@ saveSQLDataFrame <- function(x,
                                  db_sql_render(con, tbl), con = con) 
             dbExecute(con, sql_cmd)
         } else {
-            if (is(tblData(x)$lazy_query, "lazy_set_op_query")) ## from "*_join" or "union", etc
+            if (is.null(remote_name(tblData(u1))))
+                ## means non-"lazy_base_remote_query", from
+                ## join/union/rbind, etc.
                 stop("Saving SQLDataFrame with lazy join / union queries ",
                      "from same non-writable MySQL database is not supported!")
             if (!.mysql_has_write_perm(localConn))
@@ -81,34 +83,19 @@ saveSQLDataFrame <- function(x,
                 dbExecute(con, sql_drop)
             }
         }
-    } else if(is(connSQLDataFrame(x), "SQLiteConnection")) { 
+    } else if(is(dbcon(x), "SQLiteConnection")) { 
         if (file.exists(dbname)) {
             dbname <- file_path_as_absolute(dbname)
             if (overwrite == FALSE)
                 stop("The 'dbname' already exists! Please provide a new value ",
                      "OR change 'overwrite = TRUE'. ")
         }
-        if (is(tblData(x)$lazy_query, "lazy_base_query")) {  
-            con <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
-            aux <- .attach_database(con, connSQLDataFrame(x)@dbname)
-            tbl <- .open_tbl_from_connection(con, aux, x)  ## already
-                                                            ## evaluated
-                                                            ## ridx
-                                                            ## here.
-        } else if (is(tblData(x)$lazy_query, "lazy_set_op_query") | is(tblData(x)$lazy_query, "lazy_select_query")) { 
-            con <- connSQLDataFrame(x)
-            tbl <- tblData(x)
-            ## Since the "*_join", "union" function returns @indexes
-            ## as NULL. Only "rbind" will retain the @indexes[[1]],
-            ## and which be processed as an additional file
-            ## "dbtable_ridx". So here we only use "tblData(x)"
-            ## instead of ".extract_tbl_from_SQLDataFrame_indexes"
+        con <- dbcon(x)
+        tbl <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
         }
         sql_cmd <- build_sql("CREATE TABLE ", sql(dbtable), " AS ",
                              db_sql_render(con, tbl), con = con)
         dbExecute(con, sql_cmd)
-    }
-    ## add unique index file with dbkey(x)
     if (index)
         dbplyr:::db_create_index.DBIConnection(con, dbtable,
                                                columns = dbkey(x),
@@ -117,19 +104,16 @@ saveSQLDataFrame <- function(x,
     ## doesn't work.
     ## https://www.w3schools.com/sql/sql_create_index.asp DROP INDEX
     ## table_name.index_name; see also: dbRemoveTable()
-
+    
     ## This chunk applies to an input SQLDataFrame from "rbind"
-    if (is(con, "SQLiteConnection")) {
-        if(is(tblData(x)$lazy_query, "lazy_set_op_query")) {
-            file.copy(connSQLDataFrame(x)@dbname, dbname, overwrite = overwrite)
-            sql_drop <- build_sql("DROP TABLE ", sql(dbtable), con = con)
-            dbExecute(con, sql_drop)
-            con <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
-            if (!is.null(ridx(x))) {
-                dbWriteTable(con, paste0(dbtable, "_ridx"),
-                             value = data.frame(ridx = ridx(x)))
-            }  ## save database file into the provided "dbname" file path.
-        }
+    file.copy(dbcon(x)@dbname, dbname, overwrite = overwrite)
+    sql_drop <- build_sql("DROP TABLE ", sql(dbtable), con = con)
+    dbExecute(con, sql_drop)
+    con <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbname)
+    if (!is.null(ridx(x))) {
+        dbWriteTable(con, paste0(dbtable, "_ridx"),
+                     value = data.frame(ridx = ridx(x)),
+                     overwrite = overwrite)
     }
     .msg_saveSQLDataFrame(x, con, dbtable)
     suppressMessages(res <- SQLDataFrame(conn = con, dbtable = dbtable, dbkey = dbkey(x)))

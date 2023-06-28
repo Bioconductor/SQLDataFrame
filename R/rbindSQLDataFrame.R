@@ -12,7 +12,8 @@
     cnm <- cnms[[1]]
     rnms_final <- do.call(c, lapply(objects, ROWNAMES))
 
-    ## pairwise "union" with multiple input. 
+    ## pairwise "union" with multiple input. @indexes will be reset to
+    ## NULL after union.
     out <- union(objects[[1]], objects[[2]])
     objects <- objects[-seq_len(2)]
     repeat{
@@ -22,7 +23,9 @@
     }
 
     idx <- match(rnms_final, out@dbconcatKey)
-    out@indexes[[1]] <- idx
+    if (!identical(idx, seq_len(nrow(out))))
+        out@indexes[[1]] <- idx
+    ## FIXME: if idx is seq_len(nrow(out)), then use NULL
     return(out)
 }
 

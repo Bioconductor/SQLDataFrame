@@ -7,16 +7,34 @@
 \alias{tail,SQLDataFrame-method}
 \alias{tail}
 \alias{nrow,SQLDataFrame-method}
+\alias{nrow}
 \alias{dim}
 \alias{dim,SQLDataFrame-method}
-\alias{dimnames,SQLDataFrame-method}
-\alias{dimnames}
-\alias{length,SQLDataFrame-method}
-\alias{length}
 \alias{names,SQLDataFrame-method}
 \alias{names}
+\alias{names<-,SQLDataFrame-method}
+\alias{names<-}
+\alias{names<-,SQLDataFrame}
+\alias{colnames,SQLDataFrame-method}
+\alias{colnames}
+\alias{colnames<-,SQLDataFrame-method}
+\alias{colnames<-}
+\alias{rownames,SQLDataFrame-method}
+\alias{rownames}
+\alias{rownames<-,SQLDataFrame-method}
+\alias{rownames<-}
+\alias{length,SQLDataFrame-method}
+\alias{length}
+\alias{dimnames,SQLDataFrame-method}
+\alias{dimnames}
+\alias{dimnames<-,SQLDataFrame,ANY-method}
+\alias{dimnames<-}
+\alias{dimnames<-,SQLDataFrame-method}
+\alias{[,SQLDataFrame,ANY,ANY,ANY-method}
 \alias{[,SQLDataFrame,ANY-method}
+\alias{[,SQLDataFrame,SQLDataFrame,ANY,ANY-method}
 \alias{[,SQLDataFrame,SQLDataFrame-method}
+\alias{[,SQLDataFrame,list,ANY,ANY-method}
 \alias{[,SQLDataFrame,list-method}
 \alias{[[,SQLDataFrame-method}
 \alias{$,SQLDataFrame-method}
@@ -29,7 +47,7 @@
 \alias{mutate.SQLDataFrame}
 \alias{mutate}
 \alias{mutate,SQLDataFrame-methods}
-\alias{connSQLDataFrame}
+\alias{dbcon}
 \title{SQLDataFrame methods}
 \usage{
 \S4method{head}{SQLDataFrame}(x, n = 6L)
@@ -38,17 +56,29 @@
 
 \S4method{nrow}{SQLDataFrame}(x)
 
-\S4method{dimnames}{SQLDataFrame}(x)
+\S4method{names}{SQLDataFrame}(x)
+
+\S4method{names}{SQLDataFrame}(x) <- value
+
+\S4method{colnames}{SQLDataFrame}(x, do.NULL = TRUE, prefix = "col")
+
+\S4method{colnames}{SQLDataFrame}(x) <- value
+
+\S4method{rownames}{SQLDataFrame}(x, do.NULL = TRUE, prefix = "row")
+
+\S4method{rownames}{SQLDataFrame}(x) <- value
 
 \S4method{length}{SQLDataFrame}(x)
 
-\S4method{names}{SQLDataFrame}(x)
+\S4method{dimnames}{SQLDataFrame}(x)
 
-\S4method{[}{SQLDataFrame,ANY}(x, i, j, ..., drop = TRUE)
+\S4method{dimnames}{SQLDataFrame,ANY}(x) <- value
 
-\S4method{[}{SQLDataFrame,SQLDataFrame}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,ANY,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
-\S4method{[}{SQLDataFrame,list}(x, i, j, ..., drop = TRUE)
+\S4method{[}{SQLDataFrame,SQLDataFrame,ANY,ANY}(x, i, j, ..., drop = TRUE)
+
+\S4method{[}{SQLDataFrame,list,ANY,ANY}(x, i, j, ..., drop = TRUE)
 
 \S4method{[[}{SQLDataFrame}(x, i, j, ...)
 
@@ -60,12 +90,22 @@
 
 \method{mutate}{SQLDataFrame}(.data, ...)
 
-connSQLDataFrame(x)
+dbcon(x)
 }
 \arguments{
 \item{x}{An \code{SQLDataFrame} object.}
 
 \item{n}{Number of rows.}
+
+\item{value}{a valid value for component of \code{rownames},
+\code{colnames}, \code{dimnames}. NOTE, it doesn't make any
+change when applied to these replacement methods for
+\code{SQLDataFrame}.}
+
+\item{do.NULL}{logical. If ‘FALSE’ and names are ‘NULL’, names are
+created. See \code{base::colnames} for details.}
+
+\item{prefix}{for created names when \code{do.NULL} is FALSE.}
 
 \item{i}{Row subscript. Could be numeric / character / logical
 values, a named list of key values, and \code{SQLDataFrame},
@@ -109,13 +149,27 @@ TRUE.}
 \code{head, tail}: An \code{SQLDataFrame} object with
     certain rows.
 
-\code{dim}: interger vector
+\code{dim}: interger vector showing number of rows and cols.
 
-\code{dimnames}: A list of character vectors.
+\code{nrow}: An integer showing number of rows.
 
-\code{length}: An integer
+\code{names}: A character vector.
 
-\code{names}: A character vector
+\code{names<-}: No change.
+
+\code{colnames}: A character vector.
+
+\code{colnames<-}: No change.
+
+\code{rownames}: NULL or vector if "do.NULL = FALSE".
+
+\code{rownames<-}: No change.
+
+\code{length}: An integer same as \code{ncol}.
+
+\code{dimnames}: A list.
+
+\code{dimnames<-}: No change.
 
 \code{[i, j]}: A \code{SQLDataFrame} object or vector with
     realized column values (with single column subsetting and
@@ -136,8 +190,8 @@ TRUE.}
     the \code{SQLDataFrame} object. See \code{?S4Vectors::head} for
     more details.
 
-\code{dim, dimnames, length, names}: Retrieve the
-    dimension, dimension names, number of columns and colnames of
+\code{dim, nrow, ncol, length, dimnames, rownames,
+    colnames, names}: Retrieve the dimension and dimension names of
     SQLDataFrame object.
 
 \code{[i, j]} supports subsetting by \code{i} (for
@@ -154,7 +208,7 @@ Use \code{filter()} to choose rows/cases where
     input. New variables overwrite existing variables of the same
     name.
 
-\code{connSQLDataFrame} returns the connection of a
+\code{dbcon} returns the connection of a
     SQLDataFrame object.
 }
 \examples{
@@ -167,9 +221,13 @@ test.db <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 dim(obj)
+nrow(obj)
+ncol(obj)
 dimnames(obj)
-length(obj)
+rownames(obj)
 names(obj)
+colnames(obj)
+length(obj)
 
 obj1 <- SQLDataFrame(conn = conn, dbtable = "state",
                      dbkey = c("region", "population"))
@@ -239,5 +297,5 @@ obj1 \%>\% select(region, size, population) \%>\%
 ## connection info
 ###################
 
-connSQLDataFrame(obj)
+dbcon(obj)
 }

@@ -30,6 +30,7 @@ date: "last edit: 9/21/2022"
 
 Load packages into R session. It will automatically load the package
 of `dplyr` and `dbplyr`.
+
 ```{r Load, message=FALSE, eval = TRUE}
 library(SQLDataFrame)
 library(DBI)
@@ -40,6 +41,7 @@ library(DBI)
 ```{r constructor}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile)
+dbListTables(conn)
 obj <- SQLDataFrame(
     conn = conn, dbtable = "state", dbkey = "state")
 obj
@@ -56,17 +58,18 @@ functions.
 slotNames(obj)
 dbtable(obj)
 dbkey(obj)
+dbcon(obj)
 ```
 
 ## `tblData` slot
 
 The `tblData` slot saves the `dbplyr::tbl_dbi` version of the database
 table, which is a light-weight representation of the database table in
-_R_. Of note is that this lazy tbl only contains unique rows. It could
-also be sorted by the `dbkey(obj)` if the `SQLDataFrame` object was
-generated from `union` or `rbind`. So when the `saveSQLDataFrame()`
-function was called, a database table will be written into a physical
-disk space and have the unique records.
+_R_. Of note is that this lazy tbl only contains unique rows. The rows
+could also be sorted by the `dbkey(obj)` if the `SQLDataFrame` object
+was generated from `union` or `rbind`. So when the
+`saveSQLDataFrame()` function was called, a database table will be
+written into a physical disk space containing only the unique records.
 
 Accessor function is made avaible for this slot: 
 ```{r}
@@ -74,13 +77,14 @@ tblData(obj)
 ```
 
 ## `dbnrows` and `dbconcatKey`
+
 The `dbnrows` slot saves the number of rows corresponding to the
 `tblData`, and `dbconcatKey` saves the realized (concatenated if
 multiple) key columns corresponding to the `tblData`. Accessor
 functions are also available for these 2 slots: 
 
 ```{r}
-dbnrows(obj)
+dbnrows(obj)  ## equivalent to nrow(obj)
 dbconcatKey(obj)
 ```
 
@@ -98,6 +102,9 @@ obj_sub <- obj[sample(5, 3, replace = TRUE), 2:3]
 obj_sub
 obj_sub@indexes
 identical(tblData(obj), tblData(obj_sub))
+identical(dbnrows(obj), dbnrows(obj_sub))
+nrow(obj)
+nrow(obj_sub)
 ```
 
 With a `filter` or `select` function (which is similar to `[i, ]`
@@ -116,7 +123,7 @@ identical(tblData(obj), tblData(obj_select))
 
 # SQLDataFrame methods
 
-## ROWNAMES
+## ROWNAMES 
 
 The `ROWNAMES,SQLDataFrame` method was defined to return the
 (concatenated if multiple) key column(s) value, so that the row
@@ -140,4 +147,24 @@ obj1[c("South:3615.0", "West:365.0"), ]
 
 ```{r}
 sessionInfo()
+```
+
+## Compatibility with `GenomicRanges` and `SummarizedExperiment`
+```{r}
+
+library(SQLDataFrame)
+library(DBI)
+dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
+conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
+obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
+dim(obj)
+is(obj, "DataFrame")
+
+library(GenomicRanges)
+gr <- GRanges("chr1", IRanges(1:50, 60))
+mcols(gr) <- obj
+
+## assay <- array(1:10, dim=c(50, 2))
+## cdata <- obj[1:2, ]
+## SE(assays = assya, rowRanges = gr, colData = cdata) ## see inst/extdata/sqldf_udpate.Rmd for FIXME tag!!! 
 ```

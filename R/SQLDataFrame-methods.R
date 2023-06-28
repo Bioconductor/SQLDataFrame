@@ -41,12 +41,9 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
     ans    
 })
 
-#' @description \code{dim, dimnames, length, names}: Retrieve the
-#'     dimension, dimension names, number of columns and colnames of
+#' @description \code{dim, nrow, ncol, length, dimnames, rownames,
+#'     colnames, names}: Retrieve the dimension and dimension names of
 #'     SQLDataFrame object.
-#' @rdname SQLDataFrame-methods
-#' @aliases dim dim,SQLDataFrame-method
-#' @return \code{dim}: interger vector
 #' @export
 #' @examples
 #' 
@@ -58,45 +55,120 @@ setMethod("tail", "SQLDataFrame", function(x, n=6L)
 #' conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = test.db)
 #' obj <- SQLDataFrame(conn = conn, dbtable = "state", dbkey = "state")
 #' dim(obj)
+#' nrow(obj)
+#' ncol(obj)
 #' dimnames(obj)
-#' length(obj)
+#' rownames(obj)
 #' names(obj)
+#' colnames(obj)
+#' length(obj)
 
+#' @rdname SQLDataFrame-methods
+#' @aliases nrow nrow,SQLDataFrame-method
+#' @aliases dim dim,SQLDataFrame-method
+#' @return \code{dim}: interger vector showing number of rows and cols.  
+#' @return \code{nrow}: An integer showing number of rows.
+#' @export
 setMethod("nrow", "SQLDataFrame", function(x) length(normalizeRowIndex(x)))
 
 #' @rdname SQLDataFrame-methods
-#' @aliases dimnames dimnames,SQLDataFrame-method
-#' @return \code{dimnames}: A list of character vectors.
+#' @aliases names names,SQLDataFrame-method
+#' @return \code{names}: A character vector.
 #' @export
 
-setMethod("dimnames", "SQLDataFrame", function(x)
-{
+## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
+setMethod("names", "SQLDataFrame", function(x) {
     cns <- colnames(tblData(x))[-.wheredbkey(x)]
     cidx <- x@indexes[[2]]
     if (!is.null(cidx))
         cns <- cns[cidx]
-    return(list(NULL, cns))
+    cns
 })
 
 #' @rdname SQLDataFrame-methods
+#' @aliases names<- names<-,SQLDataFrame
+#' @return \code{names<-}: No change. 
+#' @export
+
+setReplaceMethod("names", "SQLDataFrame", function(x, value) x)
+
+#' @rdname SQLDataFrame-methods
+#' @param do.NULL logical. If ‘FALSE’ and names are ‘NULL’, names are
+#'     created. See \code{base::colnames} for details.
+#' @param prefix for created names when \code{do.NULL} is FALSE.
+#' @aliases colnames colnames,SQLDataFrame-method
+#' @return \code{colnames}: A character vector.
+#' @export
+
+setMethod("colnames", "SQLDataFrame", function (x, do.NULL = TRUE, prefix = "col") {
+    if (!(identical(do.NULL, TRUE) && identical(prefix, "col"))) 
+        stop(wmsg("argument 'do.NULL' and 'prefix' are not supported"))
+    names(x)
+})
+
+#' @rdname SQLDataFrame-methods
+#' @param value a valid value for component of \code{rownames},
+#'     \code{colnames}, \code{dimnames}. NOTE, it doesn't make any
+#'     change when applied to these replacement methods for
+#'     \code{SQLDataFrame}.
+#' @aliases colnames<- colnames<-,SQLDataFrame-method
+#' @return \code{colnames<-}: No change.
+#' @export
+
+setReplaceMethod("colnames", "SQLDataFrame", function(x, value) x)
+
+#' @rdname SQLDataFrame-methods
+#' @aliases rownames rownames,SQLDataFrame-method
+#' @return \code{rownames}: NULL or vector if "do.NULL = FALSE".
+#' @export
+
+setMethod("rownames", "SQLDataFrame", function(x, do.NULL=TRUE, prefix="row") {
+    rn <- NULL
+    if (is.null(rn) && !do.NULL) {
+        nr <- NROW(x)
+        if (nr > 0L) 
+            rn <- paste(prefix, seq_len(nr), sep = "")
+        else rn <- character(0L)
+    }
+    rn
+})
+
+#' @rdname SQLDataFrame-methods
+#' @aliases rownames<- rownames<-,SQLDataFrame-method
+#' @return \code{rownames<-}: No change. 
+#' @export
+
+## referred rownames<-,DFrame, but should always return x with NULL rownames
+setReplaceMethod("rownames", "SQLDataFrame", function(x, value) x)
+        
+#' @rdname SQLDataFrame-methods
 #' @aliases length length,SQLDataFrame-method
-#' @return \code{length}: An integer
+#' @return \code{length}: An integer same as \code{ncol}.
 #' @export
 
 setMethod("length", "SQLDataFrame", function(x) length(colnames(x)))
 
 #' @rdname SQLDataFrame-methods
-#' @aliases names length,SQLDataFrame-method
-#' @return \code{names}: A character vector
+#' @aliases dimnames dimnames,SQLDataFrame-method
+#' @return \code{dimnames}: A list. 
 #' @export
 
-setMethod("names", "SQLDataFrame", function(x) dimnames(x)[[2]])
-## used inside "[[, normalizeDoubleBracketSubscript(i, x)" 
+setMethod("dimnames", "SQLDataFrame", function(x)
+{
+    ans <- list(rownames(x), colnames(x))
+    DelayedArray:::simplify_NULL_dimnames(ans)
+})
+
+#' @rdname SQLDataFrame-methods
+#' @aliases dimnames<- dimnames<-,SQLDataFrame-method
+#' @return \code{dimnames<-}: No change. 
+#' @export
 
 setReplaceMethod("dimnames", "SQLDataFrame", function(x, value)
 {
-    stop("invalid to use dimnames()<- on an ",
-         "S4 object of class '", class(x), "'")
+    if (!(is.list(value) && length(value) == 2L)) 
+        stop(wmsg("dimnames replacement value must be a list of length 2"))
+    callNextMethod()
 })
 
 
@@ -419,19 +491,19 @@ filter.SQLDataFrame <- function(.data, ...)
 #' 
 mutate.SQLDataFrame <- function(.data, ...)
 {
-    if (is(connSQLDataFrame(.data), "MySQLConnection")) {
-        con <- connSQLDataFrame(.data)
+    if (is(dbcon(.data), "MySQLConnection")) {
+        con <- dbcon(.data)
         tbl <- tblData(.data)
     } ## FIXME: generalize and remove duplicate code, check for SQLite
       ## cases, any chance to avoid creating new local connections?
     else {
         if (is(tblData(.data)$ops, "op_double") | is(tblData(.data)$ops, "op_single")) {
-            con <- connSQLDataFrame(.data)
+            con <- dbcon(.data)
             tbl <- tblData(.data)
         } else {
             dbname <- tempfile(fileext = ".db")
             con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-            aux <- .attach_database(con, connSQLDataFrame(.data)@dbname)
+            aux <- .attach_database(con, dbcon(.data)@dbname)
             auxSchema <- in_schema(aux, ident(dbtable(.data)))
         tbl <- tbl(con, auxSchema)
         }
@@ -450,7 +522,7 @@ mutate.SQLDataFrame <- function(.data, ...)
     return(out)
 }
 
-#' @description \code{connSQLDataFrame} returns the connection of a
+#' @description \code{dbcon} returns the connection of a
 #'     SQLDataFrame object.
 #' @rdname SQLDataFrame-methods
 #' @export
@@ -460,8 +532,8 @@ mutate.SQLDataFrame <- function(.data, ...)
 #' ## connection info
 #' ###################
 #'
-#' connSQLDataFrame(obj)
-connSQLDataFrame <- function(x)
+#' dbcon(obj)
+dbcon <- function(x)
 {
-    tblData(x)$src$con
+    dbplyr::remote_con(tblData(x))
 }
