@@ -38,76 +38,76 @@
 
 .join_union_prepare_sqlite <- function(x, y)
 {
-    if (is(tblData(x)$lazy_query, "lazy_set_op_query")) {
-        ## may change: !is(tblData(x)$lazy_query, "lazy_base_query")
+    ## If x y from same connection
+    if (identical(dbcon(x), dbcon(y))) {
         con <- dbcon(x)
-        tblx <- .open_tbl_from_connection(con, "main", x)
-        if (is(tblData(y)$lazy_query, "lazy_set_op_query")) {
-                ## attach all databases from y except "main", which is
-                ## temporary connection from "union" or "join"
-                dbs <- .dblist(con)
-                cony <- dbcon(y)
-                tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
-                dbsy <- .dblist(cony)[-1,]
-                
-                idx <- match(paste(dbsy$name, dbsy$file, sep=":"),
-                             paste(dbs$name, dbs$file, sep=":"))
-                idx <- which(!is.na(idx))          
-                if (length(idx)) dbsy <- dbsy[-idx, ]
-                for (i in seq_len(nrow(dbsy))) {
-                    .attach_database(con, dbsy[i, "file"], dbsy[i, "name"])
-                }
-                ## open the lazy tbl from new connection
-                sql_cmd <- dbplyr::db_sql_render(cony, tbly)
-                tbly <- tbl(con, sql_cmd)
+        tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
+        tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
+    } else {
+        ## if different connection, then choose and open the
+        ## connection with attached databases from previous lazy
+        ## operations (rbind, union, join, etc.) and attach a new
+        ## database for the other object (x or y).
+        dbs_xcon <- .dblist(dbcon(x))$file
+        dbs_xcon <- dbs_xcon[dbs_xcon != ""]
+        dbs_ycon <- .dblist(dbcon(y))$file
+        dbs_ycon <- dbs_ycon[dbs_ycon != ""]
+        if (all(length(dbs_xcon) >1, length(dbs_ycon) > 1))
+            stop(.msg_realizeSQLDataFrame)
+        if (length(dbs_ycon) > 1) {
+            con <- dbcon(y)
+            tbly <- .extract_tbl_from_SQLDataFrame_indexes(tblData(y), y)
+            tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
         } else {
+            con <- dbcon(x)
+            tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(x), x)
             tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
         }
-    } else if (is(tblData(y)$lazy_query, "lazy_set_op_query")) {
-        con <- dbcon(y)
-        tbly <- .open_tbl_from_connection(con, "main", y)
-        tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
-    } else { 
-        dbname <- tempfile(fileext = ".db")
-        con <- DBI::dbConnect(RSQLite::SQLite(), dbname = dbname)
-        tblx <- .attachMaybe_and_open_tbl_in_new_connection(con, x)
-        tbly <- .attachMaybe_and_open_tbl_in_new_connection(con, y)
     }
     return(list(tblx, tbly))
 }
 
+.msg_realizeSQLDataFrame <- paste0(
+    "Please call 'saveSQLDataFrame()' ",
+    "to realize the existing lazy operations ",
+    "on SQLDataFrame (e.g., from 'rbind', 'join', 'union') ",
+    "before further operations! \n")
+
 .attachMaybe_and_open_tbl_in_new_connection <- function(con, sdf) {
+    ## check if the y database is already attached to the x connection
     dbs <- .dblist(con)
     dbname <- dbcon(sdf)@dbname
+    ## if yes, use the existing "aux" name
     aux <- dbs[match(dbname, dbs$file), "name"]
+    ## If not, attach here, using a random name (other than "main")
     if (is.na(aux))
         aux <- .attach_database(con, dbname)
+    ## open the y database table in x connection
     res_tbl <- .open_tbl_from_connection(con, aux, sdf)
     return(res_tbl)
 }
+
 .dblist <- function(con) {
     res <- dbGetQuery(con, "PRAGMA database_list")
     return(res)
 }
-.dblist_SQLDataFrame <- function(sdf) {
-    con <- dbcon(sdf)
-    .dblist(con)
-}
+
 .attach_database <- function(con, dbname, aux = NULL) {
     if (is.null(aux))
         aux <- dplyr:::random_table_name()
     dbExecute(con, paste0("ATTACH '", dbname, "' AS ", aux))
     return(aux)
 }
-.open_tbl_from_connection <- function(con, aux, sdf) {
-    if (aux == "main") {
-        tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblData(sdf), sdf)
-    } else {
-        auxSchema <- in_schema(aux, ident(dbtable(sdf)))
-        tblx <- tbl(con, auxSchema)
-        tblx <- .extract_tbl_from_SQLDataFrame_indexes(tblx, sdf)
-    }
-    return(tblx)
+
+.open_tbl_from_connection <- function(con, aux, sdf) 
+{
+    tblname <- tryCatch(dbtable(sdf),
+                        warning=function(w)
+                            stop(.msg_realizeSQLDataFrame))
+    auxSchema <- in_schema(aux, ident(tblname))
+    res_tbl <- tbl(con, auxSchema)
+    res_tbl <- .extract_tbl_from_SQLDataFrame_indexes(res_tbl, sdf)
+    return(res_tbl)
 }
 
 ##-----------------------------------------------------##

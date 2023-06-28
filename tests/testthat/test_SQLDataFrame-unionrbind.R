@@ -35,8 +35,8 @@ test_that("union SQLDataFrame with same source works!", {
     expect_true(validObject(u1))
     expect_identical(dim(u1), c(15L, 2L))
     expect_null(ridx(u1))
-    expect_identical(normalizePath(dirname(dbcon(u1)@dbname)),
-                     normalizePath(tempdir()))
+    expect_identical(normalizePath(dbcon(u1)@dbname),
+                     normalizePath(dbcon(obj01)@dbname))
     expect_warning(dbtable(u1))
 })
 
@@ -46,8 +46,8 @@ test_that("union SQLDataFrame with difference source works!", {
     expect_true(validObject(u2))
     expect_identical(dim(u2), c(15L, 2L))
     expect_null(ridx(u2))
-    expect_identical(normalizePath(dirname(dbcon(u2)@dbname)),
-                     normalizePath(tempdir()))
+    expect_identical(normalizePath(dbcon(u2)@dbname),
+                     normalizePath(dbcon(obj01)@dbname))
     expect_warning(dbtable(u2))
 
     u3 <- union(u2, obj21)
@@ -71,8 +71,8 @@ test_that("rbind SQLDataFrame works!", {
     expect_true(validObject(r1))
     expect_identical(dim(r1), c(18L, 2L))
     expect_identical(ridx(r1), match(ROWNAMES(r1), dbconcatKey(r1)))
-    expect_identical(normalizePath(dirname(dbcon(r1)@dbname)),
-                     normalizePath(tempdir()))
+    expect_identical(normalizePath(dbcon(r1)@dbname),
+                     normalizePath(dbcon(obj01)@dbname))
     expect_warning(dbtable(r1))
 
     r2 <- rbind(r1, obj21)
@@ -80,20 +80,36 @@ test_that("rbind SQLDataFrame works!", {
     expect_identical(dim(r2), c(22L, 2L))
     expect_identical(ridx(r2), match(ROWNAMES(r2), dbconcatKey(r2)))
     expect_identical(dbcon(r1)@dbname, dbcon(r2)@dbname)
-
+    expect_true(all.equal(as.data.frame(r2),
+                          rbind(as.data.frame(r1), as.data.frame(obj21)),
+                          check.attributes = FALSE))
     r3 <- rbind(obj21, r1)
     expect_identical(dim(r3), dim(r2))
     expect_identical(dbcon(r2)@dbname, dbcon(r3)@dbname) 
+    expect_true(all.equal(as.data.frame(r3),
+                          rbind(as.data.frame(obj21), as.data.frame(r1)),
+                          check.attributes = FALSE))
 
     ## multiple inputs
     r4 <- rbind(obj01, obj11, obj12, obj21)
     expect_identical(dim(r4), c(26L, 2L))
     expect_identical(ridx(r4), match(ROWNAMES(r4), dbconcatKey(r4)))
+    expect_true(all.equal(as.data.frame(r4),
+                          rbind(as.data.frame(obj01),
+                                as.data.frame(obj11),
+                                as.data.frame(obj12),
+                                as.data.frame(obj21)),
+                          check.attributes = FALSE))
+    
+    ## two inputs, both from "lazy_set_op" (e.g., rbind), but with
+    ## different connections. Error.
+    expect_error(r5 <- rbind(r1, rbind(obj11, obj21)))
+    
 })
 
 test_that("saveSQLDataFrame after rbind preserves row index!", {
-    r1 <- rbind(obj01, obj11)
-    r11 <- saveSQLDataFrame(r1)
+    r1 <- rbind(obj21, obj11)
+    r11 <- saveSQLDataFrame(r1, overwrite = TRUE)
     expect_identical(ridx(r1), ridx(r11))
     expect_identical(as.data.frame(r1), as.data.frame(r11))
 })

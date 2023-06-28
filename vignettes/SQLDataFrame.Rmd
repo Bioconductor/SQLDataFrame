@@ -123,6 +123,8 @@ web or cloud.
 ```{r constructor_conn}
 dbfile <- system.file("extdata/test.db", package = "SQLDataFrame")
 conn <- DBI::dbConnect(DBI::dbDriver("SQLite"), dbname = dbfile)
+dbListTables(conn)
+dbListFields(conn, "state")
 obj <- SQLDataFrame(conn = conn, dbtable = "state",
                     dbkey = "state")
 ```
@@ -190,12 +192,11 @@ disk so that `dbtable()` will be activated.
 ```{r}
 dbtable(obj)
 aa <- rbind(obj[1:5, ], obj[6:10, ])
-aa
-dbtable(aa)  ## message
-bb <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
+dbtable(aa)  ## warning
+aa1 <- saveSQLDataFrame(aa, dbname = tempfile(fileext=".db"),
                        dbtable = "aa")
-dbcon(bb)
-dbtable(bb)
+dbcon(aa)
+dbtable(aa)
 ```
 
 # makeSQLDataFrame
@@ -234,8 +235,9 @@ function for realization. `saveSQLDataFrame` write the lazy tbl
 carried in `tblData` slot into an on-disk database table, and re-open
 the `SQLDataFrame` object from the new path.
 
-It's also recommended that users call `saveSQLDataFrame` frequently to
-avoid too many lazy layers which slows down the data processing. 
+It's highly recommended that users call `saveSQLDataFrame` frequently to
+avoid potential errors rising from too many lazy layers that involves
+different database tables, especially. 
 
 ```{r}
 dbcon(obj)
@@ -330,13 +332,13 @@ implemented for `SQLDataFrame`, where `union` returns the
 original orders of input objects.
 
 ```{r}
-dbfile1 <- system.file("extdata/test.db", package = "SQLDataFrame")
+dbfile1 <- system.file("extdata/test1.db", package = "SQLDataFrame")
 con1 <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile1)
-dbfile2 <- system.file("extdata/test1.db", package = "SQLDataFrame")
+dbfile2 <- system.file("extdata/test2.db", package = "SQLDataFrame")
 con2 <- DBI::dbConnect(dbDriver("SQLite"), dbname = dbfile2)
-ss1 <- SQLDataFrame(conn = con1, dbtable = "state",
+ss1 <- SQLDataFrame(conn = con1, dbtable = "state1",
                     dbkey = c("state"))
-ss2 <- SQLDataFrame(conn = con2, dbtable = "state1",
+ss2 <- SQLDataFrame(conn = con2, dbtable = "state2",
                     dbkey = c("state"))
 ss11 <- ss1[sample(5), ]
 ss21 <- ss2[sample(10, 5), ]
@@ -352,6 +354,9 @@ obj1  ## reordered by the "dbkey()"
 ```{r}
 obj2 <- rbind(ss11, ss21) 
 obj2  ## keeping the original order by updating the row index
+
+obj3 <- rbind(obj2, ss11)
+obj3
 ```
 
 ## *_join methods

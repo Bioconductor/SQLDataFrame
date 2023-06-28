@@ -34,7 +34,7 @@ cdata <- obj[1:2, ]
 se <- SummarizedExperiment(assays = assay,
                            rowRanges = gr,
                            colData = cdata)
-
+colData(se)  ## FIXME 6/26/23, print method shows "DataFrame" not "SQLDataFrame"... 
 
 ```
 
