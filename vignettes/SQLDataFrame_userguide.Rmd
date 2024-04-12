@@ -55,11 +55,17 @@ respective extension classes (and constructor functions):
 
 - `SQLite`: `SQLiteDataFrame`
 - `DuckDB`: `DuckDBDataFrame`
+- `Parquet`: `ParquetDataFrame`
+
+Note that the support of `Parquet` is different from the
+`ParquetDataFrame` by Aaron. It uses the raw SQL queries for data
+extraction instead of through the `arrow` `Dataset`.
 
 It can be easily extended to any other SQL-backed file types by simply
 defining the extension classs in `SQL_extensions.R` with minor updates
-in `acquireConn.R` to create a database instance. Pull requests for
-adding new SQL backends are welcome!
+in `acquireConn.R` to create a database instance, `SQLDataFrame.R`,
+and `SQLColumnSeed.R`. Pull requests for adding new SQL backends are
+welcome!
 
 # Package installation
 
@@ -109,6 +115,21 @@ DBI::dbDisconnect(con)
 df1 <- SQLDataFrame(tf1, dbtype = "duckdb", table = "mtcars")
 df2 <- DuckDBDataFrame(tf1, table = "mtcars")
 identical(df1, df2)
+```
+
+We can also create a `ParquetDataFrame`. NOte that the `table`
+argument is not required for the constructor. Any given value will be
+overwritten by `my_parquet_table`. 
+
+```{r}
+tf2 <- tempfile()
+on.exit(unlink(tf2))
+arrow::write_dataset(mtcars, tf2, format = "parquet")
+dir(tf2)
+ 
+df3 <- SQLDataFrame(tf2, dbtype = "parquet") ## does not request "table"
+df4 <- ParquetDataFrame(tf2)  ## does not request "table"
+identical(df3, df4)
 ```
 
 These support all the usual methods for a `DataFrame`, except that the
@@ -175,10 +196,14 @@ file.
 
 At any point, users can retrieve a handle of connection to the
 underlying SQL file via the `acquireConn()` function. This can be used
-with methods in the `r CRANpkg("DBI")`, `r CRANpkg("RSQLite")`, and `r CRANpkg("duckdb")`
-packages. The cached `DBIConnection` for any given `path` can be
-deleted by calling `releaseConn`.
+with methods in the `r CRANpkg("DBI")`, `r CRANpkg("RSQLite")`, and `r
+CRANpkg("duckdb")` packages. The cached `DBIConnection` for any given
+`path` can be deleted by calling `releaseConn`.
 
+Note that for Parquet table, it is opened as an `arrow Dataset` first
+and then registered in a duckdb connection as a virtual
+table. `releaseConn` will unregister the table and close the
+connection.
 
 ```{r}
 handle <- acquireConn(path(df), dbtype = dbtype(df))

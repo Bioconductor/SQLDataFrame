@@ -30,7 +30,8 @@ SQLDataFrame(path, dbtype = NULL, table = NULL, columns = NULL, nrows = NULL)
 \item{path}{String containing a path to a SQL file.}
 
 \item{dbtype}{String containing the SQL database type (case
-insensitive). Supported types are "SQLite" and "DuckDB".}
+insensitive). Supported types are "SQLite", "DuckDB", and
+"Parquet".}
 
 \item{table}{String containing the name of SQL table.}
 
@@ -48,7 +49,8 @@ A SQLDataFrame where each column is a
 \description{
 Create a SQL-backed \linkS4class{DataFrame}, where the data are
 kept on disk until requested. Direct extension classes are
-\code{SQLiteDataFrame} and \code{DuckDBDataFrame}.
+\code{SQLiteDataFrame}, \code{DuckDBDataFrame}, and
+\code{ParquetDataFrame}.
 }
 \details{
 The SQLDataFrame is essentially just a
@@ -83,11 +85,17 @@ DBI::dbDisconnect(con)
 
 ### DuckDB
 tf1 <- tempfile()
-on.exit(unlist(tf1))
+on.exit(unlink(tf1))
 con <- DBI::dbConnect(duckdb::duckdb(), tf1)
 DBI::dbWriteTable(con, "mtcars", mtcars)
 DBI::dbDisconnect(con)
 
+### Parquet
+tf2 <- tempfile()
+on.exit(unlink(tf2))
+arrow::write_dataset(mtcars, tf2, format = "parquet")
+dir(tf2)
+ 
 ## Creating a SQLite-backed data frame:
 
 df <- SQLDataFrame(tf, dbtype = "SQLite", table = "mtcars")
@@ -98,6 +106,12 @@ identical(df, df1)
 df2 <- SQLDataFrame(tf1, dbtype = "duckdb", table = "mtcars")
 df3 <- DuckDBDataFrame(tf1, "mtcars")
 identical(df2, df3)
+
+## Parquet-backed data frame: (opened through a duckdb connection)
+df4 <- SQLDataFrame(tf2, dbtype = "parquet") ## does not request "table"
+df5 <- ParquetDataFrame(tf2)  ## does not request "table"
+identical(df4, df5)
+
 ## Extraction yields a SQLiteColumnVector:
 df$carb
 

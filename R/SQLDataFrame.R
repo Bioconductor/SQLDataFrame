@@ -2,11 +2,13 @@
 #'
 #' Create a SQL-backed \linkS4class{DataFrame}, where the data are
 #' kept on disk until requested. Direct extension classes are
-#' \code{SQLiteDataFrame} and \code{DuckDBDataFrame}.
+#' \code{SQLiteDataFrame}, \code{DuckDBDataFrame}, and
+#' \code{ParquetDataFrame}.
 #'
 #' @param path String containing a path to a SQL file.
 #' @param dbtype String containing the SQL database type (case
-#'     insensitive). Supported types are "SQLite" and "DuckDB".
+#'     insensitive). Supported types are "SQLite", "DuckDB", and
+#'     "Parquet".
 #' @param table String containing the name of SQL table.
 #' @param columns Character vector containing the names of columns in
 #'     a SQL table. If \code{NULL}, this is determined from
@@ -49,11 +51,17 @@
 #'
 #' ### DuckDB
 #' tf1 <- tempfile()
-#' on.exit(unlist(tf1))
+#' on.exit(unlink(tf1))
 #' con <- DBI::dbConnect(duckdb::duckdb(), tf1)
 #' DBI::dbWriteTable(con, "mtcars", mtcars)
 #' DBI::dbDisconnect(con)
-#' 
+#'
+#' ### Parquet
+#' tf2 <- tempfile()
+#' on.exit(unlink(tf2))
+#' arrow::write_dataset(mtcars, tf2, format = "parquet")
+#' dir(tf2)
+#'  
 #' ## Creating a SQLite-backed data frame:
 #'
 #' df <- SQLDataFrame(tf, dbtype = "SQLite", table = "mtcars")
@@ -64,7 +72,12 @@
 #' df2 <- SQLDataFrame(tf1, dbtype = "duckdb", table = "mtcars")
 #' df3 <- DuckDBDataFrame(tf1, "mtcars")
 #' identical(df2, df3)
-
+#'
+#' ## Parquet-backed data frame: (opened through a duckdb connection)
+#' df4 <- SQLDataFrame(tf2, dbtype = "parquet") ## does not request "table"
+#' df5 <- ParquetDataFrame(tf2)  ## does not request "table"
+#' identical(df4, df5)
+#' 
 #' ## Extraction yields a SQLiteColumnVector:
 #' df$carb
 #'
@@ -131,12 +144,12 @@
 #' @export
 SQLDataFrame <- function(path, dbtype=NULL, table=NULL, columns=NULL, nrows=NULL) {
     if (is.null(dbtype))
-        stop("Please specify the SQL database type: sqlite, duckdb.")
-    dbtype <- switch(tolower(dbtype),
-                     sqlite = "SQLite",
-                     duckdb = "DuckDB")
+        stop("Please specify the SQL database type: sqlite, duckdb, parquet.")
+    dbtype <- match.arg(tolower(dbtype), c("sqlite", "duckdb", "parquet"))
     con <- acquireConn(path, dbtype)
-    if (is.null(table)) {
+    if (dbtype == "parquet") {
+        table <- "my_parquet_table"
+    } else if (is.null(table)) {
         tbls <- DBI::dbListTables(con)
         stop("Please specify a table name. \n Available tables are: ",
              paste(tbls, collapse=", "))

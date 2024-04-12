@@ -1,10 +1,11 @@
 # Tests the basic functions of a SQLColumnSeed.
 # library(testthat); library(SQLDataFrame); source("setup.R"); source("test_SQLColumnSeed.R")
 
-for (tp in c("sqlite", "duckdb")) {
+for (tp in c("sqlite", "duckdb", "parquet")) {
     pth <- switch(tp,
                   sqlite = tf,
-                  duckdb = tf1)
+                  duckdb = tf1,
+                  parquet = tf2)
     x <- SQLColumnSeed(pth, dbtype = tp, table = "mtcars", column="wt")
     y <- DelayedArray(x)
     
@@ -31,15 +32,21 @@ for (tp in c("sqlite", "duckdb")) {
 
 test_that("backend-specific ColumnSeed or ColumnVector constructor works", {
     ## SQLite backend
-    x1 <- SQLiteColumnSeed(pth, "mtcars", "mpg")
+    x1 <- SQLiteColumnSeed(tf, "mtcars", "mpg")
     y1 <- SQLiteColumnVector(x1)
     expect_s4_class(x1, "SQLiteColumnSeed")
     expect_s4_class(y1, "SQLiteColumnVector")
     
     ## DuckDB backend
-    x2 <- DuckDBColumnSeed(pth, "mtcars", "mpg")
+    x2 <- DuckDBColumnSeed(tf1, "mtcars", "mpg")
     y2 <- DuckDBColumnVector(x2)
     expect_s4_class(x2, "DuckDBColumnSeed")
     expect_s4_class(y2, "DuckDBColumnVector")
+    
+    ## Parquet backend
+    x3 <- ParquetColumnSeed(tf2, "mpg")
+    y3 <- ParquetColumnVector(x3)
+    expect_s4_class(x3, "ParquetColumnSeed")
+    expect_s4_class(y3, "ParquetColumnVector")
 })    
 

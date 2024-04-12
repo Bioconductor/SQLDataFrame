@@ -21,9 +21,12 @@ SQLColumnVector(x, ...)
 \item{path}{String containing a path to a SQL file.}
 
 \item{dbtype}{String containing the SQL database type (case
-insensitive). Supported types are "SQLite" and "DuckDB".}
+insensitive). Supported types are "SQLite", "DuckDB", and
+"Parquet".}
 
-\item{table}{String containing the name of the table in SQL file.}
+\item{table}{String containing the name of the table in SQL
+file. For Parquet, it overwrites any given value here by
+"my_parquet_table".}
 
 \item{column}{String containing the name of the column inside the
 table.}
@@ -41,13 +44,11 @@ different type.}
 \item{x}{A SQLColumnSeed object.}
 
 \item{...}{Further arguments to be passed to the
-    \code{SQLColumnSeed} constructor.
-#'}
+\code{SQLColumnSeed} constructor.}
 }
 \value{
 For \code{SQLColumnSeed}: a SQLColumnSeed. For
     \code{SQLColumnVector}: a SQLColumnVector.
-#'
 }
 \description{
 Represent a column of a SQL table as a 1-dimensional
