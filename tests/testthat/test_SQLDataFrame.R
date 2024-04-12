@@ -1,10 +1,11 @@
 # Tests the basic functions of a SQLiteDataFrame.
 # library(testthat); library(SQLiteDataFrame); source("setup.R"); source("test-SQLiteDataFrame.R")
 
-for (tp in c("sqlite", "duckdb")) {
+for (tp in c("sqlite", "duckdb", "parquet")) {
     pth <- switch(tp,
                   sqlite = tf,
-                  duckdb = tf1)
+                  duckdb = tf1,
+                  parquet = tf2)
     x <- SQLDataFrame(pth, dbtype = tp, "mtcars")
 
     test_that("backend-specific constructor works", {
@@ -12,6 +13,8 @@ for (tp in c("sqlite", "duckdb")) {
             x1 <- SQLiteDataFrame(pth, "mtcars")
         } else if (tp == "duckdb") { 
             x1 <- DuckDBDataFrame(pth, "mtcars")
+        } else if (tp == "parquet") {
+            x1 <- ParquetDataFrame(pth)
         }
         expect_s4_class(x1, "SQLDataFrame")
         expect_identical(x, x1)

@@ -1,6 +1,6 @@
 Package: SQLDataFrame
 Title: Representation of SQL tables in DataFrame metaphor
-Version: 1.17.1
+Version: 1.17.2
 Description:
     Implements bindings for SQL tables that are compatible with
     Bioconductor S4 data structures, namely the DataFrame and
@@ -28,7 +28,9 @@ Imports:
     BiocGenerics,
     RSQLite,
     duckdb,
-    DBI
+    DBI,
+    arrow,
+    dplyr
 Suggests:
     knitr,
     rmarkdown,
@@ -38,5 +40,5 @@ biocViews: DataRepresentation, Infrastructure, Software
 VignetteBuilder: knitr
 URL: https://github.com/Bioconductor/SQLDataFrame
 BugReports: https://github.com/Bioconductor/SQLDataFrame/issues  
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Encoding: UTF-8

@@ -7,11 +7,15 @@ persistent$handles <- list()
 #' 
 #' @param path String containing a path to a SQL file.
 #' @param dbtype String containing the SQL database type (case
-#'     insensitive). Supported types are "SQLite" and "DuckDB".
+#'     insensitive). Supported types are "SQLite", "DuckDB", and
+#'     "Parquet".
 #' @return For \code{acquireConn}, a DBIConnection with backends of
-#'     SQLite or DuckDB, which are identical to that returned by
-#'     \code{DBI::dbConnect(RSQLite::SQLite(), path)} or
-#'     \code{DBI::dbConnect(duckdb::duckdb(), path)}.
+#'     SQLite, DuckDB, or Parquet, which are identical to that
+#'     returned by \code{DBI::dbConnect(RSQLite::SQLite(), path)} for
+#'     SQLite tables, or \code{DBI::dbConnect(duckdb::duckdb(), path)}
+#'     for DuckDB table, or a duckdb connection with a virtual parquet
+#'     table that was opened as arrow dataset and then registered in a
+#'     duckdb connection.
 #'
 #' For \code{releaseConn}, any existing DBIConnection for the
 #' \code{path} is disconnected and cleared from cache, and \code{NULL}
@@ -49,13 +53,26 @@ persistent$handles <- list()
 #' ###########
 #' 
 #' tf1 <- tempfile()
-#' on.exit(unlist(tf1))
+#' on.exit(unlink(tf1))
 #' con <- DBI::dbConnect(duckdb::duckdb(), tf1)
 #' DBI::dbWriteTable(con, "mtcars", mtcars)
 #' DBI::dbDisconnect(con)
 #' con <- acquireConn(tf1, dbtype = "DuckDB")
 #' releaseConn(tf1)
 #'
+#' ############
+#' ## Parquet
+#' ############
+#'
+#' tf2 <- tempfile()
+#' on.exit(unlink(tf2))
+#' arrow::write_dataset(mtcars, tf2, format = "parquet")
+#' dir(tf2)
+#' con <- acquireConn(tf2, dbtype = "Parquet")
+#' releaseConn(tf2)
+#'
+#' @importFrom arrow open_dataset write_dataset
+#' @import dplyr
 #' @export
 #' @rdname acquireConn
 #' @importFrom utils tail
@@ -63,7 +80,7 @@ persistent$handles <- list()
 acquireConn <- function(path, dbtype = NULL) {
     ## browser()
     if (is.null(dbtype))
-        stop("Please specify the SQL database type: sqlite, duckdb.")
+        stop("Please specify the SQL database type: sqlite, duckdb, parquet.")
     dbtype <- tolower(dbtype)
     
     ## Here we set up an LRU cache for the SQLite connection. 
@@ -86,10 +103,18 @@ acquireConn <- function(path, dbtype = NULL) {
         persistent$handles <- tail(persistent$handles, limit - 1L)
     }
 
-    drv <- switch(dbtype,
-                  "sqlite" = RSQLite::SQLite(),
-                  "duckdb" = duckdb::duckdb()) 
-    output <- DBI::dbConnect(drv, path)
+    if (dbtype %in% c("sqlite", "duckdb")) {
+        drv <- switch(dbtype,
+                      "sqlite" = RSQLite::SQLite(), 
+                      "duckdb"= duckdb::duckdb())        
+        output <- DBI::dbConnect(drv, path)
+    } else if (dbtype == "parquet") {
+        output <- DBI::dbConnect(duckdb::duckdb())
+        ds <- arrow::open_dataset(path)
+        duckdb::duckdb_register(output, "my_parquet_table", ds)
+        ## open parquet as a virtual table in duckdb connection
+        ## ref: https://www.richpauloo.com/blog/parquet/
+    }
     persistent$handles[[path]] <- output
     output
 }
@@ -103,7 +128,10 @@ releaseConn <- function(path) {
         i <- which(names(persistent$handles) == path)
         if (length(i)) {
             con <- persistent$handles[[i]]
-            DBI::dbDisconnect(con)
+            if (grepl(".parquet", path)) {
+                duckdb::duckdb_unregister(con, "my_parquet_table")
+            }
+            DBI::dbDisconnect(con)  
             persistent$handles <- persistent$handles[-i]
         }
     }

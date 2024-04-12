@@ -156,3 +156,53 @@ DuckDBDataFrame <- function(path, table=NULL, columns=NULL, nrows=NULL) {
                  columns=columns, nrows=nrows)
 }
 
+###############
+## Parquet
+###############
+
+#' @export
+#'
+setClass("ParquetColumnSeed", contains = "SQLColumnSeed")
+
+#' @export
+ParquetColumnSeed <- function(path, column, length = NULL, type = NULL) {
+    dbtype <- "Parquet"
+    table <- "my_parquet_table"
+    sd <- SQLColumnSeed(path = path, dbtype = dbtype, table = table, column = column,
+                        length = length, type = type)
+    new("ParquetColumnSeed", path=path(sd), dbtype = dbtype(sd), table=sqltable(sd),
+        column=sd@column, length=dim(sd), type=type(sd))
+
+}
+
+#' @export
+setClass("ParquetColumnVector", contains = "DelayedArray", slots = c(seed = "ParquetColumnSeed"))
+
+#' @export
+setMethod("DelayedArray", "ParquetColumnSeed", function(seed) new("ParquetColumnVector", seed=seed))
+
+#' @export
+ParquetColumnVector <- function(x, ...) {
+    if (!is(x, "ParquetColumnSeed")) {
+        x <- ParquetColumnSeed(x, ...)
+    }
+    new("ParquetColumnVector", seed=x)
+}
+
+#' @export
+#' @importFrom DelayedArray extract_array
+setMethod("extract_array", "ParquetColumnSeed", function(x, index) {
+    callNextMethod()
+})
+
+#' @export
+setClass("ParquetDataFrame", contains = "SQLDataFrame")
+
+#' @export
+ParquetDataFrame <- function(path, columns=NULL, nrows=NULL) {
+    dbtype <- "Parquet"
+    table <- "my_parquet_table"
+    SQLDataFrame(path=path, dbtype = dbtype, table = table,
+                 columns=columns, nrows=nrows)
+}
+

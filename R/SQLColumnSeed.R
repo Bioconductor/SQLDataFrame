@@ -6,8 +6,11 @@
 #'
 #' @param path String containing a path to a SQL file.
 #' @param dbtype String containing the SQL database type (case
-#'     insensitive). Supported types are "SQLite" and "DuckDB".
-#' @param table String containing the name of the table in SQL file.
+#'     insensitive). Supported types are "SQLite", "DuckDB", and
+#'     "Parquet".
+#' @param table String containing the name of the table in SQL
+#'     file. For Parquet, it overwrites any given value here by
+#'     "my_parquet_table".
 #' @param column String containing the name of the column inside the
 #'     table.
 #' @param length Integer containing the number of rows. If
@@ -19,18 +22,17 @@
 #'     this to avoid a look-up, or to coerce the output into a
 #'     different type.
 #' @param x A SQLColumnSeed object.
+
 ## #' @param index An unnamed list of subscripts as positive integer
-## #'     vectors, one vector per dimension in \code{x}. Empty and
-## #'     missing subscripts (represented by \code{integer(0)} and
-## #'     \code{NULL} list elements, respectively) are allowed. The
-## #'     subscripts can contain duplicated indices. They cannot contain
-## #'     NAs or non-positive values. 
+## vectors, one vector per dimension in \code{x}. Empty and missing
+## #subscripts (represented by \code{integer(0)} and \code{NULL} list
+## elements, respectively) are allowed. The subscripts can contain
+## duplicated indices. They cannot contain NAs or non-positive values.
+
 #' @param ... Further arguments to be passed to the
 #'     \code{SQLColumnSeed} constructor.
-#' #'
 #' @return For \code{SQLColumnSeed}: a SQLColumnSeed. For
 #'     \code{SQLColumnVector}: a SQLColumnVector.
-#' #'
 #' @author Qian Liu
 #'
 #' @examples
@@ -81,10 +83,11 @@ setClass("SQLColumnSeed", slots=c(
 #' @importFrom DelayedArray type
 SQLColumnSeed <- function(path, dbtype, table, column, length=NULL, type=NULL) {
     if (is.null(dbtype))
-        stop("Please specify the SQL database type: sqlite, duckdb.")
-    dbtype <- switch(tolower(dbtype),
-                     sqlite = "SQLite",
-                     duckdb = "DuckDB")
+        stop("Please specify the SQL database type: sqlite, duckdb, parquet.")
+    dbtype <- match.arg(tolower(dbtype), c("sqlite", "duckdb", "parquet"))
+    if (dbtype == "parquet") {
+        table <- "my_parquet_table"
+    }
     if (is.null(length) || is.null(type)) {
         con <- acquireConn(path, dbtype)
         if (is.null(type)) {

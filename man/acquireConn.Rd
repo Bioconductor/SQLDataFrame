@@ -13,13 +13,17 @@ releaseConn(path)
 \item{path}{String containing a path to a SQL file.}
 
 \item{dbtype}{String containing the SQL database type (case
-insensitive). Supported types are "SQLite" and "DuckDB".}
+insensitive). Supported types are "SQLite", "DuckDB", and
+"Parquet".}
 }
 \value{
 For \code{acquireConn}, a DBIConnection with backends of
-    SQLite or DuckDB, which are identical to that returned by
-    \code{DBI::dbConnect(RSQLite::SQLite(), path)} or
-    \code{DBI::dbConnect(duckdb::duckdb(), path)}.
+    SQLite, DuckDB, or Parquet, which are identical to that
+    returned by \code{DBI::dbConnect(RSQLite::SQLite(), path)} for
+    SQLite tables, or \code{DBI::dbConnect(duckdb::duckdb(), path)}
+    for DuckDB table, or a duckdb connection with a virtual parquet
+    table that was opened as arrow dataset and then registered in a
+    duckdb connection.
 
 For \code{releaseConn}, any existing DBIConnection for the
 \code{path} is disconnected and cleared from cache, and \code{NULL}
@@ -61,12 +65,23 @@ releaseConn(tf) # clears the cache
 ###########
 
 tf1 <- tempfile()
-on.exit(unlist(tf1))
+on.exit(unlink(tf1))
 con <- DBI::dbConnect(duckdb::duckdb(), tf1)
 DBI::dbWriteTable(con, "mtcars", mtcars)
 DBI::dbDisconnect(con)
 con <- acquireConn(tf1, dbtype = "DuckDB")
 releaseConn(tf1)
+
+############
+## Parquet
+############
+
+tf2 <- tempfile()
+on.exit(unlink(tf2))
+arrow::write_dataset(mtcars, tf2, format = "parquet")
+dir(tf2)
+con <- acquireConn(tf2, dbtype = "Parquet")
+releaseConn(tf2)
 
 }
 \author{
