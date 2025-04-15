@@ -1,6 +1,6 @@
 Package: SQLDataFrame
 Title: Representation of SQL tables in DataFrame metaphor
-Version: 1.21.0
+Version: 1.22.0
 Description:
     Implements bindings for SQL tables that are compatible with
     Bioconductor S4 data structures, namely the DataFrame and
